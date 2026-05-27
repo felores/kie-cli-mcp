@@ -238,6 +238,32 @@ class KieAiMcpServer {
     );
   }
 
+  /**
+   * Extract a task identifier from a Kie create-task response, tolerating the
+   * several shapes Kie returns across endpoints (data.taskId / data.recordId /
+   * data.id / nested {result: {...}} / top-level taskId/recordId/id).
+   * Returns undefined if nothing resembling an id can be found, which the
+   * caller should treat as a failed create even if response.code === 200.
+   */
+  private extractTaskId(response: any): string | undefined {
+    if (!response) return undefined;
+    const candidates = [
+      response?.data?.taskId,
+      response?.data?.recordId,
+      response?.data?.id,
+      response?.data?.result?.taskId,
+      response?.data?.result?.recordId,
+      response?.data?.result?.id,
+      response?.taskId,
+      response?.recordId,
+      response?.id,
+    ];
+    for (const c of candidates) {
+      if (typeof c === "string" && c.length > 0) return c;
+    }
+    return undefined;
+  }
+
   private formatError(
     toolName: string,
     error: unknown,
@@ -3278,9 +3304,11 @@ class KieAiMcpServer {
             text: JSON.stringify(
               {
                 success: true,
+                source: "local-cache",
+                note: "This is the MCP's local SQLite cache of tasks it has previously created or polled — NOT the full task list of your Kie account. Tasks created without a recognizable task_id (e.g. some Kling video creates) are not tracked here. To inspect a specific task that is missing from this list, call get_task_status with the Kie task id directly (e.g. from the Kie dashboard).",
                 tasks: tasks,
                 count: tasks.length,
-                message: `Retrieved ${tasks.length} tasks`,
+                message: `Retrieved ${tasks.length} cached tasks`,
               },
               null,
               2,
@@ -5049,12 +5077,47 @@ class KieAiMcpServer {
           ? "Kling 3.0 image-to-video"
           : "Kling 3.0 text-to-video";
 
-      if (response.data?.taskId) {
+      // Kie returns the task id under different keys depending on the model;
+      // use a tolerant extractor and treat a missing id as a failed create
+      // even when Kie's HTTP response was 200.
+      const taskId = this.extractTaskId(response);
+
+      if (taskId) {
         await this.db.createTask({
-          task_id: response.data.taskId,
+          task_id: taskId,
           api_type: "kling-3.0-video",
           status: "pending",
         });
+      }
+
+      if (!taskId) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: false,
+                  error:
+                    "Kie create-task response did not contain a recognizable task id; the task cannot be tracked or polled. See raw_response for what Kie returned.",
+                  mode: modeDescription,
+                  raw_response: response,
+                  parameters: {
+                    prompt: request.prompt,
+                    duration: request.duration || "5",
+                    aspect_ratio: request.aspect_ratio || "16:9",
+                    mode: request.mode || "std",
+                    sound: request.sound ?? false,
+                    multi_shots: request.multi_shots ?? false,
+                    callBackUrl: request.callBackUrl,
+                  },
+                },
+                null,
+                2,
+              ),
+            },
+          ],
+        };
       }
 
       return {
@@ -5064,9 +5127,10 @@ class KieAiMcpServer {
             text: JSON.stringify(
               {
                 success: true,
-                task_id: response.data?.taskId,
+                task_id: taskId,
                 mode: modeDescription,
                 message: `Kling 3.0 video generation task created successfully (${modeDescription})`,
+                raw_response: response,
                 parameters: {
                   prompt: request.prompt,
                   duration: request.duration || "5",
@@ -5077,8 +5141,8 @@ class KieAiMcpServer {
                   callBackUrl: request.callBackUrl,
                 },
                 next_steps: [
-                  "Use get_task_status to check generation progress",
-                  "Task completion will be sent to the provided callback URL",
+                  `Use get_task_status with task_id: ${taskId} to check progress`,
+                  "Task completion will also be sent to the provided callback URL",
                   "Video generation typically takes 1-5 minutes depending on duration and complexity",
                 ],
               },
