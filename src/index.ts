@@ -12,6 +12,7 @@ import {
   GetPromptRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
+import { startHttpServer } from "./http-server.js";
 
 import { KieAiClient } from "./kie-ai-client.js";
 import { TaskDatabase } from "./database.js";
@@ -46,7 +47,6 @@ import {
 } from "./types.js";
 
 class KieAiMcpServer {
-  private server: Server;
   private client: KieAiClient;
   private db: TaskDatabase;
   private config: KieAiConfig;
@@ -95,11 +95,6 @@ class KieAiMcpServer {
   );
 
   constructor() {
-    this.server = new Server({
-      name: "kie-ai-mcp-server",
-      version: "3.2.1",
-    });
-
     // Initialize client with config from environment
     this.config = {
       apiKey: process.env.KIE_AI_API_KEY || "",
@@ -117,8 +112,21 @@ class KieAiMcpServer {
     this.client = new KieAiClient(this.config);
     this.db = new TaskDatabase(process.env.KIE_AI_DB_PATH);
     this.enabledTools = this.getEnabledTools();
+  }
 
-    this.setupHandlers();
+  /**
+   * Build a fresh MCP Server instance wired to the shared client/db/config.
+   * Called once in stdio mode, and once per session in Streamable HTTP mode
+   * (each HTTP session needs its own protocol-level Server, but they all share
+   * the same KieAiClient + SQLite TaskDatabase held on this instance).
+   */
+  buildServer(): Server {
+    const server = new Server(
+      { name: "kie-ai-mcp-server", version: "3.2.1" },
+      { capabilities: { tools: {}, resources: {}, prompts: {} } },
+    );
+    this.setupHandlers(server);
+    return server;
   }
 
   private validateToolNames(tools: string[]): void {
@@ -291,8 +299,8 @@ class KieAiMcpServer {
     };
   }
 
-  private setupHandlers(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+  private setupHandlers(server: Server): void {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       const allTools = [
         {
           name: "nano_banana_image",
@@ -2204,7 +2212,7 @@ class KieAiMcpServer {
       return { tools: filteredTools };
     });
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       try {
         const { name, arguments: args } = request.params;
 
@@ -2319,7 +2327,7 @@ class KieAiMcpServer {
     });
 
     // Resource Handlers
-    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
       return {
         resources: [
           // Model Documentation - Images
@@ -2572,7 +2580,7 @@ class KieAiMcpServer {
       };
     });
 
-    this.server.setRequestHandler(
+    server.setRequestHandler(
       ReadResourceRequestSchema,
       async (request) => {
         const { uri } = request.params;
@@ -2663,7 +2671,7 @@ class KieAiMcpServer {
     );
 
     // Prompt Handlers
-    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    server.setRequestHandler(ListPromptsRequestSchema, async () => {
       return {
         prompts: [
           {
@@ -2682,7 +2690,7 @@ class KieAiMcpServer {
       };
     });
 
-    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
       switch (name) {
@@ -6102,8 +6110,25 @@ These guidelines ensure optimal balance between quality requirements and cost ma
   }
 
   async run(): Promise<void> {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    const mode = (process.env.MCP_TRANSPORT || "stdio").toLowerCase();
+
+    if (mode === "http" || mode === "streamable-http") {
+      // Remote mode: Streamable HTTP — for self-hosting (e.g. Coolify).
+      // A fresh protocol Server is built per session; KieAiClient + SQLite DB
+      // are shared across all sessions via this instance.
+      startHttpServer(() => this.buildServer(), {
+        port: parseInt(process.env.PORT || "3000"),
+        host: process.env.HOST || "0.0.0.0",
+        authToken: process.env.MCP_AUTH_TOKEN,
+        path: process.env.MCP_HTTP_PATH || "/mcp",
+      });
+    } else {
+      // Local mode: stdio (Claude Desktop, Cursor, npx). Unchanged default.
+      const server = this.buildServer();
+      const transport = new StdioServerTransport();
+      await server.connect(transport);
+      console.error("[Kie.ai MCP] Started in stdio mode");
+    }
   }
 }
 

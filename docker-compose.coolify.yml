@@ -1,0 +1,51 @@
+# kie-ai-mcp-server — Coolify Compose (remote Streamable HTTP).
+#
+# Coolify's Traefik handles TLS + routing via the SERVICE_FQDN_* magic var.
+# No `ports:` mapping — the service is private to the compose net and only
+# reachable through the FQDN Coolify assigns.
+#
+# Setup in Coolify UI:
+#   1. Project → "+ New Resource" → "Docker Compose"
+#   2. Repository: git URL of this repo
+#   3. Compose File Path: docker-compose.coolify.yml
+#   4. Environment Variables:
+#        SERVICE_FQDN_KIEAIMCP_3000   e.g. kie-mcp.example.tld
+#        KIE_AI_API_KEY               your Kie.ai API key
+#        MCP_AUTH_TOKEN               secret bearer token (openssl rand -hex 32)
+#   5. Deploy → Coolify pulls the repo, builds the image, fetches TLS certs.
+#
+# Connect from a client:
+#   claude.ai Custom Connector / Claude Desktop / Cursor →
+#     URL  = https://<SERVICE_FQDN_KIEAIMCP_3000>/mcp
+#     Auth = Bearer ${MCP_AUTH_TOKEN}
+
+services:
+  kie-ai-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Coolify magic-var → rewritten to the public FQDN + Traefik labels.
+      - SERVICE_FQDN_KIEAIMCP_3000
+      - MCP_TRANSPORT=http
+      - PORT=3000
+      - HOST=0.0.0.0
+      - MCP_AUTH_TOKEN=${MCP_AUTH_TOKEN}
+      - KIE_AI_API_KEY=${KIE_AI_API_KEY}
+      - KIE_AI_DB_PATH=/data/tasks.db
+      # Optional: default callback URL for async tasks (must be publicly reachable)
+      - KIE_AI_CALLBACK_URL=${KIE_AI_CALLBACK_URL:-}
+      - NODE_ENV=production
+    volumes:
+      # Persist the SQLite task history across redeploys
+      - kie-ai-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+
+volumes:
+  kie-ai-data:

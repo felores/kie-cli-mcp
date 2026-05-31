@@ -56,11 +56,13 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^4.21.2",
     "sqlite3": "^5.1.6",
-    "zod": "^3.22.4"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",
     "@types/sqlite3": "^3.1.11",
