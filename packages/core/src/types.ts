@@ -2069,6 +2069,35 @@ export const ListTasksSchema = z.object({
 });
 export type ListTasksRequest = z.infer<typeof ListTasksSchema>;
 
+export const WaitForTaskSchema = z.object({
+  task_id: z
+    .string()
+    .min(1)
+    .describe("Task ID returned by a generation tool to wait for"),
+  timeout_seconds: z
+    .number()
+    .int()
+    .min(5)
+    .max(600)
+    .default(180)
+    .describe("Max seconds to wait before giving up"),
+  interval_seconds: z
+    .number()
+    .int()
+    .min(1)
+    .max(60)
+    .default(5)
+    .describe("Seconds between checks against the callback rendezvous"),
+  rendezvous_url: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "Base URL of the callback rendezvous result endpoint (e.g. https://felo-workers.felo.workers.dev/kie/result). Defaults to KIE_AI_RESULT_URL, or is derived from KIE_AI_CALLBACK_URL when it ends in /kie/callback",
+    ),
+});
+export type WaitForTaskRequest = z.infer<typeof WaitForTaskSchema>;
+
 export const Veo3Get1080pVideoSchema = z.object({
   task_id: z.string().min(1).describe("Veo3 task ID to get 1080p video for"),
   index: z

@@ -32,6 +32,7 @@ const EXPECTED_TOOL_NAMES = [
   "topaz_upscale_image",
   "veo3_generate_video",
   "veo3_get_1080p_video",
+  "wait_for_task",
   "wan_animate",
   "wan_video",
   "z_image",

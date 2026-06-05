@@ -24,6 +24,7 @@ import { sunoGenerateMusicTool } from "./suno_generate_music.js";
 import { topazUpscaleImageTool } from "./topaz_upscale_image.js";
 import { veo3GenerateVideoTool } from "./veo3_generate_video.js";
 import { veo3Get1080pVideoTool } from "./veo3_get_1080p_video.js";
+import { waitForTaskTool } from "./wait_for_task.js";
 import { wanAnimateTool } from "./wan_animate.js";
 import { wanVideoTool } from "./wan_video.js";
 import { zImageTool } from "./z_image.js";
@@ -61,6 +62,7 @@ export const TOOL_REGISTRY: ToolDef[] = [
   topazUpscaleImageTool,
   veo3GenerateVideoTool,
   veo3Get1080pVideoTool,
+  waitForTaskTool,
   wanAnimateTool,
   wanVideoTool,
   zImageTool,

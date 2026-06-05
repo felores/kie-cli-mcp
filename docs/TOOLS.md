@@ -9,7 +9,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 - **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [z_image](#z_image)
 - **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
 - **Audio:** [elevenlabs_tts](#elevenlabs_tts), [elevenlabs_ttsfx](#elevenlabs_ttsfx), [suno_generate_music](#suno_generate_music)
-- **Utility:** [get_task_status](#get_task_status), [list_tasks](#list_tasks)
+- **Utility:** [get_task_status](#get_task_status), [list_tasks](#list_tasks), [wait_for_task](#wait_for_task)
 
 ---
 
@@ -509,4 +509,17 @@ List recent tasks with their status
 | --- | --- | --- | --- |
 | `limit` | integer | no | Maximum number of tasks to return (default: `20`) |
 | `status` | `pending` / `processing` / `completed` / `failed` | no | Filter by status |
+
+### wait_for_task
+
+Wait for a generation task to complete via the callback rendezvous (no Kie polling). Use after any generation tool when KIE_AI_CALLBACK_URL points at your rendezvous worker: it returns the final result URLs in a single call once the worker receives the callback. Requires a rendezvous (KIE_AI_RESULT_URL, the rendezvous_url arg, or a KIE_AI_CALLBACK_URL ending in /kie/callback).
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `task_id` | string | yes | Task ID returned by a generation tool to wait for |
+| `timeout_seconds` | integer | no | Max seconds to wait before giving up (default: `180`) |
+| `interval_seconds` | integer | no | Seconds between checks against the callback rendezvous (default: `5`) |
+| `rendezvous_url` | string | no | Base URL of the callback rendezvous result endpoint (e.g. https://felo-workers.felo.workers.dev/kie/result). Defaults to KIE_AI_RESULT_URL, or is derived from KIE_AI_CALLBACK_URL when it ends in /kie/callback |
 
