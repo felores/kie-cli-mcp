@@ -6,10 +6,38 @@ Kie.ai offers **30-50% lower cost** than competitors with 99.9% uptime and 24/7 
 
 ## 📚 Documentation
 
-- **[Complete Tool Reference](docs/TOOLS.md)** - Detailed documentation for all 24 AI tools
+- **[Complete Tool Reference](docs/TOOLS.md)** - Detailed documentation for all AI tools
 - **[Database & Task Management](docs/DATABASE.md)** - SQLite database and task lifecycle  
 - **[Administrator Configuration](docs/ADMIN.md)** - Deployment guides and environment setup
 - **[Intelligent Features](docs/INTELLIGENCE.md)** - Smart mode detection and cost optimization
+
+## Two ways to use it (one shared core)
+
+This repo is an npm-workspaces monorepo. The MCP server and a standalone CLI are
+generated from the same tool registry, so both expose the exact same models and
+install independently:
+
+- **MCP server** — `@felores/kie-ai-mcp-server` (for Claude Desktop and other MCP
+  clients). See **Quick Start** below.
+- **CLI** — `@felores/kie-cli` (binary `kie-cli`) for the terminal, no MCP client
+  needed: `npm i -g @felores/kie-cli`, then `kie-cli --help`. See
+  [`packages/cli/README.md`](packages/cli/README.md).
+
+## 🤖 Agent skill (optional)
+
+`skills/kie-ai/` is a Claude Code skill that teaches agents to drive the `kie-cli`
+command (discover → generate → poll → result), including how to install the CLI if
+it's missing. Skills are **global**, so install it into your personal skills dir
+(a project-local skill only triggers inside this repo):
+
+```bash
+cp -r skills/kie-ai ~/.claude/skills/kie-ai
+# or symlink to keep it in sync with the repo:
+ln -s "$PWD/skills/kie-ai" ~/.claude/skills/kie-ai
+```
+
+Then any session can generate media by asking in plain language ("make me an image
+of…", "turn this photo into a video").
 
 ## 🚀 Quick Start - Add to Your MCP Client
 
