@@ -10,9 +10,9 @@
 </pre>
 </div>
 
-# Kie.ai MCP Server
+# Kie.ai CLI + MCP Server
 
-**Access State of the Art AI models at half the price using one MCP Server.** Generate videos, images, music, and audio with the latest generative AI technologies using a developer-friendly API.
+**Access State of the Art AI models at half the price using one MCP Server.** Generate videos, images, music, and audio with the latest generative AI technologies using a user-friendly CLI tool and MCP server to connect your Claude, Codex, OpenCode, Pi-mono or any other agentic harness
 
 Kie.ai offers **30-50% lower cost** than competitors with 99.9% uptime and 24/7 human support.
 
