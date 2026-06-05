@@ -237,7 +237,7 @@ npm install -g @felores/kie-ai-mcp-server
 ### Option 2: Install from Source
 ```bash
 # Clone the repository
-git clone https://github.com/felores/kie-ai-mcp-server.git
+git clone https://github.com/felores/kie-cli-mcp.git
 cd kie-ai-mcp-server
 
 # Install dependencies
@@ -566,7 +566,7 @@ See https://kie.ai/billing for detailed pricing.
 ## Support
 
 For issues related to:
-- **MCP Server**: Open an issue at https://github.com/felores/kie-ai-mcp-server/issues
+- **MCP Server**: Open an issue at https://github.com/felores/kie-cli-mcp/issues
 - **Kie.ai API**: Contact support@kie.ai or check https://docs.kie.ai/
 - **API Keys**: Visit https://kie.ai/api-key
 

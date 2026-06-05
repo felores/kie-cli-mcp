@@ -48,7 +48,7 @@ and links it as a global `kie-cli`:
 
 ```bash
 REPO="$HOME/Documents/GitHub/mcp/kie-ai-mcp-server"
-[ -d "$REPO" ] || git clone https://github.com/felores/kie-ai-mcp-server "$REPO"
+[ -d "$REPO" ] || git clone https://github.com/felores/kie-cli-mcp "$REPO"
 cd "$REPO"
 npm install
 npm run build -w @felores/kie-ai-core && npm run bundle -w @felores/kie-cli

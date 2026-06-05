@@ -20,11 +20,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/felores/kie-ai-mcp-server.git"
+    "url": "git+https://github.com/felores/kie-cli-mcp.git"
   },
-  "homepage": "https://github.com/felores/kie-ai-mcp-server#readme",
+  "homepage": "https://github.com/felores/kie-cli-mcp#readme",
   "bugs": {
-    "url": "https://github.com/felores/kie-ai-mcp-server/issues"
+    "url": "https://github.com/felores/kie-cli-mcp/issues"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

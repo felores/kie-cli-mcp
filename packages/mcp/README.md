@@ -38,7 +38,7 @@ Add to your MCP client config (e.g. Claude Desktop `claude_desktop_config.json`)
 
 Generation tools create async tasks; poll them with `get_task_status` and browse
 recent work with `list_tasks`. See the
-[repository](https://github.com/felores/kie-ai-mcp-server) for full tool docs.
+[repository](https://github.com/felores/kie-cli-mcp) for full tool docs.
 
 ## License
 
