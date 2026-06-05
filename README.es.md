@@ -12,7 +12,7 @@
 
 <p align="center">🇬🇧 <a href="README.md">English</a> &nbsp;·&nbsp; 🇪🇸 <b>Español</b></p>
 
-# Kie.ai CLI + Servidor MCP
+# Kie.ai CLI + Servidor MCP + Skill de Agente
 
 **Una sola API para los mejores modelos de IA de medios (Veo 3, Nano Banana, Suno, Kling, Flux, ElevenLabs, Seedance y más), expuestos a la vez como servidor MCP y como CLI independiente, generados desde un único registro de herramientas.** Genera video, imágenes, música y voz desde Claude, Codex, OpenCode, Pi-mono, o cualquier harness agéntico, o directo desde tu terminal.
 
