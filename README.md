@@ -1,3 +1,15 @@
+<div align="center">
+<pre>
+██╗  ██╗██╗███████╗
+██║ ██╔╝██║██╔════╝
+█████╔╝ ██║█████╗  
+██╔═██╗ ██║██╔══╝  
+██║  ██╗██║███████╗
+╚═╝  ╚═╝╚═╝╚══════╝
+  C L I  /  M C P
+</pre>
+</div>
+
 # Kie.ai MCP Server
 
 **Access State of the Art AI models at half the price using one MCP Server.** Generate videos, images, music, and audio with the latest generative AI technologies using a developer-friendly API.
