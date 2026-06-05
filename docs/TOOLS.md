@@ -512,7 +512,7 @@ List recent tasks with their status
 
 ### wait_for_task
 
-Wait for a generation task to complete via the callback rendezvous (no Kie polling). Use after any generation tool when KIE_AI_CALLBACK_URL points at your rendezvous worker: it returns the final result URLs in a single call once the worker receives the callback. Requires a rendezvous (KIE_AI_RESULT_URL, the rendezvous_url arg, or a KIE_AI_CALLBACK_URL ending in /kie/callback).
+Wait for a generation task to complete in a single call, so you don't have to poll get_task_status repeatedly. Pass the task_id returned by any generation tool: it blocks until the result is ready (or the timeout) and returns the final URLs, streaming progress meanwhile. By default it polls the Kie API directly (no setup); if a callback rendezvous is configured (KIE_AI_RESULT_URL, rendezvous_url, or a KIE_AI_CALLBACK_URL ending in /kie/callback) it waits on that instead. Tip for long jobs: clients should enable resetTimeoutOnProgress with a generous maxTotalTimeout.
 
 #### Parameters
 
@@ -520,6 +520,6 @@ Wait for a generation task to complete via the callback rendezvous (no Kie polli
 | --- | --- | --- | --- |
 | `task_id` | string | yes | Task ID returned by a generation tool to wait for |
 | `timeout_seconds` | integer | no | Max seconds to wait before giving up (default: `180`) |
-| `interval_seconds` | integer | no | Seconds between checks against the callback rendezvous (default: `5`) |
-| `rendezvous_url` | string | no | Base URL of the callback rendezvous result endpoint (e.g. https://felo-workers.felo.workers.dev/kie/result). Defaults to KIE_AI_RESULT_URL, or is derived from KIE_AI_CALLBACK_URL when it ends in /kie/callback |
+| `interval_seconds` | integer | no | Seconds between status checks while waiting (default: `5`) |
+| `rendezvous_url` | string | no | Optional callback rendezvous result base URL (e.g. https://felo-workers.felo.workers.dev/kie/result). Omit to poll the Kie API directly (the default). When set, or when KIE_AI_RESULT_URL / a KIE_AI_CALLBACK_URL ending in /kie/callback is configured, it waits on the rendezvous instead |
 

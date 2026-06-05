@@ -2087,13 +2087,13 @@ export const WaitForTaskSchema = z.object({
     .min(1)
     .max(60)
     .default(5)
-    .describe("Seconds between checks against the callback rendezvous"),
+    .describe("Seconds between status checks while waiting"),
   rendezvous_url: z
     .string()
     .url()
     .optional()
     .describe(
-      "Base URL of the callback rendezvous result endpoint (e.g. https://felo-workers.felo.workers.dev/kie/result). Defaults to KIE_AI_RESULT_URL, or is derived from KIE_AI_CALLBACK_URL when it ends in /kie/callback",
+      "Optional callback rendezvous result base URL (e.g. https://felo-workers.felo.workers.dev/kie/result). Omit to poll the Kie API directly (the default). When set, or when KIE_AI_RESULT_URL / a KIE_AI_CALLBACK_URL ending in /kie/callback is configured, it waits on the rendezvous instead",
     ),
 });
 export type WaitForTaskRequest = z.infer<typeof WaitForTaskSchema>;

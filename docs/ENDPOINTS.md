@@ -52,7 +52,8 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | Tool | Description |
 |------|-------------|
 | `list_tasks` | List recent tasks (local cache) with status filter |
-| `get_task_status` | Check status of a generation task |
+| `get_task_status` | Check status of a generation task (single poll) |
+| `wait_for_task` | Block until a task finishes (polls Kie directly, streams `notifications/progress`); optional callback rendezvous |
 
 ### Image
 | Tool | Kie.ai Models | Status |
@@ -146,6 +147,12 @@ Kie.ai credits, where 1 credit is about $0.005. Pricing changes often; verify cu
 ---
 
 ## Changelog
+
+### 2026-06-05 (later)
+- `wait_for_task` now polls the Kie API directly by default and streams MCP
+  `notifications/progress`, so it blocks in one call until the result is ready
+  (the callback rendezvous is now an optional fallback). Added it to the Utility
+  table, which had been undercounting it.
 
 ### 2026-06-05
 - Refreshed to the current 28 tools; moved `grok_imagine`, `z_image`,

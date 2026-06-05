@@ -150,9 +150,9 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 ### CLI
 
 ```bash
-# Genera una imagen, luego consulta hasta que termine
+# Genera una imagen, luego espera el resultado en una sola llamada (sin consultar a mano)
 kie-cli nano_banana_image --prompt "a red panda coding at night, neon" --resolution 2K --json
-kie-cli get_task_status --task_id <id> --json
+kie-cli wait_for_task --task_id <id> --json
 
 # Música, sin letra personalizada
 kie-cli suno_generate_music --prompt "Upbeat electronic, energetic" --customMode --model V5 --title "Energy Boost"
@@ -161,7 +161,9 @@ kie-cli suno_generate_music --prompt "Upbeat electronic, energetic" --customMode
 kie-cli elevenlabs_tts --text "Welcome to the future of content creation!" --voice Rachel --model turbo
 ```
 
-La generación es asíncrona: las herramientas devuelven un `task_id`; consúltalo con `get_task_status` y revisa el trabajo reciente con `list_tasks`. Agrega `--json` al CLI para salida procesable por máquina.
+La generación es asíncrona: las herramientas devuelven un `task_id`. Espéralo en una sola llamada con `wait_for_task` (consulta a Kie por ti y devuelve las URLs finales cuando están listas), o revisa una vez con `get_task_status` y mira el trabajo reciente con `list_tasks`. Agrega `--json` al CLI para salida procesable por máquina.
+
+En un cliente MCP, `wait_for_task` mantiene la llamada abierta y envía `notifications/progress` hasta que el resultado está listo, así el modelo obtiene las URLs sin hacer bucles. Para trabajos largos (video), activa `resetTimeoutOnProgress` con un `maxTotalTimeout` generoso en tu cliente para que la llamada no se corte en el timeout por defecto.
 
 ## Configuración
 

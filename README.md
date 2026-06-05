@@ -150,9 +150,9 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
 ### CLI
 
 ```bash
-# Generate an image, then poll until it's done
+# Generate an image, then wait for the result in one call (no manual polling)
 kie-cli nano_banana_image --prompt "a red panda coding at night, neon" --resolution 2K --json
-kie-cli get_task_status --task_id <id> --json
+kie-cli wait_for_task --task_id <id> --json
 
 # Music, with custom lyrics off
 kie-cli suno_generate_music --prompt "Upbeat electronic, energetic" --customMode --model V5 --title "Energy Boost"
@@ -161,7 +161,9 @@ kie-cli suno_generate_music --prompt "Upbeat electronic, energetic" --customMode
 kie-cli elevenlabs_tts --text "Welcome to the future of content creation!" --voice Rachel --model turbo
 ```
 
-Generation is asynchronous: tools return a `task_id`; poll it with `get_task_status` and browse recent work with `list_tasks`. Add `--json` to the CLI for machine-readable output.
+Generation is asynchronous: tools return a `task_id`. Wait for it in a single call with `wait_for_task` (it polls Kie for you and returns the final URLs when ready), or check once with `get_task_status` and browse recent work with `list_tasks`. Add `--json` to the CLI for machine-readable output.
+
+In an MCP client, `wait_for_task` keeps the tool call open and streams `notifications/progress` until the result is ready, so the model gets the URLs without looping. For long jobs (video), enable `resetTimeoutOnProgress` with a generous `maxTotalTimeout` in your client so the call is not cut off at the default timeout.
 
 ## Configuration
 

@@ -85,7 +85,7 @@ class KieAiMcpServer {
     this.server = new Server(
       {
         name: "kie-ai-mcp-server",
-        version: "3.3.2",
+        version: "3.4.0",
       },
       {
         // SDK 1.x requires declaring the capabilities whose request handlers we
@@ -254,34 +254,66 @@ class KieAiMcpServer {
       return { tools };
     });
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      try {
-        const { name, arguments: args } = request.params;
+    this.server.setRequestHandler(
+      CallToolRequestSchema,
+      async (request, extra) => {
+        try {
+          const { name, arguments: args } = request.params;
 
-        if (!this.enabledTools.has(name)) {
-          throw new McpError(
-            ErrorCode.InvalidRequest,
-            `Tool '${name}' is not enabled. This tool has been disabled by server configuration. ` +
-              `Please check KIE_AI_ENABLED_TOOLS, KIE_AI_TOOL_CATEGORIES, or KIE_AI_DISABLED_TOOLS environment variables.`,
-          );
+          if (!this.enabledTools.has(name)) {
+            throw new McpError(
+              ErrorCode.InvalidRequest,
+              `Tool '${name}' is not enabled. This tool has been disabled by server configuration. ` +
+                `Please check KIE_AI_ENABLED_TOOLS, KIE_AI_TOOL_CATEGORIES, or KIE_AI_DISABLED_TOOLS environment variables.`,
+            );
+          }
+
+          const tool = getTool(name);
+          if (!tool) {
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Unknown tool: ${name}`,
+            );
+          }
+
+          // When the client opts into progress (a progressToken in the request
+          // _meta), give the tool an onProgress sink that streams
+          // notifications/progress on this still-open request. Each notification
+          // resets the client's request timeout, so a blocking tool like
+          // wait_for_task can hold the call open until generation finishes.
+          const progressToken = (
+            request.params as { _meta?: { progressToken?: string | number } }
+          )._meta?.progressToken;
+          const ctx: ToolContext =
+            progressToken === undefined
+              ? this.toolContext
+              : {
+                  ...this.toolContext,
+                  onProgress: async (update) => {
+                    try {
+                      await extra.sendNotification({
+                        method: "notifications/progress",
+                        params: { progressToken, ...update },
+                      });
+                    } catch {
+                      // Client may have disconnected mid-generation; the poll
+                      // loop still returns its final result, so ignore.
+                    }
+                  },
+                };
+
+          return await tool.run(args, ctx);
+        } catch (error) {
+          if (error instanceof McpError) {
+            throw error;
+          }
+
+          const message =
+            error instanceof Error ? error.message : "Unknown error";
+          throw new McpError(ErrorCode.InternalError, message);
         }
-
-        const tool = getTool(name);
-        if (!tool) {
-          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
-        }
-
-        return await tool.run(args, this.toolContext);
-      } catch (error) {
-        if (error instanceof McpError) {
-          throw error;
-        }
-
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
-        throw new McpError(ErrorCode.InternalError, message);
-      }
-    });
+      },
+    );
 
     // Resource Handlers
     this.server.setRequestHandler(ListResourcesRequestSchema, async () => {

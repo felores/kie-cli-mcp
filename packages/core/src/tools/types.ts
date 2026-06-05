@@ -31,6 +31,18 @@ export interface ToolContext {
     error: unknown,
     paramDescriptions: Record<string, string>,
   ): ToolResult;
+  /**
+   * Optional progress sink for long-running tools. The MCP adapter wires this to
+   * `notifications/progress` when the client opted in with a `progressToken`,
+   * which keeps the open `tools/call` request alive (clients reset their timeout
+   * on each notification). The CLI leaves it undefined, so tools must treat it as
+   * a best-effort no-op (`ctx.onProgress?.(...)`).
+   */
+  onProgress?(update: {
+    progress: number;
+    total?: number;
+    message?: string;
+  }): Promise<void>;
 }
 
 export type ToolCategory = "image" | "video" | "audio" | "utility";

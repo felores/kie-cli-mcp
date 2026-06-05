@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-06-05
+
+### Added
+- **`wait_for_task` now waits in a single call, no polling.** Pass a `task_id`
+  and it blocks until the result is ready (or the timeout) and returns the final
+  URLs, so the agent no longer loops over `get_task_status`. By default it polls
+  the Kie API directly, so no callback infrastructure is needed; the callback
+  "rendezvous" path is kept as an optional fallback for distributed/serverless
+  setups (`KIE_AI_RESULT_URL`, the `rendezvous_url` arg, or a
+  `KIE_AI_CALLBACK_URL` ending in `/kie/callback`).
+- **MCP progress notifications.** While `wait_for_task` waits, the server streams
+  `notifications/progress` on the still-open `tools/call` request (when the
+  client sends a `progressToken`). Each notification resets the client's request
+  timeout, which is how the call stays open past the default 60s. For long jobs,
+  clients should enable `resetTimeoutOnProgress` with a generous
+  `maxTotalTimeout`. The terminal result reuses `get_task_status`'s per-API
+  parsing, so completed Suno/multi-output tasks return every URL.
+  (`@felores/kie-cli` → 0.2.0; the CLI gets the single-call wait too, without the
+  MCP-only progress stream.)
+
 ## [3.3.2] - 2026-06-05
 
 ### Changed
