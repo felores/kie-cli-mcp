@@ -4,7 +4,7 @@ description: >-
   Generate media (images, video, music, speech, sound effects, lip-sync, upscaling)
   with AI through the Kie.ai `kie-cli` command. Use this whenever the user wants to
   create or edit an image, generate a video, compose music, synthesize a voice/TTS,
-  make a talking-avatar or lip-sync clip, upscale an image, or remove a background —
+  make a talking-avatar or lip-sync clip, upscale an image, or remove a background,
   and whenever they mention Kie.ai, Nano Banana, Veo3, Suno, ElevenLabs, Seedance,
   Seedream, Midjourney, Flux, Kling, Wan, Hailuo, GPT Image, Recraft, Ideogram, or
   Topaz. Trigger even if the user doesn't name a model, e.g. "make me an image of...",
@@ -19,7 +19,7 @@ each model as a subcommand. It is **self-documenting**: you discover commands an
 flags at runtime, so you never need a hardcoded model list (which would go stale as
 models change).
 
-## Step 0 — Check the CLI is available
+## Step 0, Check the CLI is available
 
 ```bash
 command -v kie-cli >/dev/null && kie-cli --help >/dev/null 2>&1 && echo "kie-cli ready" || echo "kie-cli missing"
@@ -36,13 +36,13 @@ Also confirm the API key is set (the CLI needs it to do anything):
 
 ## Install (only if the CLI is missing)
 
-**Option A — from npm (preferred):**
+**Option A, from npm (preferred):**
 
 ```bash
 npm i -g @felores/kie-cli && kie-cli --help | head -1   # install + verify
 ```
 
-**Option B — from the monorepo (use if Option A fails with a 404 / "not found",
+**Option B, from the monorepo (use if Option A fails with a 404 / "not found",
 i.e. the package isn't published yet).** This builds the self-contained CLI bundle
 and links it as a global `kie-cli`:
 
@@ -72,7 +72,7 @@ To persist it, add that line to `~/.zshrc` (or `~/.bashrc`). Optional env vars:
 If `npm i -g` fails with permissions, prefer fixing the npm prefix or using a node
 version manager rather than `sudo`. If you genuinely cannot install the CLI, the same
 models are also available through the MCP server `@felores/kie-ai-mcp-server` (add it
-to your MCP client config with the same `KIE_AI_API_KEY`) — but the rest of this skill
+to your MCP client config with the same `KIE_AI_API_KEY`): but the rest of this skill
 assumes the CLI.
 
 ## Workflow
@@ -87,7 +87,7 @@ kie-cli --help                 # all commands, grouped [image]/[video]/[audio]/[
 kie-cli <tool> --help          # that tool's flags, with types, choices, and defaults
 ```
 
-Read `<tool> --help` before composing a command — the flags, allowed enum values, and
+Read `<tool> --help` before composing a command, the flags, allowed enum values, and
 defaults come straight from the tool's schema, so this is the source of truth. Don't
 guess flag names.
 
@@ -103,9 +103,9 @@ kie-cli get_task_status --task_id <id> --json
 ```
 
 Re-run until the status indicates completion (or failure). When complete, the JSON
-holds the output URL(s) — inspect the response fields. `get_task_status` also returns
+holds the output URL(s): inspect the response fields. `get_task_status` also returns
 polling guidance (suggested interval) based on the media type; images finish in
-seconds, videos can take minutes. Don't poll in a tight loop — wait a few seconds
+seconds, videos can take minutes. Don't poll in a tight loop, wait a few seconds
 between checks.
 
 ### 4. List recent work
@@ -143,7 +143,7 @@ kie-cli elevenlabs_tts --text "Welcome to the demo." --json
 - **Errors are data, not crashes.** A bad/missing parameter returns
   `{"success": false, "error": ..., "parameter_guidance": ...}` and a non-zero exit
   code. Read `parameter_guidance` and fix the flags, then retry.
-- **Invalid enum values are rejected by the CLI** with the list of valid choices —
+- **Invalid enum values are rejected by the CLI** with the list of valid choices,
   if you hit that, re-check `<tool> --help`.
 - **One image/edit tool may take reference images** (e.g. `--image_input <url> ...`);
   array flags accept multiple values: `--image_input url1 url2`.

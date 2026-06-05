@@ -472,7 +472,7 @@ Looping ambient sound:
 **Note**: The `callBackUrl` is optional and uses automatic fallback if not provided. Sound effects generation typically takes 30-90 seconds depending on complexity.
 
 ### 10. `bytedance_seedance_video`
-Generate videos with ByteDance Seedance 2.0 — multimodal inputs (image/video/audio references), native audio generation, standard and fast modes.
+Generate videos with ByteDance Seedance 2.0, multimodal inputs (image/video/audio references), native audio generation, standard and fast modes.
 
 **Parameters:**
 - `prompt` (string, required): Text prompt for video generation (3-20000 chars)

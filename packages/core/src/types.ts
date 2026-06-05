@@ -433,7 +433,7 @@ export const ByteDanceSeedanceVideoSchema = z
       .default("standard")
       .optional()
       .describe(
-        "Generation mode — standard (seedance-2, higher quality) or fast (seedance-2-fast, iterative workflows)",
+        "Generation mode: standard (seedance-2, higher quality) or fast (seedance-2-fast, iterative workflows)",
       ),
     // Frame control
     first_frame_url: z
@@ -472,7 +472,7 @@ export const ByteDanceSeedanceVideoSchema = z
       .enum(["480p", "720p"])
       .default("720p")
       .optional()
-      .describe("Video resolution — 480p for faster, 720p for balance"),
+      .describe("Video resolution: 480p for faster, 720p for balance"),
     duration: z
       .number()
       .int()

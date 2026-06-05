@@ -16,7 +16,7 @@ discover and invoke tools automatically based on its contextual understanding an
 user's prompts.
 
 However, implementations are free to expose tools through any interface pattern that
-suits their needs—the protocol itself does not mandate any specific user
+suits their needs,the protocol itself does not mandate any specific user
 interaction model.
 
 <Warning>

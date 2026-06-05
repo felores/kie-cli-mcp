@@ -42,7 +42,7 @@ One shared `core` feeds two independently installable surfaces:
 
 ```text
 packages/core   @felores/kie-ai-core  (PRIVATE, never published; bundled into both)
-  src/tools/         tool registry — ONE ToolDef per model (single source of truth)
+  src/tools/         tool registry, ONE ToolDef per model (single source of truth)
   src/kie-ai-client.ts  KieAiClient → Kie.ai API
   src/database.ts       TaskDatabase (SQLite task persistence)
   src/types.ts          Zod schemas

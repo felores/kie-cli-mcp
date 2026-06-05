@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2026-06-05
+
+### Changed
+- Removed em dashes from all docs and from a few tool description strings
+  (`bytedance_seedance_video` and its `mode`/`resolution` hints), so the text
+  shown in `kie-cli --help` and MCP `listTools` is clean. No functional changes.
+- Rewrote the README: fact-checked against the current code, trimmed marketing
+  fluff, and led with the token-efficiency story (load only the tools you need
+  via `KIE_AI_ENABLED_TOOLS`; the CLI costs zero context tokens until called).
+- Added a Spanish README (`README.es.md`) with a language switcher.
+
 ## [3.3.1] - 2026-06-05
 
 ### Fixed
@@ -14,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whenever the response contained a `taskId`, even when Kie reported an
   application-level failure (HTTP 200 with `code !== 200`). They now only create
   the task and return success when `response.code === 200 && taskId`, otherwise
-  they surface the API error message — matching the other 19 tools.
+  they surface the API error message, matching the other 19 tools.
   (Addresses the CodeRabbit review on PR #2; `@felores/kie-cli` → 0.1.1.)
 
 ## [3.3.0] - 2026-06-04
