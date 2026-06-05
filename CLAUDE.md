@@ -36,47 +36,80 @@
 - Required: `KIE_AI_API_KEY`
 - Optional: `KIE_AI_BASE_URL`, `KIE_AI_TIMEOUT`, `KIE_AI_DB_PATH`, `KIE_AI_CALLBACK_URL`
 
-## Architecture
-- MCP server (index.ts) → KieAiClient (kie-ai-client.ts) → Kie.ai API
-- Task persistence via TaskDatabase (database.ts)
-- Smart endpoint routing based on api_type (veo vs playground)
+## Architecture (monorepo, npm workspaces)
+
+One shared `core` feeds two independently installable surfaces:
+
+```text
+packages/core   @felores/kie-ai-core  (PRIVATE, never published; bundled into both)
+  src/tools/         tool registry — ONE ToolDef per model (single source of truth)
+  src/kie-ai-client.ts  KieAiClient → Kie.ai API
+  src/database.ts       TaskDatabase (SQLite task persistence)
+  src/types.ts          Zod schemas
+packages/mcp    @felores/kie-ai-mcp-server  (bin: kie-ai-mcp-server)
+  src/index.ts          MCP adapter: listTools + dispatch derived from TOOL_REGISTRY
+packages/cli    @felores/kie-cli            (bin: kie-cli)
+  src/index.ts          CLI adapter: yargs commands derived from TOOL_REGISTRY
+```
+
+- A tool is one `ToolDef { name, description, category, schema, run(args, ctx) }`.
+- `run()` returns the MCP content envelope; the MCP server returns it verbatim,
+  the CLI unwraps `content[0].text`. `ctx` provides `client`, `db`,
+  `getCallbackUrl`, `formatError`.
+- MCP `inputSchema` and CLI flags are both derived from the tool's Zod schema via
+  `toInputJsonSchema` (zod-to-json-schema). Zod is the only schema definition.
+- esbuild bundles `core` into each publishable package (`sqlite3` external);
+  `core` is never published, so MCP and CLI install with zero shared runtime dep.
+- Build: `npm run build` (all), `npm run bundle` (publish bundles),
+  `npm test` (core jest), `npm run typecheck`.
 
 ## Adding New Tools
 
-When adding new Kie.ai endpoints to the MCP server:
+Adding a model is **one tool file + one client method**. Both the MCP server and
+the CLI pick it up automatically from the registry.
 
-1. **Check endpoint status**: See `docs/ENDPOINTS.md` for current implementation status
-2. **Follow the workflow**: See `docs/ADD_TOOL_GUIDE.md` for step-by-step instructions
-3. **Research first**: Scrape the Kie.ai playground page and API docs
-4. **Save documentation**: Store endpoint docs in `docs/kie/{provider}_{model}.md`
+1. **Check endpoint status**: See `docs/ENDPOINTS.md`
+2. **Research first**: Scrape the Kie.ai playground page and API docs
+3. **Save documentation**: Store endpoint docs in `docs/kie/{provider}_{model}.md`
 
 ### Quick Workflow
 ```bash
 1. Scrape https://kie.ai/{endpoint} for parameters and pricing
-2. Check https://docs.kie.ai/{api}/quickstart for API docs
-3. Define Zod schema in src/types.ts (use mode detection pattern)
-4. Add client method in src/kie-ai-client.ts
-5. Register tool in src/index.ts (listTools + handler)
-6. Build, test, update docs, bump version, publish
+2. npm run add-tool -- <tool_name> [image|video|audio|utility]   # scaffolds + registers
+3. Move the Zod schema into packages/core/src/types.ts (use mode detection pattern)
+4. Add the client method in packages/core/src/kie-ai-client.ts
+5. Fill in description + run() body + db api_type in packages/core/src/tools/<tool_name>.ts
+6. Update EXPECTED_TOOL_NAMES in packages/core/src/__tests__/registry.test.ts
+7. npm run build && npm test, then bump versions, update docs, publish
 ```
 
 ### Key Files
 | What | Where |
 |------|-------|
 | Endpoint tracking | `docs/ENDPOINTS.md` |
-| Add tool workflow | `docs/ADD_TOOL_GUIDE.md` |
-| Zod schemas | `src/types.ts` |
-| API client | `src/kie-ai-client.ts` |
-| Tool registration | `src/index.ts` |
+| Scaffold a tool | `npm run add-tool -- <name> <category>` |
+| Tool registry | `packages/core/src/tools/index.ts` |
+| One tool per file | `packages/core/src/tools/<tool_name>.ts` |
+| Zod schemas | `packages/core/src/types.ts` |
+| API client | `packages/core/src/kie-ai-client.ts` |
+| MCP adapter | `packages/mcp/src/index.ts` |
+| CLI adapter | `packages/cli/src/index.ts` |
+| Registry tests | `packages/core/src/__tests__/registry.test.ts` |
 | Tool documentation | `docs/TOOLS.md` |
 
 ## Publishing to NPM
 
 ### Package Information
-- **Package name**: `@felores/kie-ai-mcp-server`
+- **Published packages** (two, versioned independently):
+  - `@felores/kie-ai-mcp-server` → `packages/mcp` (bin `kie-ai-mcp-server`)
+  - `@felores/kie-cli` → `packages/cli` (bin `kie-cli`)
+  - `@felores/kie-ai-core` is **private** and never published (bundled into both).
 - **NPM account**: `felores`
 - **Registry**: https://registry.npmjs.org/
 - **2FA**: Enabled (requires OTP for publishing)
+- **Build before publishing**: each package's `prepublishOnly` runs `npm run bundle`
+  (builds core, then esbuild-bundles it in). Publish from the package dir or with
+  `npm publish -w @felores/<pkg>`. Bundled dist is self-contained.
 
 ### Version Management (CRITICAL)
 **ALWAYS check and update versions when making user-facing changes:**
@@ -86,11 +119,12 @@ When adding new Kie.ai endpoints to the MCP server:
    - **Minor (x.X.0)**: New features, new tools, new parameters (backwards compatible)
    - **Major (X.0.0)**: Breaking changes, API endpoint changes, removed features
 
-2. **Files to update** (all 3 required):
-   - `package.json` → `"version": "X.Y.Z"`
-   - `src/index.ts` → `version: 'X.Y.Z'` (in Server constructor)
+2. **Files to update** when bumping the MCP server:
+   - `packages/mcp/package.json` → `"version": "X.Y.Z"`
+   - `packages/mcp/src/index.ts` → `version: "X.Y.Z"` (in Server constructor)
    - `CHANGELOG.md` → Add new version section with changes
    - `README.md` → Update changelog section
+   (CLI bumps: `packages/cli/package.json` only.)
 
 3. **Pre-publish checklist**:
    ```bash

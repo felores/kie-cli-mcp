@@ -1,47 +1,21 @@
 {
-  "name": "@felores/kie-ai-mcp-server",
-  "version": "3.2.1",
-  "description": "MCP server for Kie.ai APIs (24 AI tools: Nano Banana image generation/editing/upscaling, Veo3 video generation, Suno music generation, ElevenLabs TTS/sound effects, ByteDance Seedance/Seedream video/image, Qwen image generation/editing, Runway Aleph video transformation, Midjourney AI generation, Wan 2.7 video generation, Hailuo video generation, Kling video generation, GPT Image 2 generation/editing, Flux Kontext image generation/editing, Recraft background removal, Ideogram image reframing, Topaz image upscaling, HappyHorse 1.0 video generation)",
-  "main": "dist/index.js",
-  "bin": {
-    "kie-ai-mcp-server": "dist/index.js"
-  },
+  "name": "kie-ai-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for Kie.ai integrations: MCP server and standalone CLI sharing a common core",
   "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "start": "node --env-file=.env dist/index.js",
-    "dev": "tsx --env-file=.env src/index.ts",
-    "test": "jest",
-    "prepublishOnly": "npm run build"
-  },
-  "keywords": [
-    "mcp",
-    "kie.ai",
-    "ai",
-    "image-generation",
-    "video-generation",
-    "music-generation",
-    "text-to-speech",
-    "nano-banana",
-    "veo3",
-    "suno",
-    "elevenlabs",
-    "bytedance",
-    "qwen",
-    "runway",
-    "midjourney",
-    "wan",
-    "hailuo",
-    "openai-4o-image",
-    "flux-kontext",
-    "flux-2",
-    "recraft",
-    "ideogram",
-    "topaz",
-    "model-context-protocol",
-    "ai-api",
-    "unified-ai"
+  "workspaces": [
+    "packages/core",
+    "packages/mcp",
+    "packages/cli"
   ],
+  "scripts": {
+    "build": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-mcp-server && npm run build -w @felores/kie-cli",
+    "bundle": "npm run build -w @felores/kie-ai-core && npm run bundle -w @felores/kie-ai-mcp-server && npm run bundle -w @felores/kie-cli",
+    "test": "npm run test -w @felores/kie-ai-core",
+    "typecheck": "npm run typecheck -w @felores/kie-ai-core && npm run typecheck -w @felores/kie-ai-mcp-server && npm run typecheck -w @felores/kie-cli",
+    "add-tool": "node scripts/add-tool.mjs"
+  },
   "author": "felores",
   "license": "MIT",
   "repository": {
@@ -52,30 +26,12 @@
   "bugs": {
     "url": "https://github.com/felores/kie-ai-mcp-server/issues"
   },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0",
-    "sqlite3": "^5.1.6",
-    "zod": "^3.22.4"
-  },
   "devDependencies": {
-    "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",
-    "@types/sqlite3": "^3.1.11",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.4.6",
-    "tsx": "^4.6.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.3.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "files": [
-    "dist",
-    "ai_docs",
-    "README.md",
-    "LICENSE"
-  ]
+  }
 }
