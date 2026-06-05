@@ -14,7 +14,8 @@
     "bundle": "npm run build -w @felores/kie-ai-core && npm run bundle -w @felores/kie-ai-mcp-server && npm run bundle -w @felores/kie-cli",
     "test": "npm run test -w @felores/kie-ai-core",
     "typecheck": "npm run typecheck -w @felores/kie-ai-core && npm run typecheck -w @felores/kie-ai-mcp-server && npm run typecheck -w @felores/kie-cli",
-    "add-tool": "node scripts/add-tool.mjs"
+    "add-tool": "node scripts/add-tool.mjs",
+    "docs": "npm run build -w @felores/kie-ai-core && node scripts/gen-docs.mjs"
   },
   "author": "felores",
   "license": "MIT",
