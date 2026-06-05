@@ -35,6 +35,14 @@ class KieAiMcpServer {
   private enabledTools: Set<string>;
   private toolContext: ToolContext;
 
+  // Utility tools are derived from the registry's `category` field, not a
+  // hardcoded list, so they are always-on by definition: any tool marked
+  // `category: "utility"` (get_task_status, list_tasks, wait_for_task) cannot be
+  // disabled or filtered out, and adding a new one never needs mirroring here.
+  private static readonly UTILITY_TOOLS = TOOL_REGISTRY.filter(
+    (t) => t.category === "utility",
+  ).map((t) => t.name);
+
   private static readonly TOOL_CATEGORIES: Record<string, string[]> = {
     image: [
       "nano_banana_image",
@@ -65,7 +73,7 @@ class KieAiMcpServer {
       "midjourney_generate", // Also generates videos (mj_video, mj_video_hd modes)
     ],
     audio: ["suno_generate_music", "elevenlabs_tts", "elevenlabs_ttsfx"],
-    utility: ["list_tasks", "get_task_status"],
+    utility: KieAiMcpServer.UTILITY_TOOLS,
   };
 
   // Derived from the registry so every registered tool is always enabled-eligible.
