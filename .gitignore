@@ -114,3 +114,5 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Agent scratchpad (experiments, codemods)
+.scratchpad/

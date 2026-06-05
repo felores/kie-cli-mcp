@@ -1,0 +1,63 @@
+{
+  "name": "@felores/kie-cli",
+  "version": "0.1.0",
+  "description": "Standalone CLI for Kie.ai APIs: generate images, video, music and speech from the terminal. Same models as the Kie.ai MCP server, no MCP client required.",
+  "main": "dist/index.js",
+  "bin": {
+    "kie-cli": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "bundle": "node build.mjs",
+    "typecheck": "tsc -b --noEmit",
+    "dev": "tsx src/index.ts",
+    "prepack": "npm run build -w @felores/kie-ai-core && npm run bundle"
+  },
+  "keywords": [
+    "kie.ai",
+    "ai",
+    "cli",
+    "image-generation",
+    "video-generation",
+    "music-generation",
+    "text-to-speech",
+    "nano-banana",
+    "veo3"
+  ],
+  "author": "felores",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/felores/kie-ai-mcp-server.git"
+  },
+  "homepage": "https://github.com/felores/kie-ai-mcp-server#readme",
+  "bugs": {
+    "url": "https://github.com/felores/kie-ai-mcp-server/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.6",
+    "yargs": "^17.7.2",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@felores/kie-ai-core": "*",
+    "@types/node": "^20.10.0",
+    "@types/yargs": "^17.0.33",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.6.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "skill_name": "kie-ai",
+  "evals": [
+    {
+      "id": 1,
+      "name": "generate-image",
+      "prompt": "Generate an image for me: a red panda wearing headphones, coding at a desk at night, neon lighting. I want it at 2K resolution. Give me the final image URL when it's ready.",
+      "expected_output": "Agent discovers and runs the kie-cli image command (e.g. nano_banana_image) with the prompt and 2K resolution, uses --json, captures the task id, polls get_task_status until done, and reports the resulting image URL.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "check-tasks",
+      "prompt": "Can you check my recent Kie.ai generations and tell me their status?",
+      "expected_output": "Agent runs `kie-cli list_tasks --json` (and/or get_task_status) and summarizes the recent tasks and their statuses. No new generation is started.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "select-avatar-tool",
+      "prompt": "I have a portrait photo (https://example.com/face.jpg) and a short script I want the person to say. I want a talking-avatar video via Kie.ai where they lip-sync my script. Which exact command and flags should I use? You don't need to run the full video job, just figure out the right tool and its parameters.",
+      "expected_output": "Agent uses `kie-cli --help` and `kie-cli <tool> --help` to identify the correct lip-sync/avatar tool (kling_avatar or infinitalk_lip_sync) and lists the exact flags (image/photo URL, audio or script, etc.). Does not need to run a real generation.",
+      "files": []
+    }
+  ]
+}

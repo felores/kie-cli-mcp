@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-06-04
+
+### Added
+- **Standalone CLI** (`@felores/kie-cli`, binary `kie-cli`): every Kie.ai model is
+  now usable from the terminal with no MCP client. Commands and flags are
+  generated from the same tool registry as the MCP server. Supports `--json` for
+  machine-readable output. Installs completely independently of the MCP server.
+- **`npm run add-tool <name>`**: scaffolds a new tool file and registers it, so
+  adding a model is one file plus a client method. Both the MCP server and the
+  CLI pick it up automatically.
+
+### Fixed
+- **Resources and prompts now work.** The model-documentation resources (17) and
+  the `image`/`video` prompts loaded Markdown from an `ai_docs/` directory that
+  did not ship in the package, so `resources/read` and `prompts/get` failed with
+  ENOENT for every one of them (pre-existing bug). They are now **generated from
+  the tool registry**: each tool exposes a `kie://tools/<name>` resource rendered
+  from its schema, and the prompts list the tools for their category. Nothing is
+  read from disk, so they can never drift or 404. `resources/read` now succeeds
+  for all 33 resources (was 5/22); both prompts return content.
+
+### Changed
+- **Monorepo architecture**: the project is now an npm-workspaces monorepo with a
+  shared, unpublished `core` package (tool registry, Zod schemas, API client,
+  task database) that is bundled into both the MCP server and the CLI at build
+  time. One source of truth, two independently installable packages.
+- **Tools come from a single registry**: `listTools` and tool dispatch are
+  derived from the registry instead of 28 hand-written JSON Schemas and a 6,000+
+  line switch. MCP tool names, descriptions and behaviour are unchanged.
+- **`inputSchema` is now derived from each tool's Zod schema.** This corrects
+  pre-existing drift between the hand-written JSON Schema and the validator. Most
+  visible on `midjourney_generate`, whose advertised parameters/enums now match
+  what is actually validated (e.g. `speed` accepts `relax`, not `relaxed`).
+  Runtime validation behaviour is unchanged.
+- **Upgraded `@modelcontextprotocol/sdk` from `^0.4.0` to `^1.29.0`.** Server
+  capabilities (`tools`, `resources`, `prompts`) are now declared explicitly, as
+  required by the 1.x SDK. Protocol behaviour is unchanged: `tools/list` (28),
+  `resources/list` (22) and `prompts/list` (2) all respond as before.
+
+### Notes
+- The MCP package keeps its name `@felores/kie-ai-mcp-server` and bin
+  `kie-ai-mcp-server`; existing client configurations require no changes.
+- Minimum `zod` is now `^3.24.0` (the bundled `zod-to-json-schema` uses the
+  `zod/v3` subpath, which older zod releases do not export).
+
 ## [3.2.1] - 2026-05-02
 
 ### Removed
