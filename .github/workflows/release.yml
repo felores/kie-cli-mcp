@@ -1,60 +1,60 @@
-name: Release and Publish
+name: Release (npm publish with provenance)
+
+# Publishes both packages to npm with provenance (the signed attestation that
+# links each package to this repo + build, so they show in the repo's Packages
+# sidebar with a "verified" badge). The private @felores/kie-ai-core is never
+# published — it is bundled into each package by the prepack step.
+#
+# Trigger: push a version tag (e.g. `git tag v3.3.2 && git push origin v3.3.2`)
+# or run manually from the Actions tab. Each package is published only if its
+# current package.json version isn't already on npm, so re-runs are safe.
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance (OIDC)
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@felores'
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Build project
-        run: npm run build
+      - name: Build, typecheck, test
+        run: |
+          npm run build
+          npm run typecheck
+          npm test
 
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            See CHANGELOG.md for detailed changes.
-            
-            ## Installation
-            ```bash
-            npm install -g @felores/kie-ai-mcp-server
-            ```
-          draft: false
-          prerelease: false
-
-      - name: Publish to NPM
-        run: npm publish --provenance
+      - name: Publish @felores/kie-ai-mcp-server
+        run: |
+          VER=$(node -p "require('./packages/mcp/package.json').version")
+          if npm view "@felores/kie-ai-mcp-server@$VER" version >/dev/null 2>&1; then
+            echo "@felores/kie-ai-mcp-server@$VER already published — skipping."
+          else
+            npm publish -w @felores/kie-ai-mcp-server --provenance --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish to GitHub Packages
-        run: npm publish --registry https://npm.pkg.github.com
+      - name: Publish @felores/kie-cli
+        run: |
+          VER=$(node -p "require('./packages/cli/package.json').version")
+          if npm view "@felores/kie-cli@$VER" version >/dev/null 2>&1; then
+            echo "@felores/kie-cli@$VER already published — skipping."
+          else
+            npm publish -w @felores/kie-cli --provenance --access public
+          fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
