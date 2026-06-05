@@ -1,6 +1,6 @@
 {
   "name": "@felores/kie-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Standalone CLI for Kie.ai APIs: generate images, video, music and speech from the terminal. Same models as the Kie.ai MCP server, no MCP client required.",
   "main": "dist/index.js",
   "bin": {

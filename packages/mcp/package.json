@@ -1,6 +1,6 @@
 {
   "name": "@felores/kie-ai-mcp-server",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "MCP server for Kie.ai APIs: image, video, music and speech generation across Nano Banana, Veo3, Suno, ElevenLabs, ByteDance, Qwen, Runway, Midjourney, Wan, Hailuo, Kling, GPT Image 2, Flux Kontext, Recraft, Ideogram, Topaz, HappyHorse and more.",
   "main": "dist/index.js",
   "bin": {

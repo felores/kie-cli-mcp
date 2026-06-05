@@ -4,7 +4,8 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
   name: "hailuo_video",
-  description: "Generate videos using Hailuo AI models (unified tool for text-to-video and image-to-video with standard/pro quality). Supports v02 (original) and v2.3 (enhanced motion/expressions, 1080P)",
+  description:
+    "Generate videos using Hailuo AI models (unified tool for text-to-video and image-to-video with standard/pro quality). Supports v02 (original) and v2.3 (enhanced motion/expressions, 1080P)",
   category: "video",
   schema: HailuoVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -23,12 +24,14 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
         modeDescription = `v${version} text-to-video (${request.quality || "standard"} quality)`;
       }
 
-      if (response.data?.taskId) {
+      if (response.code === 200 && response.data?.taskId) {
         await ctx.db.createTask({
           task_id: response.data.taskId,
           api_type: "hailuo",
           status: "pending",
         });
+      } else {
+        throw new Error(response.msg || "Failed to create Hailuo video task");
       }
 
       return {
