@@ -8,10 +8,9 @@
 ╚═╝  ╚═╝╚═╝╚══════╝
  C L I  /  M C P
 </pre>
-
-🇬🇧 <a href="README.md">English</a> &nbsp;·&nbsp; 🇪🇸 <b>Español</b>
-
 </div>
+
+<p align="center">🇬🇧 <a href="README.md">English</a> &nbsp;·&nbsp; 🇪🇸 <b>Español</b></p>
 
 # Kie.ai CLI + Servidor MCP
 
