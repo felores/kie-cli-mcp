@@ -4,7 +4,8 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const nanoBananaImageTool: ToolDef<typeof NanoBananaImageSchema> = {
   name: "nano_banana_image",
-  description: "Generate and edit images using Google's Gemini 3.1 Flash Image (Nano Banana 2) - unified tool with 4K support, up to 14 reference images, Google Search grounding, and improved text rendering. Pricing: 8 credits/1K, 12/2K, 18/4K",
+  description:
+    "Generate and edit images using Google's Gemini 3.1 Flash Image (Nano Banana 2) - unified tool with 4K support, up to 14 reference images, Google Search grounding, and improved text rendering. Pricing: 8 credits/1K, 12/2K, 18/4K",
   category: "image",
   schema: NanoBananaImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -18,13 +19,17 @@ export const nanoBananaImageTool: ToolDef<typeof NanoBananaImageSchema> = {
       const apiType = isEdit ? "nano-banana-edit" : "nano-banana-image";
       const modeDescription = isEdit ? "edit" : "generate";
 
-      if (response.data?.taskId) {
+      if (response.code === 200 && response.data?.taskId) {
         await ctx.db.createTask({
           task_id: response.data.taskId,
           api_type: apiType as any,
           status: "pending",
           result_url: response.data.imageUrl,
         });
+      } else {
+        throw new Error(
+          response.msg || "Failed to create Nano Banana image task",
+        );
       }
 
       return {

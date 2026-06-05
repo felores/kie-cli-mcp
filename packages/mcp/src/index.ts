@@ -77,7 +77,7 @@ class KieAiMcpServer {
     this.server = new Server(
       {
         name: "kie-ai-mcp-server",
-        version: "3.3.0",
+        version: "3.3.1",
       },
       {
         // SDK 1.x requires declaring the capabilities whose request handlers we

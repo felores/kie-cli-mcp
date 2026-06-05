@@ -4,7 +4,8 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const wanAnimateTool: ToolDef<typeof WanAnimateSchema> = {
   name: "wan_animate",
-  description: "Animate static images or replace characters in videos using Alibaba's Wan 2.2 Animate models with motion transfer and seamless environmental integration",
+  description:
+    "Animate static images or replace characters in videos using Alibaba's Wan 2.2 Animate models with motion transfer and seamless environmental integration",
   category: "video",
   schema: WanAnimateSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -18,12 +19,14 @@ export const wanAnimateTool: ToolDef<typeof WanAnimateSchema> = {
       const modeDescription =
         request.mode === "replace" ? "character replacement" : "animation";
 
-      if (response.data?.taskId) {
+      if (response.code === 200 && response.data?.taskId) {
         await ctx.db.createTask({
           task_id: response.data.taskId,
           api_type: "wan-animate",
           status: "pending",
         });
+      } else {
+        throw new Error(response.msg || "Failed to create Wan Animate task");
       }
 
       return {

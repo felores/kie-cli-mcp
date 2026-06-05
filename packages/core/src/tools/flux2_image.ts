@@ -4,7 +4,8 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const flux2ImageTool: ToolDef<typeof Flux2ImageSchema> = {
   name: "flux2_image",
-  description: "Generate and edit images using Black Forest Labs' Flux 2 models (Pro/Flex) with multi-reference consistency, photoreal detail, and accurate text rendering",
+  description:
+    "Generate and edit images using Black Forest Labs' Flux 2 models (Pro/Flex) with multi-reference consistency, photoreal detail, and accurate text rendering",
   category: "image",
   schema: Flux2ImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -22,12 +23,14 @@ export const flux2ImageTool: ToolDef<typeof Flux2ImageSchema> = {
         ? `image-to-image (${modelType})`
         : `text-to-image (${modelType})`;
 
-      if (response.data?.taskId) {
+      if (response.code === 200 && response.data?.taskId) {
         await ctx.db.createTask({
           task_id: response.data.taskId,
           api_type: "flux2-image",
           status: "pending",
         });
+      } else {
+        throw new Error(response.msg || "Failed to create Flux 2 image task");
       }
 
       return {

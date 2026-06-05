@@ -4,7 +4,8 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const klingVideoTool: ToolDef<typeof KlingVideoSchema> = {
   name: "kling_video",
-  description: "Generate videos using Kling 3.0 AI - supports 3-15s flexible duration, native multilingual audio, multi-shot storytelling, character elements, and std/pro quality modes",
+  description:
+    "Generate videos using Kling 3.0 AI - supports 3-15s flexible duration, native multilingual audio, multi-shot storytelling, character elements, and std/pro quality modes",
   category: "video",
   schema: KlingVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -24,12 +25,16 @@ export const klingVideoTool: ToolDef<typeof KlingVideoSchema> = {
           ? "Kling 3.0 image-to-video"
           : "Kling 3.0 text-to-video";
 
-      if (response.data?.taskId) {
+      if (response.code === 200 && response.data?.taskId) {
         await ctx.db.createTask({
           task_id: response.data.taskId,
           api_type: "kling-3.0-video",
           status: "pending",
         });
+      } else {
+        throw new Error(
+          response.msg || "Failed to create Kling 3.0 video task",
+        );
       }
 
       return {

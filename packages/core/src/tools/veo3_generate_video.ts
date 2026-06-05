@@ -16,12 +16,14 @@ export const veo3GenerateVideoTool: ToolDef<typeof Veo3GenerateSchema> = {
 
       const response = await ctx.client.generateVeo3Video(request);
 
-      if (response.data?.taskId) {
+      if (response.code === 200 && response.data?.taskId) {
         await ctx.db.createTask({
           task_id: response.data.taskId,
           api_type: "veo3",
           status: "pending",
         });
+      } else {
+        throw new Error(response.msg || "Failed to create Veo3 video task");
       }
 
       return {
