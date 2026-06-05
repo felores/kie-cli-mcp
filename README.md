@@ -33,6 +33,10 @@ The MCP server and the CLI are generated from the same tool registry, so both ex
 
 ## 🚀 Quick Start
 
+Add Kie.ai to your MCP client. Pick how many tools you want loaded:
+
+### Load all tools (simplest)
+
 ```json
 {
   "mcpServers": {
@@ -47,22 +51,42 @@ The MCP server and the CLI are generated from the same tool registry, so both ex
 }
 ```
 
+This makes **every** tool available, so every tool's schema goes into your context.
+
+### Load only the tools you need (save tokens, recommended)
+
+Add `KIE_AI_ENABLED_TOOLS` with a comma-separated list; only those tools load:
+
+```json
+{
+  "mcpServers": {
+    "kie-ai": {
+      "command": "npx",
+      "args": ["-y", "@felores/kie-ai-mcp-server"],
+      "env": {
+        "KIE_AI_API_KEY": "your-api-key-here",
+        "KIE_AI_ENABLED_TOOLS": "nano_banana_image,veo3_generate_video,suno_generate_music"
+      }
+    }
+  }
+}
+```
+
+This loads **only** those tools (plus the always-on utility tools), keeping your context lean.
+
 **Get your free API key:** [kie.ai/api-key](https://kie.ai/api-key). No callback URL setup required, the server handles it automatically.
 
 **For Claude Desktop:** add this to `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows). Also works with Cursor, Windsurf, VS Code, Claude Code, OpenCode, Droid, and others.
 
-### 🎛️ Load only the tools you need (save tokens)
+### 🎛️ More ways to filter
 
-Add any of these to the `env` block above (or export them for the CLI). This is the core of the token-efficiency story:
+Same idea, different env vars (inside the `env` block, or as shell exports for the CLI, e.g. `export KIE_AI_ENABLED_TOOLS="nano_banana_image,veo3_generate_video"`):
 
 ```jsonc
-// Whitelist, load ONLY these tools (highest priority)
-"KIE_AI_ENABLED_TOOLS": "nano_banana_image,veo3_generate_video,suno_generate_music"
-
-// Category filter, load whole categories
+// Load whole categories instead of naming each tool
 "KIE_AI_TOOL_CATEGORIES": "image,video"
 
-// Blacklist, load everything except these
+// Or load everything EXCEPT some tools
 "KIE_AI_DISABLED_TOOLS": "midjourney_generate,runway_aleph_video"
 ```
 

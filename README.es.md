@@ -33,6 +33,10 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 
 ## 🚀 Inicio rápido
 
+Agrega Kie.ai a tu cliente MCP. Elige cuántas herramientas quieres cargar:
+
+### Cargar todas las herramientas (lo más simple)
+
 ```json
 {
   "mcpServers": {
@@ -47,22 +51,42 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 }
 ```
 
+Esto deja disponibles **todas** las herramientas, así que el schema de cada una entra en tu contexto.
+
+### Cargar solo las herramientas que necesitas (ahorra tokens, recomendado)
+
+Agrega `KIE_AI_ENABLED_TOOLS` con una lista separada por comas; solo esas se cargan:
+
+```json
+{
+  "mcpServers": {
+    "kie-ai": {
+      "command": "npx",
+      "args": ["-y", "@felores/kie-ai-mcp-server"],
+      "env": {
+        "KIE_AI_API_KEY": "tu-api-key-aqui",
+        "KIE_AI_ENABLED_TOOLS": "nano_banana_image,veo3_generate_video,suno_generate_music"
+      }
+    }
+  }
+}
+```
+
+Esto carga **solo** esas herramientas (más las de utilidad, siempre activas), manteniendo tu contexto liviano.
+
 **Consigue tu API key gratis:** [kie.ai/api-key](https://kie.ai/api-key). No requiere configurar callback URL, el servidor lo maneja automáticamente.
 
 **Para Claude Desktop:** agrégalo a `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) o `%APPDATA%\Claude\claude_desktop_config.json` (Windows). También funciona con Cursor, Windsurf, VS Code, Claude Code, OpenCode, Droid, y otros.
 
-### 🎛️ Carga solo las herramientas que necesitas (ahorra tokens)
+### 🎛️ Más formas de filtrar
 
-Agrega cualquiera de estas al bloque `env` de arriba (o expórtalas para el CLI). Este es el corazón de la eficiencia de tokens:
+Misma idea, distintas variables de entorno (dentro del bloque `env`, o como exports de shell para el CLI, ej. `export KIE_AI_ENABLED_TOOLS="nano_banana_image,veo3_generate_video"`):
 
 ```jsonc
-// Whitelist, carga SOLO estas herramientas (mayor prioridad)
-"KIE_AI_ENABLED_TOOLS": "nano_banana_image,veo3_generate_video,suno_generate_music"
-
-// Filtro por categoría, carga categorías completas
+// Categorías completas en vez de nombrar cada herramienta
 "KIE_AI_TOOL_CATEGORIES": "image,video"
 
-// Blacklist, carga todo excepto estas
+// O carga todo EXCEPTO algunas
 "KIE_AI_DISABLED_TOOLS": "midjourney_generate,runway_aleph_video"
 ```
 
