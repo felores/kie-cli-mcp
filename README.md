@@ -211,6 +211,34 @@ npm test            # run the test suite
 This is an npm-workspaces monorepo: `packages/core` (private shared registry, bundled into the others), `packages/mcp` (`@felores/kie-ai-mcp-server`) and `packages/cli` (`@felores/kie-cli`). To add a model, run `npm run add-tool -- <name> <category>` and both surfaces pick it up. For the dev server with auto-reload: `npm run dev -w @felores/kie-ai-mcp-server`.
 </details>
 
+<details>
+<summary><strong>🌐 Remote / HTTP transport (v3.5.0+)</strong></summary>
+
+The server defaults to **stdio**. For remote access it can run over **Streamable
+HTTP** (MCP spec 2025-11-25) — opt in with `MCP_TRANSPORT=http` or `--http`:
+
+```bash
+KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
+  node packages/mcp/dist/index.js
+curl http://127.0.0.1:3000/health
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.5.0"}
+```
+
+Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
+`Mcp-Session-Id`, plus an unauthenticated `GET /health`.
+
+| Env | Default | Purpose |
+|-----|---------|---------|
+| `MCP_TRANSPORT` | `stdio` | set `http` to enable |
+| `MCP_HTTP_HOST` | `127.0.0.1` | `0.0.0.0` only in a container / behind a proxy |
+| `MCP_HTTP_PORT` | `3000` | listen port |
+| `KIE_MCP_HTTP_TOKEN` | _(unset)_ | require `Authorization: Bearer <token>` |
+| `MCP_ALLOWED_HOSTS` | _(unset)_ | Host allowlist (DNS-rebind protection); required off-loopback |
+
+Docker + Coolify deployment and a client-connection walkthrough are in
+[docs/DEPLOY_HTTP.md](docs/DEPLOY_HTTP.md).
+</details>
+
 ## Task management
 
 The server keeps a local SQLite database of the tasks it creates and polls, persistent across restarts, used for status tracking and correct endpoint routing.

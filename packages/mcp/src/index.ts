@@ -2,6 +2,7 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { startHttpServer } from "./http-transport.js";
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -81,23 +82,9 @@ class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  constructor() {
-    this.server = new Server(
-      {
-        name: "kie-ai-mcp-server",
-        version: "3.4.0",
-      },
-      {
-        // SDK 1.x requires declaring the capabilities whose request handlers we
-        // register below (tools, resources, prompts).
-        capabilities: {
-          tools: {},
-          resources: {},
-          prompts: {},
-        },
-      },
-    );
+  static readonly VERSION = "3.5.0";
 
+  constructor() {
     // Initialize client with config from environment
     this.config = {
       apiKey: process.env.KIE_AI_API_KEY || "",
@@ -122,7 +109,30 @@ class KieAiMcpServer {
       formatError: formatToolError,
     };
 
-    this.setupHandlers();
+    this.server = this.createServer();
+  }
+
+  // Build a fresh MCP Server with all handlers wired to the shared client/db
+  // context. The stdio path uses one instance; the Streamable HTTP path calls
+  // this per session, since an SDK Server connects to exactly one transport.
+  createServer(): Server {
+    const server = new Server(
+      {
+        name: "kie-ai-mcp-server",
+        version: KieAiMcpServer.VERSION,
+      },
+      {
+        // SDK 1.x requires declaring the capabilities whose request handlers we
+        // register below (tools, resources, prompts).
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {},
+        },
+      },
+    );
+    this.setupHandlers(server);
+    return server;
   }
 
   private validateToolNames(tools: string[]): void {
@@ -242,8 +252,8 @@ class KieAiMcpServer {
     );
   }
 
-  private setupHandlers(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+  private setupHandlers(server: Server): void {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = TOOL_REGISTRY.filter((t) =>
         this.enabledTools.has(t.name),
       ).map((t) => ({
@@ -254,69 +264,63 @@ class KieAiMcpServer {
       return { tools };
     });
 
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request, extra) => {
-        try {
-          const { name, arguments: args } = request.params;
+    server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+      try {
+        const { name, arguments: args } = request.params;
 
-          if (!this.enabledTools.has(name)) {
-            throw new McpError(
-              ErrorCode.InvalidRequest,
-              `Tool '${name}' is not enabled. This tool has been disabled by server configuration. ` +
-                `Please check KIE_AI_ENABLED_TOOLS, KIE_AI_TOOL_CATEGORIES, or KIE_AI_DISABLED_TOOLS environment variables.`,
-            );
-          }
-
-          const tool = getTool(name);
-          if (!tool) {
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `Unknown tool: ${name}`,
-            );
-          }
-
-          // When the client opts into progress (a progressToken in the request
-          // _meta), give the tool an onProgress sink that streams
-          // notifications/progress on this still-open request. Each notification
-          // resets the client's request timeout, so a blocking tool like
-          // wait_for_task can hold the call open until generation finishes.
-          const progressToken = (
-            request.params as { _meta?: { progressToken?: string | number } }
-          )._meta?.progressToken;
-          const ctx: ToolContext =
-            progressToken === undefined
-              ? this.toolContext
-              : {
-                  ...this.toolContext,
-                  onProgress: async (update) => {
-                    try {
-                      await extra.sendNotification({
-                        method: "notifications/progress",
-                        params: { progressToken, ...update },
-                      });
-                    } catch {
-                      // Client may have disconnected mid-generation; the poll
-                      // loop still returns its final result, so ignore.
-                    }
-                  },
-                };
-
-          return await tool.run(args, ctx);
-        } catch (error) {
-          if (error instanceof McpError) {
-            throw error;
-          }
-
-          const message =
-            error instanceof Error ? error.message : "Unknown error";
-          throw new McpError(ErrorCode.InternalError, message);
+        if (!this.enabledTools.has(name)) {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            `Tool '${name}' is not enabled. This tool has been disabled by server configuration. ` +
+              `Please check KIE_AI_ENABLED_TOOLS, KIE_AI_TOOL_CATEGORIES, or KIE_AI_DISABLED_TOOLS environment variables.`,
+          );
         }
-      },
-    );
+
+        const tool = getTool(name);
+        if (!tool) {
+          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+        }
+
+        // When the client opts into progress (a progressToken in the request
+        // _meta), give the tool an onProgress sink that streams
+        // notifications/progress on this still-open request. Each notification
+        // resets the client's request timeout, so a blocking tool like
+        // wait_for_task can hold the call open until generation finishes.
+        const progressToken = (
+          request.params as { _meta?: { progressToken?: string | number } }
+        )._meta?.progressToken;
+        const ctx: ToolContext =
+          progressToken === undefined
+            ? this.toolContext
+            : {
+                ...this.toolContext,
+                onProgress: async (update) => {
+                  try {
+                    await extra.sendNotification({
+                      method: "notifications/progress",
+                      params: { progressToken, ...update },
+                    });
+                  } catch {
+                    // Client may have disconnected mid-generation; the poll
+                    // loop still returns its final result, so ignore.
+                  }
+                },
+              };
+
+        return await tool.run(args, ctx);
+      } catch (error) {
+        if (error instanceof McpError) {
+          throw error;
+        }
+
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        throw new McpError(ErrorCode.InternalError, message);
+      }
+    });
 
     // Resource Handlers
-    this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
       const toolResources = TOOL_REGISTRY.filter((t) =>
         this.enabledTools.has(t.name),
       ).map((t) => ({
@@ -370,89 +374,86 @@ class KieAiMcpServer {
       return { resources: [...toolResources, ...guideResources] };
     });
 
-    this.server.setRequestHandler(
-      ReadResourceRequestSchema,
-      async (request) => {
-        const { uri } = request.params;
+    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const { uri } = request.params;
 
-        const toolMatch = uri.match(/^kie:\/\/tools\/(.+)$/);
-        if (toolMatch) {
-          const tool = getTool(toolMatch[1]);
-          if (!tool) {
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              `Resource not found: ${uri}`,
-            );
-          }
+      const toolMatch = uri.match(/^kie:\/\/tools\/(.+)$/);
+      if (toolMatch) {
+        const tool = getTool(toolMatch[1]);
+        if (!tool) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            `Resource not found: ${uri}`,
+          );
+        }
+        return {
+          contents: [
+            { uri, mimeType: "text/markdown", text: toolToMarkdown(tool) },
+          ],
+        };
+      }
+
+      switch (uri) {
+        case "kie://guides/image-models-comparison":
           return {
             contents: [
-              { uri, mimeType: "text/markdown", text: toolToMarkdown(tool) },
+              {
+                uri,
+                mimeType: "text/markdown",
+                text: this.getImageModelsComparison(),
+              },
             ],
           };
-        }
-
-        switch (uri) {
-          case "kie://guides/image-models-comparison":
-            return {
-              contents: [
-                {
-                  uri,
-                  mimeType: "text/markdown",
-                  text: this.getImageModelsComparison(),
-                },
-              ],
-            };
-          case "kie://guides/video-models-comparison":
-            return {
-              contents: [
-                {
-                  uri,
-                  mimeType: "text/markdown",
-                  text: this.getVideoModelsComparison(),
-                },
-              ],
-            };
-          case "kie://guides/quality-optimization":
-            return {
-              contents: [
-                {
-                  uri,
-                  mimeType: "text/markdown",
-                  text: this.getQualityOptimizationGuide(),
-                },
-              ],
-            };
-          case "kie://tasks/active":
-            return {
-              contents: [
-                {
-                  uri,
-                  mimeType: "application/json",
-                  text: await this.getActiveTasks(),
-                },
-              ],
-            };
-          case "kie://stats/usage":
-            return {
-              contents: [
-                {
-                  uri,
-                  mimeType: "application/json",
-                  text: await this.getUsageStats(),
-                },
-              ],
-            };
-          default:
-            throw new McpError(
-              ErrorCode.InvalidParams,
-              `Resource not found: ${uri}`,
-            );
-        }
-      },
-    );
+        case "kie://guides/video-models-comparison":
+          return {
+            contents: [
+              {
+                uri,
+                mimeType: "text/markdown",
+                text: this.getVideoModelsComparison(),
+              },
+            ],
+          };
+        case "kie://guides/quality-optimization":
+          return {
+            contents: [
+              {
+                uri,
+                mimeType: "text/markdown",
+                text: this.getQualityOptimizationGuide(),
+              },
+            ],
+          };
+        case "kie://tasks/active":
+          return {
+            contents: [
+              {
+                uri,
+                mimeType: "application/json",
+                text: await this.getActiveTasks(),
+              },
+            ],
+          };
+        case "kie://stats/usage":
+          return {
+            contents: [
+              {
+                uri,
+                mimeType: "application/json",
+                text: await this.getUsageStats(),
+              },
+            ],
+          };
+        default:
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            `Resource not found: ${uri}`,
+          );
+      }
+    });
 
     // Prompt Handlers
-    this.server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    server.setRequestHandler(ListPromptsRequestSchema, async () => {
       return {
         prompts: [
           {
@@ -471,7 +472,7 @@ class KieAiMcpServer {
       };
     });
 
-    this.server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
       const { name } = request.params;
       if (name !== "image" && name !== "video") {
         throw new McpError(ErrorCode.InvalidParams, `Unknown prompt: ${name}`);
@@ -1162,8 +1163,24 @@ These guidelines ensure optimal balance between quality requirements and cost ma
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
   }
+
+  // Streamable HTTP transport (remote access). Each session gets its own Server
+  // via createServer(); the shared client/db context is reused across sessions.
+  runHttp(): void {
+    startHttpServer({
+      createServer: () => this.createServer(),
+      version: KieAiMcpServer.VERSION,
+    });
+  }
 }
 
-// Start the server
+// Start the server. Default transport is stdio; opt into Streamable HTTP with
+// MCP_TRANSPORT=http or the --http flag.
+const useHttp =
+  process.env.MCP_TRANSPORT === "http" || process.argv.includes("--http");
 const server = new KieAiMcpServer();
-server.run().catch(console.error);
+if (useHttp) {
+  server.runHttp();
+} else {
+  server.run().catch(console.error);
+}
