@@ -1,0 +1,17 @@
+name: Feature request / new model
+description: Request a new Kie.ai model/endpoint or an improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want?
+      description: For a new model, link the Kie.ai playground/endpoint page.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why / use case
+    validations:
+      required: false

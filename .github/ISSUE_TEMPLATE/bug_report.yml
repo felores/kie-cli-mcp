@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a bug in the MCP server or CLI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please fill in the repro details below — vague reports get closed.
+        For a quick question, use Discussions instead.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package?
+      options:
+        - "@felores/kie-ai-mcp-server (MCP)"
+        - "@felores/kie-cli (CLI)"
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: "Output of `npm view @felores/kie-ai-mcp-server version` or `kie-cli --version`"
+      placeholder: "e.g. mcp 3.4.0 / cli 0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: tool
+    attributes:
+      label: Tool / command
+      description: Which tool or CLI command triggered it?
+      placeholder: "e.g. nano_banana_image, get_task_status"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact calls/args. Redact API keys and any secrets.
+      placeholder: |
+        1. Call `...` with args `{ ... }`
+        2. ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, Node version, MCP client (Claude Desktop, etc.)
+    validations:
+      required: false
