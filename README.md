@@ -31,6 +31,8 @@ The MCP server and the CLI are generated from the same tool registry, so both ex
 - **MCP server**: `@felores/kie-ai-mcp-server`, for Claude Desktop and other MCP clients. See **Quick Start** below.
 - **CLI**: `@felores/kie-cli` (binary `kie-cli`), for the terminal, no MCP client needed: `npm i -g @felores/kie-cli`, then `kie-cli --help`. See [`packages/cli/README.md`](packages/cli/README.md).
 
+The MCP server runs locally over **stdio** by default, and can also run as a **remote HTTP service** (Streamable HTTP) so one shared instance serves many clients over the network. See the **Remote / HTTP transport** section below.
+
 ## 🚀 Quick Start
 
 Add Kie.ai to your MCP client. Pick how many tools you want loaded:
@@ -209,6 +211,47 @@ npm test            # run the test suite
 ```
 
 This is an npm-workspaces monorepo: `packages/core` (private shared registry, bundled into the others), `packages/mcp` (`@felores/kie-ai-mcp-server`) and `packages/cli` (`@felores/kie-cli`). To add a model, run `npm run add-tool -- <name> <category>` and both surfaces pick it up. For the dev server with auto-reload: `npm run dev -w @felores/kie-ai-mcp-server`.
+</details>
+
+<details>
+<summary><strong>🌐 Remote / HTTP transport (v3.5.0+)</strong></summary>
+
+The server defaults to **stdio** (one local process per client). It can also run
+as a **remote HTTP service** over **Streamable HTTP** (MCP spec 2025-11-25).
+
+**Why use it:**
+- **One shared instance for many clients** — host it once, connect your whole
+  team or several agents over the network instead of spawning a local process each.
+- **Deploy anywhere** — runs as a container on any host or PaaS (Dockerfile +
+  Coolify compose included), behind your own TLS/proxy.
+- **Centralized config & task history** — a single API key and one shared SQLite
+  task DB, so generations are tracked in one place.
+- **Secured by default off-loopback** — bearer-token auth and Host-allowlist
+  (DNS-rebinding) protection, with an open `/health` endpoint for uptime probes.
+- **Zero disruption** — stdio stays the default; HTTP is purely opt-in.
+
+Opt in with `MCP_TRANSPORT=http` or `--http`:
+
+```bash
+KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
+  node packages/mcp/dist/index.js
+curl http://127.0.0.1:3000/health
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.5.0"}
+```
+
+Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
+`Mcp-Session-Id`, plus an unauthenticated `GET /health`.
+
+| Env | Default | Purpose |
+|-----|---------|---------|
+| `MCP_TRANSPORT` | `stdio` | set `http` to enable |
+| `MCP_HTTP_HOST` | `127.0.0.1` | `0.0.0.0` only in a container / behind a proxy |
+| `MCP_HTTP_PORT` | `3000` | listen port |
+| `KIE_MCP_HTTP_TOKEN` | _(unset)_ | require `Authorization: Bearer <token>` |
+| `MCP_ALLOWED_HOSTS` | _(unset)_ | Host allowlist (DNS-rebind protection); required off-loopback |
+
+Docker + Coolify deployment and a client-connection walkthrough are in
+[docs/DEPLOY_HTTP.md](docs/DEPLOY_HTTP.md).
 </details>
 
 ## Task management

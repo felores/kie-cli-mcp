@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-06-06
+
+### Added
+- **Streamable HTTP transport for remote access** (MCP spec 2025-11-25). The
+  server still defaults to stdio; opt into HTTP with `MCP_TRANSPORT=http` or the
+  `--http` flag. Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful
+  sessions keyed by `Mcp-Session-Id` (each session gets its own MCP `Server`
+  over a shared Kie.ai client + task DB).
+- **Health endpoint** `GET /health` → `{status, transport, sessions, version}`,
+  unauthenticated and exempt from Origin/DNS-rebind checks for container probes.
+- **Bearer-token auth** via `KIE_MCP_HTTP_TOKEN` and **DNS-rebinding protection**
+  via `MCP_ALLOWED_HOSTS` (required when binding beyond loopback). New env:
+  `MCP_HTTP_HOST` (default `127.0.0.1`), `MCP_HTTP_PORT` (default `3000`).
+- **Deployment**: `packages/mcp/Dockerfile` (multi-stage, bundled, `HEALTHCHECK`),
+  root `.dockerignore`, `docker-compose.coolify.yml`, and `docs/DEPLOY_HTTP.md`.
+
+This reimplements the capability from closed PR #3 against the current monorepo.
+Out of scope for now: OAuth 2.0 (RFC 9728) and `eventStore` stream resumability.
+
 ## [3.4.0] - 2026-06-05
 
 ### Added

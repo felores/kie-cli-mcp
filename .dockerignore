@@ -1,0 +1,17 @@
+# Build context is the monorepo root (see packages/mcp/Dockerfile).
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+*.db
+**/*.db
+.env
+**/.env
+.git
+.github
+.firecrawl
+.scratchpad
+history
+logs
+docs
+skills

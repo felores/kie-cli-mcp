@@ -14,7 +14,7 @@ await build({
   format: "esm",
   target: "node18",
   outfile: OUT,
-  external: ["sqlite3", "@modelcontextprotocol/sdk", "zod"],
+  external: ["sqlite3", "@modelcontextprotocol/sdk", "zod", "express"],
   logLevel: "info",
 });
 

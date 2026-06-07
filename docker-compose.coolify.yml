@@ -1,0 +1,41 @@
+# Coolify one-click deploy for the Streamable HTTP MCP transport.
+# In Coolify: New Resource → Docker Compose → point at this file.
+# Set the env vars below as Coolify secrets (KIE_AI_API_KEY, KIE_MCP_HTTP_TOKEN).
+services:
+  kie-ai-mcp:
+    build:
+      context: .
+      dockerfile: packages/mcp/Dockerfile
+    environment:
+      # --- required (deploy fails fast if any are unset) ---
+      KIE_AI_API_KEY: ${KIE_AI_API_KEY:?KIE_AI_API_KEY is required}
+      # --- HTTP transport ---
+      MCP_TRANSPORT: http
+      MCP_HTTP_HOST: 0.0.0.0
+      MCP_HTTP_PORT: 3000
+      # Bearer token clients must send as `Authorization: Bearer <token>`.
+      # Required for a network deployment (the server binds 0.0.0.0 here).
+      KIE_MCP_HTTP_TOKEN: ${KIE_MCP_HTTP_TOKEN:?KIE_MCP_HTTP_TOKEN is required}
+      # Comma-separated Host header allowlist (DNS-rebind protection). Set to the
+      # public host Coolify assigns, e.g. "kie-mcp.example.com". The server
+      # refuses to start on 0.0.0.0 without this.
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:?MCP_ALLOWED_HOSTS is required}
+      # Task DB persisted on the volume below.
+      KIE_AI_DB_PATH: /data/tasks.db
+      # --- optional Kie.ai tuning ---
+      KIE_AI_CALLBACK_URL: ${KIE_AI_CALLBACK_URL:-}
+    volumes:
+      - kie-mcp-data:/data
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test:
+        ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  kie-mcp-data:
