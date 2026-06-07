@@ -30,12 +30,16 @@ COPY packages/mcp/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages/mcp/dist ./dist
 
-# Task DB lives on a volume so completed tasks survive restarts.
-RUN mkdir -p /data
+# Task DB lives on a volume so completed tasks survive restarts. Run as a
+# non-root user since this transport is exposed over the network.
+RUN mkdir -p /data \
+  && addgroup -S mcp && adduser -S mcp -G mcp \
+  && chown -R mcp:mcp /app /data
 VOLUME /data
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.MCP_HTTP_PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+USER mcp
 CMD ["node", "dist/index.js"]

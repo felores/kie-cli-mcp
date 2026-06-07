@@ -24,6 +24,16 @@ export function startHttpServer(opts: HttpTransportOptions): void {
     .map((h) => h.trim())
     .filter(Boolean);
 
+  // Fail-fast: binding beyond loopback without an allowlist would leave DNS-
+  // rebinding protection off, an insecure deployment. Refuse to start instead.
+  const isLoopbackHost =
+    host === "127.0.0.1" || host === "localhost" || host === "::1";
+  if (!isLoopbackHost && allowedHosts.length === 0) {
+    throw new Error(
+      `MCP_ALLOWED_HOSTS is required when MCP_HTTP_HOST is non-loopback (got "${host}").`,
+    );
+  }
+
   const app = express();
   app.use(express.json({ limit: "10mb" }));
 
@@ -62,6 +72,20 @@ export function startHttpServer(opts: HttpTransportOptions): void {
       ? { enableDnsRebindingProtection: true, allowedHosts }
       : {};
 
+  // Express 4 does not route rejected promises from async handlers, so each
+  // handler catches its own errors and responds (avoids unhandledRejection /
+  // hung requests).
+  const onError = (res: Response, error: unknown) => {
+    console.error("[Kie.ai MCP] HTTP handler error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null,
+      });
+    }
+  };
+
   app.post("/mcp", async (req: Request, res: Response) => {
     if (!requireAuth(req, res)) return;
 
@@ -70,46 +94,69 @@ export function startHttpServer(opts: HttpTransportOptions): void {
       ? transports.get(sessionId)
       : undefined;
 
-    if (!transport) {
-      if (sessionId || !isInitializeRequest(req.body)) {
-        res.status(400).json({
-          jsonrpc: "2.0",
-          error: {
-            code: -32000,
-            message: "Bad Request: no valid session ID for a non-init request",
+    try {
+      if (!transport) {
+        // A provided-but-unknown session → 404 so the client re-initializes.
+        if (sessionId) {
+          res.status(404).json({
+            jsonrpc: "2.0",
+            error: { code: -32001, message: "Session not found" },
+            id: null,
+          });
+          return;
+        }
+        // No session header and not an initialize request → 400.
+        if (!isInitializeRequest(req.body)) {
+          res.status(400).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Bad Request: missing session ID for a non-init request",
+            },
+            id: null,
+          });
+          return;
+        }
+
+        // New session: create transport + a fresh Server, then connect.
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (id) => {
+            transports.set(id, transport!);
           },
-          id: null,
+          ...securityOpts,
         });
-        return;
+        transport.onclose = () => {
+          if (transport!.sessionId) transports.delete(transport!.sessionId);
+        };
+        await opts.createServer().connect(transport);
       }
 
-      // New session: create transport + a fresh Server, then connect.
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (id) => {
-          transports.set(id, transport!);
-        },
-        ...securityOpts,
-      });
-      transport.onclose = () => {
-        if (transport!.sessionId) transports.delete(transport!.sessionId);
-      };
-      await opts.createServer().connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error) {
+      onError(res, error);
     }
-
-    await transport.handleRequest(req, res, req.body);
   });
 
   // GET (SSE stream) and DELETE (terminate) require an existing session.
   const handleSessionRequest = async (req: Request, res: Response) => {
     if (!requireAuth(req, res)) return;
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    const transport = sessionId ? transports.get(sessionId) : undefined;
-    if (!transport) {
-      res.status(400).send("Invalid or missing session ID");
+    if (!sessionId) {
+      res.status(400).send("Missing Mcp-Session-Id header");
       return;
     }
-    await transport.handleRequest(req, res);
+    const transport = transports.get(sessionId);
+    if (!transport) {
+      // Unknown/expired session → 404 to force a clean re-initialization.
+      res.status(404).send("Session not found");
+      return;
+    }
+    try {
+      await transport.handleRequest(req, res);
+    } catch (error) {
+      onError(res, error);
+    }
   };
 
   app.get("/mcp", handleSessionRequest);

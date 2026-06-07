@@ -7,18 +7,19 @@ services:
       context: .
       dockerfile: packages/mcp/Dockerfile
     environment:
-      # --- required ---
-      KIE_AI_API_KEY: ${KIE_AI_API_KEY}
+      # --- required (deploy fails fast if any are unset) ---
+      KIE_AI_API_KEY: ${KIE_AI_API_KEY:?KIE_AI_API_KEY is required}
       # --- HTTP transport ---
       MCP_TRANSPORT: http
       MCP_HTTP_HOST: 0.0.0.0
       MCP_HTTP_PORT: 3000
       # Bearer token clients must send as `Authorization: Bearer <token>`.
-      # Leave empty to disable auth (NOT recommended for a public deployment).
-      KIE_MCP_HTTP_TOKEN: ${KIE_MCP_HTTP_TOKEN}
+      # Required for a network deployment (the server binds 0.0.0.0 here).
+      KIE_MCP_HTTP_TOKEN: ${KIE_MCP_HTTP_TOKEN:?KIE_MCP_HTTP_TOKEN is required}
       # Comma-separated Host header allowlist (DNS-rebind protection). Set to the
-      # public host Coolify assigns, e.g. "kie-mcp.example.com".
-      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS}
+      # public host Coolify assigns, e.g. "kie-mcp.example.com". The server
+      # refuses to start on 0.0.0.0 without this.
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:?MCP_ALLOWED_HOSTS is required}
       # Task DB persisted on the volume below.
       KIE_AI_DB_PATH: /data/tasks.db
       # --- optional Kie.ai tuning ---
