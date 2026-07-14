@@ -6,6 +6,7 @@
   "type": "module",
   "workspaces": [
     "packages/core",
+    "packages/openai",
     "packages/mcp",
     "packages/cli"
   ],
