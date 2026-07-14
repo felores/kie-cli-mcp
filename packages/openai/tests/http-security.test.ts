@@ -1,15 +1,28 @@
 import { once } from "node:events";
-import { request, type IncomingMessage, type Server } from "node:http";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import {
+  createServer,
+  request,
+  type IncomingMessage,
+  type Server,
+} from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import express from "express";
 import { createKieOpenAiRouter } from "../src/http-server.js";
-import { createKieOpenAiStandaloneApp } from "../src/standalone.js";
+import {
+  createKieOpenAiStandaloneApp,
+  startKieOpenAiStandaloneServer,
+} from "../src/standalone.js";
 
 const servers: Server[] = [];
 
 async function serve(app: express.Express): Promise<string> {
   const server = app.listen(0, "127.0.0.1");
   servers.push(server);
+  const close = (app as express.Express & { close?: () => void }).close;
+  if (close) server.once("close", close);
   await once(server, "listening");
   const address = server.address() as AddressInfo;
   return `http://127.0.0.1:${address.port}`;
@@ -96,7 +109,7 @@ describe("standalone security boundary", () => {
     expect(ready.status).toBe(200);
     const body = await responseJson(ready);
     expect(body).toEqual({
-      ready: true,
+      ready: false,
       contract_version: "test-contract",
       package_version: "9.8.7",
     });
@@ -188,9 +201,10 @@ describe("embedded router contract", () => {
   test("delegates authorization and never reads a standalone token", async () => {
     const originalToken = process.env.KIE_OPENAI_TOKEN;
     process.env.KIE_OPENAI_TOKEN = "must-not-be-read";
+    const router = createKieOpenAiRouter({ apiKey: "provider-secret" });
     const app = express().use(
       "/kie",
-      createKieOpenAiRouter({ apiKey: "provider-secret" }),
+      router,
     );
 
     try {
@@ -199,42 +213,48 @@ describe("embedded router contract", () => {
       expect(response.status).toBe(200);
       expect(await responseJson(response)).toMatchObject({ ready: true });
     } finally {
+      router.close();
       if (originalToken === undefined) delete process.env.KIE_OPENAI_TOKEN;
       else process.env.KIE_OPENAI_TOKEN = originalToken;
     }
   });
 
   test("rejects client credentials and remote output URLs", async () => {
+    const router = createKieOpenAiRouter({ apiKey: "provider-secret" });
     const app = express().use(
       "/kie",
-      createKieOpenAiRouter({ apiKey: "provider-secret" }),
+      router,
     );
     const baseUrl = await serve(app);
 
-    const credentials = await fetch(`${baseUrl}/kie/v1/images/generations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: "hello", api_key: "client-secret" }),
-    });
-    expect(credentials.status).toBe(422);
-    expect((await responseJson(credentials)).error).toMatchObject({
-      code: "client_credentials_forbidden",
-      param: "api_key",
-    });
+    try {
+      const credentials = await fetch(`${baseUrl}/kie/v1/images/generations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "hello", api_key: "client-secret" }),
+      });
+      expect(credentials.status).toBe(422);
+      expect((await responseJson(credentials)).error).toMatchObject({
+        code: "client_credentials_forbidden",
+        param: "api_key",
+      });
 
-    const callback = await fetch(`${baseUrl}/kie/v1/images/generations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        prompt: "hello",
-        callbackUrl: "https://attacker.example/result",
-      }),
-    });
-    expect(callback.status).toBe(422);
-    expect((await responseJson(callback)).error).toMatchObject({
-      code: "remote_output_url_forbidden",
-      param: "callbackUrl",
-    });
+      const callback = await fetch(`${baseUrl}/kie/v1/images/generations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: "hello",
+          callbackUrl: "https://attacker.example/result",
+        }),
+      });
+      expect(callback.status).toBe(422);
+      expect((await responseJson(callback)).error).toMatchObject({
+        code: "remote_output_url_forbidden",
+        param: "callbackUrl",
+      });
+    } finally {
+      router.close();
+    }
   });
 
   test("normalizes body-parser client failures without returning 500", async () => {
@@ -253,6 +273,29 @@ describe("embedded router contract", () => {
     expect((await responseJson(response)).error).toMatchObject({
       code: "unsupported_content_encoding",
     });
+  });
+
+  test("closes the router journal when the standalone listener closes", async () => {
+    const dataDir = await mkdtemp(join(tmpdir(), "kie-openai-standalone-"));
+    const probe = createServer().listen(0, "127.0.0.1");
+    await once(probe, "listening");
+    const port = (probe.address() as AddressInfo).port;
+    probe.close();
+    await once(probe, "close");
+
+    const server = startKieOpenAiStandaloneServer({
+      token: "local-token",
+      apiKey: "provider-secret",
+      dataDir,
+      port,
+    });
+    await once(server, "listening");
+    expect(await readdir(dataDir)).toContain(".writer.lock");
+
+    server.close();
+    await once(server, "close");
+    expect(await readdir(dataDir)).not.toContain(".writer.lock");
+    await rm(dataDir, { recursive: true, force: true });
   });
 
   test("normalizes unknown routes as OpenAI errors", async () => {

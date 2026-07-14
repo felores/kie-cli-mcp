@@ -12,6 +12,7 @@ import {
 } from "./errors.js";
 import {
   createKieOpenAiRouter,
+  type KieOpenAiRouter,
   type KieOpenAiRouterOptions,
 } from "./http-server.js";
 import { isLoopbackHostname } from "./validation.js";
@@ -22,6 +23,8 @@ export interface KieOpenAiStandaloneOptions extends KieOpenAiRouterOptions {
   port?: number;
   allowedOrigins?: string[];
 }
+
+export type KieOpenAiStandaloneApp = express.Express & { close: () => void };
 
 function parseHostHeader(value: string | undefined): string | null {
   if (!value) return null;
@@ -113,7 +116,7 @@ function standaloneSecurity(options: {
 
 export function createKieOpenAiStandaloneApp(
   options: KieOpenAiStandaloneOptions,
-): express.Express {
+): KieOpenAiStandaloneApp {
   const token = options.token.trim();
   if (!token) {
     throw new Error("KIE_OPENAI_TOKEN is required for standalone mode.");
@@ -124,7 +127,8 @@ export function createKieOpenAiStandaloneApp(
     throw new Error(`Standalone host must be loopback; received "${host}".`);
   }
 
-  const app = express();
+  const app = express() as KieOpenAiStandaloneApp;
+  const router = createKieOpenAiRouter(options) as KieOpenAiRouter;
   app.disable("x-powered-by");
   app.use(
     standaloneSecurity({
@@ -132,8 +136,9 @@ export function createKieOpenAiStandaloneApp(
       allowedOrigins: options.allowedOrigins ?? [],
     }),
   );
-  app.use(createKieOpenAiRouter(options));
+  app.use(router);
   app.use(openAiErrorHandler);
+  app.close = () => router.close();
   return app;
 }
 
@@ -146,11 +151,13 @@ export function startKieOpenAiStandaloneServer(
     throw new Error(`Invalid standalone port: ${port}.`);
   }
 
-  const server = createKieOpenAiStandaloneApp(options).listen(port, host, () => {
+  const app = createKieOpenAiStandaloneApp(options);
+  const server = app.listen(port, host, () => {
     console.error(
       `[Kie.ai OpenAI] listening on http://${host}:${port} (bearer auth required)`,
     );
   });
+  server.once("close", app.close);
   return server;
 }
 
@@ -170,4 +177,3 @@ export function runKieOpenAiStandaloneFromEnv(): Server {
     allowedOrigins,
   });
 }
-

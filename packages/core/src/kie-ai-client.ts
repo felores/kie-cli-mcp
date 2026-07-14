@@ -30,11 +30,109 @@ import {
   TaskResponse,
 } from "./types.js";
 
+export class KieAiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly providerCode?: number,
+  ) {
+    super(message);
+    this.name = "KieAiRequestError";
+  }
+}
+
+export interface KieAiUploadFile {
+  bytes: Uint8Array;
+  filename: string;
+  contentType: string;
+}
+
+export interface KieAiDownloadedFile {
+  bytes: Uint8Array;
+  contentType: string | null;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    ((error as { name?: unknown }).name === "AbortError" ||
+      (error as { name?: unknown }).name === "TimeoutError")
+  );
+}
+
+function providerMessage(value: unknown, fallback: string): string {
+  if (typeof value === "object" && value !== null) {
+    for (const key of ["msg", "message"]) {
+      const message = (value as Record<string, unknown>)[key];
+      if (typeof message === "string" && message.trim()) return message;
+    }
+  }
+  return fallback;
+}
+
+async function readResponseBytes(
+  response: Response,
+  maxBytes?: number,
+): Promise<Uint8Array> {
+  const contentLength = Number(response.headers.get("content-length"));
+  if (maxBytes !== undefined && Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new KieAiRequestError(
+      "The provider result exceeded the download size limit.",
+      502,
+    );
+  }
+
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (maxBytes !== undefined && bytes.length > maxBytes) {
+      throw new KieAiRequestError(
+        "The provider result exceeded the download size limit.",
+        502,
+      );
+    }
+    return bytes;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (maxBytes !== undefined && total > maxBytes) {
+        await reader.cancel();
+        throw new KieAiRequestError(
+          "The provider result exceeded the download size limit.",
+          502,
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 export class KieAiClient {
   private config: KieAiConfig;
 
   constructor(config: KieAiConfig) {
     this.config = config;
+  }
+
+  private callbackUrl(value?: string): string | undefined {
+    return value || this.config.callbackUrlFallback || undefined;
   }
 
   private async makeRequest<T>(
@@ -61,21 +159,145 @@ export class KieAiClient {
 
     try {
       const response = await fetch(url, requestOptions);
-      const data = (await response.json()) as KieAiResponse<T>;
+      let data: KieAiResponse<T>;
+      try {
+        data = (await response.json()) as KieAiResponse<T>;
+      } catch {
+        throw new KieAiRequestError(
+          `HTTP ${response.status}: The provider returned an invalid response.`,
+          response.status,
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(
-          `HTTP ${response.status}: ${data.msg || "Unknown error"}`,
+        throw new KieAiRequestError(
+          `HTTP ${response.status}: ${providerMessage(data, "The provider rejected the request.")}`,
+          response.status,
+          data.code,
         );
       }
 
       return data;
     } catch (error) {
+      if (error instanceof KieAiRequestError || isAbortError(error)) {
+        throw error;
+      }
       if (error instanceof Error) {
         throw new Error(`Request failed: ${error.message}`);
       }
       throw error;
     }
+  }
+
+  async uploadFile(
+    file: KieAiUploadFile,
+  ): Promise<KieAiResponse<{ fileUrl: string }>> {
+    const baseUrl = (
+      this.config.fileUploadBaseUrl ?? "https://kieai.redpandaai.co"
+    ).replace(/\/+$/, "");
+    const endpoint = baseUrl.endsWith("/api/v1")
+      ? `${baseUrl.slice(0, -"/api/v1".length)}/api/file-stream-upload`
+      : `${baseUrl}/api/file-stream-upload`;
+    const form = new FormData();
+    form.append(
+      "file",
+      new Blob([file.bytes as unknown as BlobPart], { type: file.contentType }),
+      file.filename,
+    );
+    form.append("uploadPath", "images");
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${this.config.apiKey}` },
+        body: form,
+        signal: AbortSignal.timeout(this.config.timeout),
+      });
+      let data: KieAiResponse<{ fileUrl: string }>;
+      try {
+        data = (await response.json()) as KieAiResponse<{ fileUrl: string }>;
+      } catch {
+        throw new KieAiRequestError(
+          `HTTP ${response.status}: The provider returned an invalid upload response.`,
+          response.status,
+        );
+      }
+      if (!response.ok) {
+        throw new KieAiRequestError(
+          `HTTP ${response.status}: ${providerMessage(data, "The provider rejected the file upload.")}`,
+          response.status,
+          data.code,
+        );
+      }
+      return data;
+    } catch (error) {
+      if (error instanceof KieAiRequestError || isAbortError(error)) {
+        throw error;
+      }
+      if (error instanceof Error) {
+        throw new Error(`Request failed: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  async downloadFile(
+    url: string,
+    options: {
+      validateUrl?: (url: string, previousUrl?: string) => void;
+      maxRedirects?: number;
+      maxBytes?: number;
+    } = {},
+  ): Promise<KieAiDownloadedFile> {
+    let currentUrl = url;
+    let previousUrl: string | undefined;
+    const maxRedirects = options.maxRedirects ?? 3;
+
+    for (let redirect = 0; redirect <= maxRedirects; redirect += 1) {
+      options.validateUrl?.(currentUrl, previousUrl);
+      try {
+        const response = await fetch(currentUrl, {
+          method: "GET",
+          redirect: "manual",
+          signal: AbortSignal.timeout(this.config.timeout),
+        });
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers.get("location");
+          if (!location || redirect === maxRedirects) {
+            throw new KieAiRequestError(
+              "The provider result could not be downloaded.",
+              response.status,
+            );
+          }
+          previousUrl = currentUrl;
+          currentUrl = new URL(location, currentUrl).toString();
+          continue;
+        }
+        if (!response.ok) {
+          throw new KieAiRequestError(
+            `HTTP ${response.status}: The provider result could not be downloaded.`,
+            response.status,
+          );
+        }
+        return {
+          bytes: await readResponseBytes(response, options.maxBytes),
+          contentType: response.headers.get("content-type"),
+        };
+      } catch (error) {
+        if (error instanceof KieAiRequestError || isAbortError(error)) {
+          throw error;
+        }
+        if (error instanceof Error) {
+          throw new Error(`Request failed: ${error.message}`);
+        }
+        throw error;
+      }
+    }
+
+    throw new KieAiRequestError(
+      "HTTP 502: The provider result could not be downloaded.",
+      502,
+    );
   }
 
   async generateNanoBananaImage(
@@ -249,7 +471,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -273,7 +495,7 @@ export class KieAiClient {
         prompt_influence: request.prompt_influence || 0.3,
         output_format: request.output_format || "mp3_44100_192",
       },
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -328,7 +550,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -349,7 +571,7 @@ export class KieAiClient {
       aspectRatio: request.aspectRatio || "16:9",
       ...(request.seed !== undefined && { seed: request.seed }),
       ...(request.referenceImage && { referenceImage: request.referenceImage }),
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -419,7 +641,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -472,7 +694,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -516,7 +738,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -560,7 +782,7 @@ export class KieAiClient {
       aspectRatio: request.aspectRatio || "16:9",
       version: request.version || "7",
       enableTranslation: request.enableTranslation || false,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     // Add image URLs (prefer fileUrls array over fileUrl)
@@ -627,7 +849,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -676,7 +898,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -698,7 +920,7 @@ export class KieAiClient {
       outputFormat: request.outputFormat || "jpeg",
       promptUpsampling: request.promptUpsampling || false,
       model: request.model || "flux-kontext-pro",
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
       safetyTolerance: request.safetyTolerance || 6,
     };
 
@@ -727,7 +949,7 @@ export class KieAiClient {
       input: {
         image: request.image,
       },
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -750,7 +972,7 @@ export class KieAiClient {
         num_images: request.num_images,
         seed: request.seed,
       },
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -804,7 +1026,7 @@ export class KieAiClient {
     const jobRequest = {
       model: "kling-3.0/video",
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -863,7 +1085,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -909,7 +1131,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -937,7 +1159,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -958,7 +1180,7 @@ export class KieAiClient {
     const jobRequest = {
       model: "z-image",
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -1037,7 +1259,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -1064,7 +1286,7 @@ export class KieAiClient {
     const jobRequest = {
       model: "infinitalk/from-audio",
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -1083,7 +1305,7 @@ export class KieAiClient {
         image_url: request.image_url,
         upscale_factor: request.upscale_factor || "2",
       },
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -1109,7 +1331,7 @@ export class KieAiClient {
     const jobRequest = {
       model,
       input,
-      callBackUrl: request.callBackUrl || process.env.KIE_AI_CALLBACK_URL,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(

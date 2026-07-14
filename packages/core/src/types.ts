@@ -2114,4 +2114,5 @@ export interface KieAiConfig {
   baseUrl: string;
   timeout: number;
   callbackUrlFallback: string;
+  fileUploadBaseUrl?: string;
 }

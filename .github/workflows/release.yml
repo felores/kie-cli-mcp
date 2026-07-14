@@ -37,6 +37,17 @@ jobs:
           npm run typecheck
           npm test
 
+      - name: Publish @felores/kie-ai-openai-server
+        run: |
+          VER=$(node -p "require('./packages/openai/package.json').version")
+          if npm view "@felores/kie-ai-openai-server@$VER" version >/dev/null 2>&1; then
+            echo "@felores/kie-ai-openai-server@$VER already published, skipping."
+          else
+            npm publish -w @felores/kie-ai-openai-server --provenance --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish @felores/kie-ai-mcp-server
         run: |
           VER=$(node -p "require('./packages/mcp/package.json').version")
