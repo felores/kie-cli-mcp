@@ -6,14 +6,15 @@
   "type": "module",
   "workspaces": [
     "packages/core",
+    "packages/openai",
     "packages/mcp",
     "packages/cli"
   ],
   "scripts": {
-    "build": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-mcp-server && npm run build -w @felores/kie-cli",
-    "bundle": "npm run build -w @felores/kie-ai-core && npm run bundle -w @felores/kie-ai-mcp-server && npm run bundle -w @felores/kie-cli",
-    "test": "npm run test -w @felores/kie-ai-core",
-    "typecheck": "npm run typecheck -w @felores/kie-ai-core && npm run typecheck -w @felores/kie-ai-mcp-server && npm run typecheck -w @felores/kie-cli",
+    "build": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-openai-server && npm run build -w @felores/kie-ai-mcp-server && npm run build -w @felores/kie-cli",
+    "bundle": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-openai-server && npm run bundle -w @felores/kie-ai-mcp-server && npm run bundle -w @felores/kie-cli",
+    "test": "npm run test -w @felores/kie-ai-core && npm run test -w @felores/kie-ai-openai-server",
+    "typecheck": "npm run typecheck -w @felores/kie-ai-core && npm run typecheck -w @felores/kie-ai-openai-server && npm run typecheck -w @felores/kie-ai-mcp-server && npm run typecheck -w @felores/kie-cli",
     "add-tool": "node scripts/add-tool.mjs",
     "docs": "npm run build -w @felores/kie-ai-core && node scripts/gen-docs.mjs"
   },

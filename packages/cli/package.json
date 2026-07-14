@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc -b",
     "bundle": "node build.mjs",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/index.ts",
     "prepack": "npm run build -w @felores/kie-ai-core && npm run bundle"
   },
