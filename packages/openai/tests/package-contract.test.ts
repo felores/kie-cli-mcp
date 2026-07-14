@@ -13,7 +13,7 @@ test("published manifest does not depend on the private core package", async () 
     version: string;
   };
 
-  expect(packageJson.version).toBe("0.1.0");
+  expect(packageJson.version).toBe("0.1.1");
   expect(packageJson.dependencies).not.toHaveProperty("@felores/kie-ai-core");
   expect(packageJson.bin).toEqual({
     "kie-ai-openai-server": "dist/bin.js",
