@@ -4,7 +4,6 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "types": ["node"],
-    "moduleResolution": "bundler",
     "composite": false
   },
   "include": ["src/**/*"],

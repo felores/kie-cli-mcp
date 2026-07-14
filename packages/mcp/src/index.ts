@@ -16,7 +16,6 @@ import {
 
 import {
   KieAiClient,
-  TaskDatabase,
   KieAiConfig,
   ToolContext,
   ToolResult,
@@ -27,6 +26,7 @@ import {
   categoryPromptText,
   formatToolError,
 } from "@felores/kie-ai-core";
+import { TaskDatabase } from "@felores/kie-ai-core/database";
 
 class KieAiMcpServer {
   private server: Server;
