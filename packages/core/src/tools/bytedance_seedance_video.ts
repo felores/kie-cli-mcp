@@ -4,7 +4,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSchema> = {
   name: "bytedance_seedance_video",
-  description: "Generate videos with ByteDance Seedance 2.0: multimodal inputs (image/video/audio references), native audio generation, standard and fast modes",
+  description: "Generate videos with ByteDance Seedance 2.0: standard, fast, or lower-cost Mini modes with multimodal references and native audio.",
   category: "video",
   schema: ByteDanceSeedanceVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -85,7 +85,7 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
         return ctx.formatError("bytedance_seedance_video", error, {
           prompt:
             "Required: Text prompt for video generation (3-20000 characters)",
-          mode: 'Optional: Generation mode: "standard" or "fast" (default: standard)',
+          mode: 'Optional: Generation mode: "standard", "fast", or "mini" (default: standard)',
           first_frame_url: "Optional: URL of image to use as first frame",
           last_frame_url: "Optional: URL of image to use as last frame",
           reference_image_urls:
@@ -109,7 +109,7 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
 
       return ctx.formatError("bytedance_seedance_video", error, {
         prompt: "Required: Text prompt for video generation",
-        mode: 'Optional: "standard" or "fast"',
+        mode: 'Optional: "standard", "fast", or "mini"',
         aspect_ratio: "Optional: Video aspect ratio",
         resolution: 'Optional: "480p" or "720p"',
         duration: "Optional: Duration in seconds 4-15",

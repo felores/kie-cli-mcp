@@ -2,6 +2,7 @@ import {
   NanoBananaImageSchema,
   ByteDanceSeedreamImageSchema,
   KlingVideoSchema,
+  ByteDanceSeedanceVideoSchema,
 } from "../types.js";
 
 // ──────────────────────────────────────────────
@@ -235,6 +236,27 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
       });
       expect(result.success).toBe(true);
     });
+  });
+});
+
+describe("ByteDanceSeedanceVideoSchema (Seedance 2.0 Mini)", () => {
+  it("accepts Mini mode", () => {
+    expect(
+      ByteDanceSeedanceVideoSchema.safeParse({
+        prompt: "A fast product video",
+        mode: "mini",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects frame and reference modes together", () => {
+    expect(
+      ByteDanceSeedanceVideoSchema.safeParse({
+        prompt: "A video",
+        first_frame_url: "https://example.com/start.png",
+        reference_image_urls: ["https://example.com/reference.png"],
+      }).success,
+    ).toBe(false);
   });
 });
 

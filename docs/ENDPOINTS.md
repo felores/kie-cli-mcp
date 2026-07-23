@@ -75,7 +75,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 |------|---------------|--------|
 | `veo3_generate_video` | Veo 3 / 3.1 (text/image-to-video) | ✅ |
 | `veo3_get_1080p_video` | Veo 3 1080p retrieval | ✅ |
-| `bytedance_seedance_video` | Seedance 2.0 (standard/fast, multimodal refs, native audio) | ✅ |
+| `bytedance_seedance_video` | Seedance 2.0 (standard/fast/mini, multimodal refs, native audio) | ✅ |
 | `runway_aleph_video` | Runway Aleph (video-to-video) | ✅ |
 | `wan_video` | Wan 2.7 (T2V/I2V/R2V/video-edit) | ✅ |
 | `wan_animate` | Wan Animate (animation/character replace) | ✅ |

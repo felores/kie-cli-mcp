@@ -441,13 +441,13 @@ export const ByteDanceSeedanceVideoSchema = z
       .min(3)
       .max(20000)
       .describe("Text prompt for video generation (3-20000 characters)"),
-    // Mode: standard (seedance-2) or fast (seedance-2-fast)
+    // Mode: standard, fast, or the lower-cost Seedance 2.0 Mini
     mode: z
-      .enum(["standard", "fast"])
+      .enum(["standard", "fast", "mini"])
       .default("standard")
       .optional()
       .describe(
-        "Generation mode: standard (seedance-2, higher quality) or fast (seedance-2-fast, iterative workflows)",
+        "Generation mode: standard (higher quality), fast (iterative workflows), or mini (lowest-cost, fastest workflow)",
       ),
     // Frame control
     first_frame_url: z
@@ -525,11 +525,18 @@ export const ByteDanceSeedanceVideoSchema = z
       if (data.aspect_ratio === "adaptive" && !data.first_frame_url) {
         return false;
       }
+      const hasFrames = !!data.first_frame_url || !!data.last_frame_url;
+      const hasReferences =
+        !!data.reference_image_urls?.length ||
+        !!data.reference_video_urls?.length ||
+        !!data.reference_audio_urls?.length;
+      if (hasFrames && hasReferences) return false;
       return true;
     },
     {
-      message: "aspect_ratio 'adaptive' requires first_frame_url",
-      path: ["aspect_ratio"],
+      message:
+        "aspect_ratio 'adaptive' requires first_frame_url, and frame inputs cannot be combined with reference inputs",
+      path: [],
     },
   );
 
