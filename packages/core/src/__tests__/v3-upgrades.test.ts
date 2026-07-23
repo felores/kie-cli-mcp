@@ -3,6 +3,7 @@ import {
   ByteDanceSeedreamImageSchema,
   KlingVideoSchema,
   ByteDanceSeedanceVideoSchema,
+  SunoGenerateSchema,
 } from "../types.js";
 
 // ──────────────────────────────────────────────
@@ -255,6 +256,32 @@ describe("ByteDanceSeedanceVideoSchema (Seedance 2.0 Mini)", () => {
         prompt: "A video",
         first_frame_url: "https://example.com/start.png",
         reference_image_urls: ["https://example.com/reference.png"],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("SunoGenerateSchema (V5_5)", () => {
+  it("accepts V5_5 duration", () => {
+    expect(
+      SunoGenerateSchema.safeParse({
+        prompt: "A gentle ambient track",
+        customMode: false,
+        instrumental: true,
+        model: "V5_5",
+        duration: 90,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects duration for models other than V5_5", () => {
+    expect(
+      SunoGenerateSchema.safeParse({
+        prompt: "A gentle ambient track",
+        customMode: false,
+        instrumental: true,
+        model: "V5",
+        duration: 90,
       }).success,
     ).toBe(false);
   });

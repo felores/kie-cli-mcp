@@ -89,7 +89,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 ### Audio
 | Tool | Kie.ai Models | Status |
 |------|---------------|--------|
-| `suno_generate_music` | Suno V3.5 / V4 / V4.5 / V4.5+ / V5 | ✅ |
+| `suno_generate_music` | Suno V3.5 / V4 / V4.5 / V4.5+ / V5 / V5.5 | ✅ |
 | `elevenlabs_tts` | ElevenLabs Text-to-Speech | ✅ |
 | `elevenlabs_ttsfx` | ElevenLabs Sound Effects | ✅ |
 

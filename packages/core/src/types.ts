@@ -176,7 +176,7 @@ export const SunoGenerateSchema = z
         "Generate instrumental music (no lyrics). In custom mode: if true, only style and title required; if false, prompt used as exact lyrics",
       ),
     model: z
-      .enum(["V3_5", "V4", "V4_5", "V4_5PLUS", "V5"])
+      .enum(["V3_5", "V4", "V4_5", "V4_5PLUS", "V5", "V5_5"])
       .default("V5")
       .optional()
       .describe("AI model version for generation"),
@@ -199,6 +199,12 @@ export const SunoGenerateSchema = z
       .max(80)
       .optional()
       .describe("Track title (required in custom mode, max 80 chars)"),
+    duration: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe("Requested track duration in seconds (available only with V5_5)"),
     negativeTags: z
       .string()
       .max(200)
@@ -243,16 +249,17 @@ export const SunoGenerateSchema = z
       // Callback URL is now optional - validation removed
       if (data.customMode) {
         if (data.instrumental) {
-          return data.style && data.title;
+          if (!data.style || !data.title) return false;
         } else {
-          return data.style && data.title && data.prompt;
+          if (!data.style || !data.title || !data.prompt) return false;
         }
       }
+      if (data.duration !== undefined && data.model !== "V5_5") return false;
       return true;
     },
     {
       message:
-        "In customMode: style and title are always required, prompt is required when instrumental is false",
+        "In customMode: style and title are always required, prompt is required when instrumental is false. duration is only available with V5_5.",
       path: [],
     },
   );
