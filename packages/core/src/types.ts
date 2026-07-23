@@ -855,6 +855,17 @@ export const ByteDanceSeedreamImageSchema = z.object({
     ),
 });
 
+export const OmniHumanVideoSchema = z.object({
+  image_url: z.string().url().describe("Portrait image URL to animate"),
+  audio_url: z.string().url().describe("Audio URL that drives the animation"),
+  mask_url: z.array(z.string().url()).max(5).optional(),
+  prompt: z.string().max(1000).optional(),
+  output_resolution: z.enum(["720", "1080"]).default("1080").optional(),
+  pe_fast_mode: z.boolean().default(false).optional(),
+  seed: z.number().int().default(-1).optional(),
+  callBackUrl: z.string().url().optional(),
+});
+
 // Z-Image - Tongyi-MAI fast text-to-image with bilingual text rendering
 export const ZImageSchema = z.object({
   prompt: z
@@ -1505,6 +1516,7 @@ export type WanVideoRequest = z.infer<typeof Wan27VideoSchema>;
 export type ByteDanceSeedreamImageRequest = z.infer<
   typeof ByteDanceSeedreamImageSchema
 >;
+export type OmniHumanVideoRequest = z.infer<typeof OmniHumanVideoSchema>;
 export type QwenImageRequest = z.infer<typeof QwenImageSchema>;
 export type MidjourneyGenerateRequest = z.infer<
   typeof MidjourneyGenerateSchema
@@ -2076,7 +2088,8 @@ export interface TaskRecord {
     | "infinitalk"
     | "kling-avatar"
     | "topaz-upscale"
-    | "happyhorse-video";
+    | "happyhorse-video"
+    | "omnihuman-video";
   status: "pending" | "processing" | "completed" | "failed";
   created_at: string;
   updated_at: string;

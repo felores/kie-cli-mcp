@@ -17,6 +17,7 @@ import { klingVideoTool } from "./kling_video.js";
 import { listTasksTool } from "./list_tasks.js";
 import { midjourneyGenerateTool } from "./midjourney_generate.js";
 import { nanoBananaImageTool } from "./nano_banana_image.js";
+import { omniHumanVideoTool } from "./omnihuman_video.js";
 import { qwenImageTool } from "./qwen_image.js";
 import { recraftRemoveBackgroundTool } from "./recraft_remove_background.js";
 import { runwayAlephVideoTool } from "./runway_aleph_video.js";
@@ -55,6 +56,7 @@ export const TOOL_REGISTRY: ToolDef[] = [
   listTasksTool,
   midjourneyGenerateTool,
   nanoBananaImageTool,
+  omniHumanVideoTool,
   qwenImageTool,
   recraftRemoveBackgroundTool,
   runwayAlephVideoTool,

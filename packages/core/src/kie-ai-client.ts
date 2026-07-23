@@ -26,6 +26,7 @@ import {
   KlingAvatarRequest,
   TopazUpscaleImageRequest,
   HappyHorseVideoRequest,
+  OmniHumanVideoRequest,
   ImageResponse,
   TaskResponse,
 } from "./types.js";
@@ -380,7 +381,8 @@ export class KieAiClient {
       apiType === "flux2-image" ||
       apiType === "wan-animate" ||
       apiType === "topaz-upscale" ||
-      apiType === "happyhorse-video" ||
+       apiType === "happyhorse-video" ||
+       apiType === "omnihuman-video" ||
       apiType === "gpt-image-2"
     ) {
       return this.makeRequest<any>(`/jobs/recordInfo?taskId=${taskId}`, "GET");
@@ -727,6 +729,26 @@ export class KieAiClient {
       "POST",
       jobRequest,
     );
+  }
+
+  async generateOmniHumanVideo(
+    request: OmniHumanVideoRequest,
+  ): Promise<KieAiResponse<TaskResponse>> {
+    const input: Record<string, unknown> = {
+      image_url: request.image_url,
+      audio_url: request.audio_url,
+      output_resolution: request.output_resolution || "1080",
+      pe_fast_mode: request.pe_fast_mode === true,
+      seed: request.seed ?? -1,
+    };
+    if (request.mask_url?.length) input.mask_url = request.mask_url;
+    if (request.prompt) input.prompt = request.prompt;
+
+    return this.makeRequest<TaskResponse>("/jobs/createTask", "POST", {
+      model: "omnihuman-1-5",
+      input,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
+    });
   }
 
   async generateQwenImage(

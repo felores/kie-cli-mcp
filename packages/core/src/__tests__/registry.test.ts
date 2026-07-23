@@ -22,6 +22,7 @@ const EXPECTED_TOOL_NAMES = [
   "infinitalk_lip_sync",
   "kling_avatar",
   "kling_video",
+  "omnihuman_video",
   "list_tasks",
   "midjourney_generate",
   "nano_banana_image",
