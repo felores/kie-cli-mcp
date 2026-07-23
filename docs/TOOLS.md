@@ -7,7 +7,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 ## Contents
 
 - **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [z_image](#z_image)
-- **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
+- **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [gemini_omni](#gemini_omni), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [omnihuman_video](#omnihuman_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
 - **Audio:** [elevenlabs_tts](#elevenlabs_tts), [elevenlabs_ttsfx](#elevenlabs_ttsfx), [suno_generate_music](#suno_generate_music)
 - **Utility:** [get_task_status](#get_task_status), [list_tasks](#list_tasks), [wait_for_task](#wait_for_task)
 
@@ -17,7 +17,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 
 ### bytedance_seedream_image
 
-Generate and edit images using ByteDance Seedream models (supports V4 and V5 Lite with 3K output). V5 Lite offers enhanced detail fidelity, multi-image fusion up to 14 refs, and clear small-text rendering
+Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.
 
 #### Parameters
 
@@ -25,13 +25,15 @@ Generate and edit images using ByteDance Seedream models (supports V4 and V5 Lit
 | --- | --- | --- | --- |
 | `prompt` | string | yes | Text prompt for image generation or editing. V4: max 5000 chars, V5 Lite: max 3000 chars (API returns 500 error if exceeded) |
 | `image_urls` | array | no | Array of image URLs for editing mode (optional - if not provided, uses text-to-image). V4: max 10, V4.5: max 14 |
-| `version` | `4` / `5-lite` | no | Seedream version: '4' for V4, '5-lite' for V5 Lite (default) with enhanced features (default: `"5-lite"`) |
+| `version` | `4` / `5-lite` / `5-pro` | no | Seedream version: '4' for V4, '5-lite' for V5 Lite (default), or '5-pro' for controlled 1K/2K generation and editing (default: `"5-lite"`) |
 | `image_size` | `square` / `square_hd` / `portrait_4_3` / `portrait_3_2` / `portrait_16_9` / `landscape_4_3` / `landscape_3_2` / `landscape_16_9` / `landscape_21_9` | no | Image aspect ratio (V4 only) (default: `"square_hd"`) |
 | `image_resolution` | `1K` / `2K` / `4K` | no | Image resolution (V4 only) (default: `"1K"`) |
 | `max_images` | integer | no | Number of images to generate (V4 only) (default: `1`) |
 | `seed` | number | no | Random seed for reproducible results (V4 only, use -1 for random) |
 | `aspect_ratio` | `1:1` / `4:3` / `3:4` / `16:9` / `9:16` / `2:3` / `3:2` / `21:9` | no | Aspect ratio for V5 Lite output (V5 Lite only) (default: `"1:1"`) |
 | `quality` | `basic` / `high` | no | Output quality for V5 Lite (V5 Lite only): 'basic' = 2K, 'high' = 3K resolution (default: `"basic"`) |
+| `output_format` | `png` / `jpeg` | no | Output format for Seedream 5 Pro: png or jpeg |
+| `nsfw_checker` | boolean | no | Enable NSFW filtering for Seedream 5 Pro |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### flux_kontext_image
@@ -137,18 +139,20 @@ Generate images and videos using Midjourney AI models (unified tool for text-to-
 
 ### nano_banana_image
 
-Generate and edit images using Google's Gemini 3.1 Flash Image (Nano Banana 2) - unified tool with 4K support, up to 14 reference images, Google Search grounding, and improved text rendering. Pricing: 8 credits/1K, 12/2K, 18/4K
+Generate and edit images using Nano Banana 2 or the faster 1K Nano Banana 2 Lite. Nano Banana 2 supports 4K, 14 references, and Google Search grounding; Lite supports up to 10 references.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
+| `model` | `nano-banana-2` / `nano-banana-2-lite` | no | Nano Banana model: nano-banana-2 supports up to 4K and 14 references; nano-banana-2-lite is the faster 1K model with up to 10 references (default: `"nano-banana-2"`) |
 | `prompt` | string | no | Text prompt for image generation or editing (max 20000 chars). Nano Banana models support up to 20K characters. |
 | `image_input` | array | no | Array of reference image URLs for editing mode (up to 14 images for multi-reference) |
 | `output_format` | `png` / `jpg` | no | Output format for generate/edit modes (default: `"png"`) |
 | `aspect_ratio` | `1:1` / `1:4` / `1:8` / `2:3` / `3:2` / `3:4` / `4:1` / `4:3` / `4:5` / `5:4` / `8:1` / `9:16` / `16:9` / `21:9` / `auto` | no | Aspect ratio for generate/edit modes (default: `"1:1"`) |
 | `resolution` | `1K` / `2K` / `4K` | no | Output resolution: 1K (8 credits), 2K (12 credits), 4K (18 credits) (default: `"1K"`) |
 | `google_search` | boolean | no | Enable Google Search grounding for factual image generation (default: `false`) |
+| `callBackUrl` | string | no | Optional URL for task completion notifications (uses KIE_AI_CALLBACK_URL if not provided) |
 
 ### qwen_image
 
@@ -211,14 +215,14 @@ Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo 
 
 ### bytedance_seedance_video
 
-Generate videos with ByteDance Seedance 2.0: multimodal inputs (image/video/audio references), native audio generation, standard and fast modes
+Generate videos with ByteDance Seedance 2.0: standard, fast, or lower-cost Mini modes with multimodal references and native audio.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `prompt` | string | yes | Text prompt for video generation (3-20000 characters) |
-| `mode` | `standard` / `fast` | no | Generation mode: standard (seedance-2, higher quality) or fast (seedance-2-fast, iterative workflows) (default: `"standard"`) |
+| `mode` | `standard` / `fast` / `mini` | no | Generation mode: standard (higher quality), fast (iterative workflows), or mini (lowest-cost, fastest workflow) (default: `"standard"`) |
 | `first_frame_url` | string | no | URL of image to use as the first frame (optional) |
 | `last_frame_url` | string | no | URL of image to use as the last frame (optional) |
 | `reference_image_urls` | array | no | Reference images for style/subject guidance (up to 9) |
@@ -231,6 +235,32 @@ Generate videos with ByteDance Seedance 2.0: multimodal inputs (image/video/audi
 | `web_search` | boolean | no | Enable web search to enhance prompt understanding (default: `false`) |
 | `nsfw_checker` | boolean | no | Enable NSFW content filtering (default: `false`) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
+
+### gemini_omni
+
+Create Gemini Omni videos or reusable Omni characters and voices from multimodal inputs.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `operation` | `video` / `character` / `audio` | no |  (default: `"video"`) |
+| `prompt` | string | no |  |
+| `image_urls` | array | no |  |
+| `audio_ids` | array | no |  |
+| `video_list` | array | no |  |
+| `character_ids` | array | no |  |
+| `duration` | `4` / `6` / `8` / `10` | no |  |
+| `aspect_ratio` | `16:9` / `9:16` | no |  |
+| `resolution` | `720p` / `1080p` / `4k` | no |  |
+| `seed` | integer | no |  |
+| `character_name` | string | no |  |
+| `descriptions` | string | no |  |
+| `audio_id` | string | no |  |
+| `name` | string | no |  |
+| `voice_description` | string | no |  |
+| `example_dialogue` | string | no |  |
+| `callBackUrl` | string | no |  |
 
 ### grok_imagine
 
@@ -335,6 +365,23 @@ Generate videos using Kling 3.0 AI - supports 3-15s flexible duration, native mu
 | `multi_prompt` | array | no | Array of shot definitions for multi-shot mode. Each shot has a prompt and duration (1-12s) |
 | `kling_elements` | array | no | Character/object elements for consistent identity across shots. Provide name, description, and reference images/videos |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
+
+### omnihuman_video
+
+Animate a portrait, pet, or character from an image and audio using ByteDance OmniHuman 1.5.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `image_url` | string | yes | Portrait image URL to animate |
+| `audio_url` | string | yes | Audio URL that drives the animation |
+| `mask_url` | array | no |  |
+| `prompt` | string | no |  |
+| `output_resolution` | `720` / `1080` | no |  (default: `"1080"`) |
+| `pe_fast_mode` | boolean | no |  (default: `false`) |
+| `seed` | integer | no |  (default: `-1`) |
+| `callBackUrl` | string | no |  |
 
 ### runway_aleph_video
 
@@ -468,7 +515,7 @@ Generate sound effects from text descriptions using ElevenLabs Sound Effects v2 
 
 ### suno_generate_music
 
-Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5)
+Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V5_5 supports requested duration.
 
 #### Parameters
 
@@ -477,10 +524,11 @@ Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5)
 | `prompt` | string | yes | Description of the desired audio content. In custom mode: used as exact lyrics (max 5000 chars for V4_5+, V5; 3000 for V3_5, V4). In non-custom mode: core idea for auto-generated lyrics (max 500 chars) |
 | `customMode` | boolean | yes | Enable advanced parameter customization. If true: requires style and title. If false: simplified mode with only prompt required |
 | `instrumental` | boolean | yes | Generate instrumental music (no lyrics). In custom mode: if true, only style and title required; if false, prompt used as exact lyrics |
-| `model` | `V3_5` / `V4` / `V4_5` / `V4_5PLUS` / `V5` | no | AI model version for generation (default: `"V5"`) |
+| `model` | `V3_5` / `V4` / `V4_5` / `V4_5PLUS` / `V5` / `V5_5` | no | AI model version for generation (default: `"V5"`) |
 | `callBackUrl` | string | no | URL to receive task completion updates (optional, will use KIE_AI_CALLBACK_URL env var if not provided) |
 | `style` | string | no | Music style/genre (required in custom mode, max 1000 chars for V4_5+, V5; 200 for V3_5, V4) |
 | `title` | string | no | Track title (required in custom mode, max 80 chars) |
+| `duration` | integer | no | Requested track duration in seconds (available only with V5_5) |
 | `negativeTags` | string | no | Music styles to exclude (optional, max 200 chars) |
 | `vocalGender` | `m` / `f` | no | Vocal gender preference (optional, only effective in custom mode) |
 | `styleWeight` | number | no | Strength of style adherence (optional, range 0-1, up to 2 decimal places) |
