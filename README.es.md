@@ -113,10 +113,10 @@ Después, cualquier sesión puede generar medios en lenguaje natural ("hazme una
 Un catálogo unificado y siempre actualizado, que incluye:
 
 - **Google Veo 3**: video cinematográfico con audio sincronizado y salida 1080p
-- **Nano Banana 2** (Gemini 3 Flash Image): generación y edición de imágenes rápida con grounding de Google Search
-- **Suno V5**: generación de música con voces realistas
-- **Kling 3.0**, **Wan 2.7**, **Hailuo 02**, **ByteDance Seedance**, **HappyHorse**, **Runway Aleph**, **Midjourney**: generación y edición de video
-- **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream**, **Ideogram**, **Recraft**, **Topaz**: generación, edición, reencuadre, remoción de fondo y upscaling de imágenes
+- **Nano Banana 2 / Nano Banana 2 Lite**: generación y edición de imágenes de alta resolución o 1K rápida
+- **Suno V5 / V5.5**: generación de música con voces realistas y control de duración en V5.5
+- **Kling 3.0**, **Wan 2.7**, **Hailuo 02**, **ByteDance Seedance 2.0 / Mini**, **OmniHuman 1.5**, **Gemini Omni**, **HappyHorse**, **Runway Aleph**, **Midjourney**: generación, avatares y edición de video
+- **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Ideogram**, **Recraft**, **Topaz**: generación, edición, reencuadre, remoción de fondo y upscaling de imágenes
 - **ElevenLabs**: texto a voz y efectos de sonido
 
 Cada herramienta tiene **detección inteligente de modo**: una sola herramienta hace generar / editar / upscale según los parámetros que pasas.
@@ -214,7 +214,7 @@ Es un monorepo de npm workspaces: `packages/core` (registro compartido privado, 
 </details>
 
 <details>
-<summary><strong>🌐 Transporte remoto / HTTP (v3.5.0+)</strong></summary>
+<summary><strong>🌐 Transporte remoto / HTTP (v3.6.0+)</strong></summary>
 
 El servidor usa **stdio** por defecto (un proceso local por cliente). También
 puede correr como **servicio HTTP remoto** vía **Streamable HTTP** (spec MCP
@@ -239,7 +239,7 @@ Actívalo con `MCP_TRANSPORT=http` o `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.5.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.6.0"}
 ```
 
 Un solo endpoint `/mcp` (POST + GET/SSE + DELETE), sesiones con estado vía

@@ -1,6 +1,6 @@
 # Remote deployment — Streamable HTTP transport
 
-Since v3.5.0 the MCP server can run over **Streamable HTTP** (MCP spec
+Since v3.6.0 the MCP server can run over **Streamable HTTP** (MCP spec
 2025-11-25) for remote access, in addition to the default stdio transport.
 This guide covers running it locally, via Docker, and on Coolify.
 
@@ -38,7 +38,7 @@ KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 # health
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.5.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.6.0"}
 ```
 
 ## Run with Docker

@@ -114,10 +114,10 @@ Then any session can generate media in plain language ("make me an image of…",
 A unified, always-current catalog including:
 
 - **Google Veo 3**: cinematic video with synchronized audio and 1080p output
-- **Nano Banana 2** (Gemini 3 Flash Image): fast image generation/editing with Google Search grounding
-- **Suno V5**: music generation with realistic vocals
-- **Kling 3.0**, **Wan 2.7**, **Hailuo 02**, **ByteDance Seedance**, **HappyHorse**, **Runway Aleph**, **Midjourney**: video generation and editing
-- **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream**, **Ideogram**, **Recraft**, **Topaz**: image generation, editing, reframing, background removal, upscaling
+- **Nano Banana 2 / Nano Banana 2 Lite**: high-resolution or fast 1K image generation and editing
+- **Suno V5 / V5.5**: music generation with realistic vocals and V5.5 duration control
+- **Kling 3.0**, **Wan 2.7**, **Hailuo 02**, **ByteDance Seedance 2.0 / Mini**, **OmniHuman 1.5**, **Gemini Omni**, **HappyHorse**, **Runway Aleph**, **Midjourney**: video generation, avatars, and editing
+- **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Ideogram**, **Recraft**, **Topaz**: image generation, editing, reframing, background removal, upscaling
 - **ElevenLabs**: text-to-speech and sound effects
 
 Each tool features **smart mode detection**: one tool handles generate / edit / upscale based on the parameters you pass.
@@ -215,7 +215,7 @@ This is an npm-workspaces monorepo: `packages/core` (private shared registry, bu
 </details>
 
 <details>
-<summary><strong>🌐 Remote / HTTP transport (v3.5.0+)</strong></summary>
+<summary><strong>🌐 Remote / HTTP transport (v3.6.0+)</strong></summary>
 
 The server defaults to **stdio** (one local process per client). It can also run
 as a **remote HTTP service** over **Streamable HTTP** (MCP spec 2025-11-25).
@@ -237,7 +237,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.5.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.6.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
