@@ -22,6 +22,26 @@ describe("NanoBananaImageSchema (Nano Banana 2)", () => {
       });
       expect(result.success).toBe(true);
     });
+
+    it("restricts Nano Banana 2 Lite to 1K and ten references", () => {
+      expect(
+        NanoBananaImageSchema.safeParse({
+          prompt: "A fast image draft",
+          model: "nano-banana-2-lite",
+          resolution: "2K",
+        }).success,
+      ).toBe(false);
+      expect(
+        NanoBananaImageSchema.safeParse({
+          prompt: "A fast image draft",
+          model: "nano-banana-2-lite",
+          image_input: Array.from(
+            { length: 11 },
+            (_, index) => `https://example.com/reference-${index}.png`,
+          ),
+        }).success,
+      ).toBe(false);
+    });
     it("accepts prompt only", () => {
       const result = NanoBananaImageSchema.safeParse({
         prompt: "A beautiful sunset",

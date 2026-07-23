@@ -84,6 +84,14 @@ export const NanoBananaImageSchema = z
       const hasPrompt = !!data.prompt;
       const hasImageInput = !!data.image_input && data.image_input.length > 0;
 
+      if (
+        data.model === "nano-banana-2-lite" &&
+        ((data.image_input?.length || 0) > 10 ||
+          (data.resolution !== undefined && data.resolution !== "1K"))
+      ) {
+        return false;
+      }
+
       // Edit mode: requires prompt and image_input
       if (hasImageInput) {
         return hasPrompt;
