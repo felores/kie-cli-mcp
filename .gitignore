@@ -116,3 +116,6 @@ ehthumbs.db
 Thumbs.db
 # Agent scratchpad (experiments, codemods)
 .scratchpad/
+
+# Firecrawl local artifacts
+.firecrawl/

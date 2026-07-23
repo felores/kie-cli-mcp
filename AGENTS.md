@@ -49,10 +49,54 @@ For tools requiring callback URLs (like Veo3, Suno):
 - Required: `KIE_AI_API_KEY`
 - Optional: `KIE_AI_BASE_URL`, `KIE_AI_TIMEOUT`, `KIE_AI_DB_PATH`, `KIE_AI_CALLBACK_URL`
 
-## Architecture
-- MCP server (index.ts) → KieAiClient (kie-ai-client.ts) → Kie.ai API
-- Task persistence via TaskDatabase (database.ts)
-- Smart endpoint routing based on api_type (veo vs playground)
+## Architecture (monorepo, npm workspaces)
+
+One shared `core` feeds two independently installable surfaces:
+
+```text
+packages/core   @felores/kie-ai-core  (PRIVATE, never published; bundled into both)
+  src/tools/         tool registry, one ToolDef per model (single source of truth)
+  src/kie-ai-client.ts  KieAiClient -> Kie.ai API
+  src/database.ts       TaskDatabase (SQLite task persistence)
+  src/types.ts          Zod schemas
+packages/mcp    @felores/kie-ai-mcp-server  (bin: kie-ai-mcp-server)
+  src/index.ts          MCP adapter: listTools + dispatch derived from TOOL_REGISTRY
+packages/cli    @felores/kie-cli            (bin: kie-cli)
+  src/index.ts          CLI adapter: yargs commands derived from TOOL_REGISTRY
+```
+
+- A tool is one `ToolDef { name, description, category, schema, run(args, ctx) }`.
+- `run()` returns the MCP content envelope; the MCP server returns it verbatim, and the CLI unwraps `content[0].text`.
+- MCP `inputSchema` and CLI flags are derived from the tool's Zod schema via `toInputJsonSchema`. Zod is the only schema definition.
+- esbuild bundles `core` into each publishable package (`sqlite3` is external). `core` is never published.
+- Build: `npm run build` (all), `npm run bundle` (publish bundles), `npm test` (core Jest), `npm run typecheck`.
+
+## Adding New Tools
+
+Adding a model is one tool file plus one client method. The MCP server and CLI discover it automatically through the registry.
+
+1. Check endpoint status in `docs/ENDPOINTS.md`.
+2. Check [Kie Market](https://kie.ai/market) for API and model updates before implementation.
+3. Research the relevant Kie.ai playground page and API documentation.
+4. Save endpoint documentation in `docs/kie/{provider}_{model}.md`.
+5. Run `npm run add-tool -- <tool_name> [image|video|audio|utility]`.
+6. Define the Zod schema in `packages/core/src/types.ts`, add the client method, and implement the tool in `packages/core/src/tools/<tool_name>.ts`.
+7. Update `EXPECTED_TOOL_NAMES` in `packages/core/src/__tests__/registry.test.ts`, then run `npm run build && npm test`.
+
+### Key Files
+| What | Where |
+|------|-------|
+| Endpoint tracking | `docs/ENDPOINTS.md` |
+| Kie API and model updates | `https://kie.ai/market` |
+| Scaffold a tool | `npm run add-tool -- <name> <category>` |
+| Tool registry | `packages/core/src/tools/index.ts` |
+| One tool per file | `packages/core/src/tools/<tool_name>.ts` |
+| Zod schemas | `packages/core/src/types.ts` |
+| API client | `packages/core/src/kie-ai-client.ts` |
+| MCP adapter | `packages/mcp/src/index.ts` |
+| CLI adapter | `packages/cli/src/index.ts` |
+| Registry tests | `packages/core/src/__tests__/registry.test.ts` |
+| Tool documentation | `docs/TOOLS.md` |
 
 ## Agent Overview
 
@@ -211,7 +255,10 @@ if (apiType === 'veo3') {
 ## Publishing to NPM
 
 ### Package Information
-- **Package name**: `@felores/kie-ai-mcp-server`
+- **Published packages** (versioned independently):
+  - `@felores/kie-ai-mcp-server` in `packages/mcp` (bin: `kie-ai-mcp-server`)
+  - `@felores/kie-cli` in `packages/cli` (bin: `kie-cli`)
+  - `@felores/kie-ai-core` is private and bundled into both published packages.
 - **NPM account**: `felores`
 - **Registry**: https://registry.npmjs.org/
 - **2FA**: Enabled (requires OTP for publishing)
@@ -224,11 +271,12 @@ if (apiType === 'veo3') {
    - **Minor (x.X.0)**: New features, new tools, new parameters (backwards compatible)
    - **Major (X.0.0)**: Breaking changes, API endpoint changes, removed features
 
-2. **Files to update** (all 3 required):
-   - `package.json` → `"version": "X.Y.Z"`
-   - `src/index.ts` → `version: 'X.Y.Z'` (in Server constructor)
+2. **Files to update** when bumping the MCP server:
+   - `packages/mcp/package.json` → `"version": "X.Y.Z"`
+   - `packages/mcp/src/index.ts` → `version: "X.Y.Z"` (in Server constructor)
    - `CHANGELOG.md` → Add new version section with changes
    - `README.md` → Update changelog section
+   - CLI bumps require `packages/cli/package.json`.
 
 3. **Pre-publish checklist**:
    ```bash
@@ -594,3 +642,29 @@ async generateMidjourney(request: MidjourneyGenerateRequest) {
 5. **Clear Error Messages**: Help users understand what went wrong and how to fix it
 
 This architecture ensures a clean, maintainable codebase while providing an excellent user experience through intelligent, unified tool interfaces.
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
