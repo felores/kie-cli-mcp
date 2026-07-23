@@ -27,6 +27,7 @@ import {
   TopazUpscaleImageRequest,
   HappyHorseVideoRequest,
   OmniHumanVideoRequest,
+  GeminiOmniRequest,
   ImageResponse,
   TaskResponse,
 } from "./types.js";
@@ -383,6 +384,7 @@ export class KieAiClient {
       apiType === "topaz-upscale" ||
        apiType === "happyhorse-video" ||
        apiType === "omnihuman-video" ||
+       apiType === "gemini-omni-video" ||
       apiType === "gpt-image-2"
     ) {
       return this.makeRequest<any>(`/jobs/recordInfo?taskId=${taskId}`, "GET");
@@ -746,6 +748,36 @@ export class KieAiClient {
 
     return this.makeRequest<TaskResponse>("/jobs/createTask", "POST", {
       model: "omnihuman-1-5",
+      input,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
+    });
+  }
+
+  async generateGeminiOmni(
+    request: GeminiOmniRequest,
+  ): Promise<KieAiResponse<any>> {
+    if (request.operation === "audio") {
+      return this.makeRequest("/omni/audio/create", "POST", {
+        audio_id: request.audio_id,
+        name: request.name,
+        ...(request.voice_description && { voice_description: request.voice_description }),
+        ...(request.example_dialogue && { example_dialogue: request.example_dialogue }),
+      });
+    }
+    if (request.operation === "character") {
+      return this.makeRequest("/omni/character/create", "POST", {
+        descriptions: request.descriptions,
+        image_urls: request.image_urls,
+        ...(request.audio_ids?.length && { audio_ids: request.audio_ids }),
+        ...(request.character_name && { character_name: request.character_name }),
+      });
+    }
+    const input: Record<string, unknown> = { prompt: request.prompt };
+    for (const key of ["image_urls", "audio_ids", "video_list", "character_ids", "duration", "aspect_ratio", "resolution", "seed"] as const) {
+      if (request[key] !== undefined) input[key] = request[key];
+    }
+    return this.makeRequest("/jobs/createTask", "POST", {
+      model: "gemini-omni-video",
       input,
       callBackUrl: this.callbackUrl(request.callBackUrl),
     });

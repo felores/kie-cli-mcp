@@ -866,6 +866,34 @@ export const OmniHumanVideoSchema = z.object({
   callBackUrl: z.string().url().optional(),
 });
 
+export const GeminiOmniSchema = z
+  .object({
+    operation: z.enum(["video", "character", "audio"]).default("video").optional(),
+    prompt: z.string().max(20000).optional(),
+    image_urls: z.array(z.string().url()).max(7).optional(),
+    audio_ids: z.array(z.string()).max(3).optional(),
+    video_list: z.array(z.object({ url: z.string().url(), start: z.number().min(0), ends: z.number().min(0) })).max(1).optional(),
+    character_ids: z.array(z.string()).max(3).optional(),
+    duration: z.enum(["4", "6", "8", "10"]).optional(),
+    aspect_ratio: z.enum(["16:9", "9:16"]).optional(),
+    resolution: z.enum(["720p", "1080p", "4k"]).optional(),
+    seed: z.number().int().min(0).max(2147483647).optional(),
+    character_name: z.string().max(210).optional(),
+    descriptions: z.string().max(20000).optional(),
+    audio_id: z.string().optional(),
+    name: z.string().max(210).optional(),
+    voice_description: z.string().max(20000).optional(),
+    example_dialogue: z.string().max(120).optional(),
+    callBackUrl: z.string().url().optional(),
+  })
+  .refine((data) => {
+    if (data.operation === "audio") return !!data.audio_id && !!data.name;
+    if (data.operation === "character") return !!data.descriptions && data.image_urls?.length === 1;
+    const video = data.video_list?.[0];
+    const quota = (data.image_urls?.length || 0) + (video ? 2 : 0) + (data.character_ids?.length || 0);
+    return !!data.prompt && (!video || video.ends > video.start) && quota <= 7;
+  }, { message: "Invalid Gemini Omni operation inputs or video quota", path: [] });
+
 // Z-Image - Tongyi-MAI fast text-to-image with bilingual text rendering
 export const ZImageSchema = z.object({
   prompt: z
@@ -1517,6 +1545,7 @@ export type ByteDanceSeedreamImageRequest = z.infer<
   typeof ByteDanceSeedreamImageSchema
 >;
 export type OmniHumanVideoRequest = z.infer<typeof OmniHumanVideoSchema>;
+export type GeminiOmniRequest = z.infer<typeof GeminiOmniSchema>;
 export type QwenImageRequest = z.infer<typeof QwenImageSchema>;
 export type MidjourneyGenerateRequest = z.infer<
   typeof MidjourneyGenerateSchema
@@ -2089,7 +2118,8 @@ export interface TaskRecord {
     | "kling-avatar"
     | "topaz-upscale"
     | "happyhorse-video"
-    | "omnihuman-video";
+    | "omnihuman-video"
+    | "gemini-omni-video";
   status: "pending" | "processing" | "completed" | "failed";
   created_at: string;
   updated_at: string;

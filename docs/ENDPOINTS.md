@@ -86,6 +86,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `infinitalk_lip_sync` | MeiGen-AI InfiniTalk (lip-sync talking video) | ✅ |
 | `kling_avatar` | Kuaishou Kling AI Avatar (talking avatar) | ✅ |
 | `omnihuman_video` | ByteDance OmniHuman 1.5 (image + audio avatar video) | ✅ |
+| `gemini_omni` | Gemini Omni (video, reusable characters, reusable voices) | ✅ |
 
 ### Audio
 | Tool | Kie.ai Models | Status |
