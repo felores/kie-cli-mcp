@@ -4,6 +4,17 @@
 
 Integrate six Kie.ai capabilities discovered from the model marketplace. Each integration has a focused commit, schema validation, task persistence when the API is asynchronous, endpoint documentation, and registry coverage.
 
+## Task List
+
+- [x] Research and document the official API contracts.
+- [x] Add Nano Banana 2 Lite.
+- [x] Add Seedream 5.0 Pro.
+- [x] Add Seedance 2.0 Mini.
+- [x] Add Suno V5_5.
+- [x] Add OmniHuman 1.5.
+- [x] Add Gemini Omni.
+- [x] Run the full build and test suites.
+
 ## Decisions
 
 1. **Nano Banana 2 Lite**: extend `nano_banana_image` with a `model` selector. Lite uses `nano-banana-2-lite`, accepts up to 10 image URLs, supports 1K output only, and must not receive Nano Banana 2-only fields.

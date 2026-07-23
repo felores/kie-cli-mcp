@@ -4,6 +4,8 @@ import {
   KlingVideoSchema,
   ByteDanceSeedanceVideoSchema,
   SunoGenerateSchema,
+  OmniHumanVideoSchema,
+  GeminiOmniSchema,
 } from "../types.js";
 
 // ──────────────────────────────────────────────
@@ -284,6 +286,54 @@ describe("SunoGenerateSchema (V5_5)", () => {
         duration: 90,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("OmniHumanVideoSchema", () => {
+  it("accepts image and audio inputs", () => {
+    expect(
+      OmniHumanVideoSchema.safeParse({
+        image_url: "https://example.com/portrait.png",
+        audio_url: "https://example.com/speech.mp3",
+        output_resolution: "1080",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects more than five subject masks", () => {
+    expect(
+      OmniHumanVideoSchema.safeParse({
+        image_url: "https://example.com/portrait.png",
+        audio_url: "https://example.com/speech.mp3",
+        mask_url: Array.from({ length: 6 }, (_, index) => `https://example.com/mask-${index}.png`),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("GeminiOmniSchema", () => {
+  it("accepts a video request within the seven-unit quota", () => {
+    expect(
+      GeminiOmniSchema.safeParse({
+        prompt: "A product demonstration",
+        image_urls: ["https://example.com/product.png"],
+        character_ids: ["character-1"],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a video request beyond the seven-unit quota", () => {
+    expect(
+      GeminiOmniSchema.safeParse({
+        prompt: "A product demonstration",
+        image_urls: Array.from({ length: 7 }, (_, index) => `https://example.com/image-${index}.png`),
+        character_ids: ["character-1"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires the operation-specific fields for audio", () => {
+    expect(GeminiOmniSchema.safeParse({ operation: "audio", audio_id: "aoede" }).success).toBe(false);
   });
 });
 
