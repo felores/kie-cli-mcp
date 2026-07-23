@@ -10,6 +10,14 @@ import {
 
 describe("NanoBananaImageSchema (Nano Banana 2)", () => {
   describe("generate mode", () => {
+    it("accepts Nano Banana 2 Lite", () => {
+      const result = NanoBananaImageSchema.safeParse({
+        prompt: "A fast image draft",
+        model: "nano-banana-2-lite",
+        image_input: ["https://example.com/reference.png"],
+      });
+      expect(result.success).toBe(true);
+    });
     it("accepts prompt only", () => {
       const result = NanoBananaImageSchema.safeParse({
         prompt: "A beautiful sunset",

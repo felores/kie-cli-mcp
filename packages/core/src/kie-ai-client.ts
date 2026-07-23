@@ -307,25 +307,32 @@ export class KieAiClient {
     const hasImageInput =
       !!request.image_input && request.image_input.length > 0;
 
+    const isLite = request.model === "nano-banana-2-lite";
     const input: any = {
       prompt: request.prompt,
-      ...(request.output_format && { output_format: request.output_format }),
       ...(request.aspect_ratio && { aspect_ratio: request.aspect_ratio }),
-      ...(request.resolution && { resolution: request.resolution }),
-      ...(request.google_search && { google_search: request.google_search }),
     };
 
-    if (hasImageInput) {
-      // Edit mode - with reference images
-      input.image_input = request.image_input;
+    if (isLite) {
+      if (request.image_input && request.image_input.length > 10) {
+        throw new Error("Nano Banana 2 Lite supports at most 10 reference images");
+      }
+      input.image_urls = request.image_input || [];
     } else {
-      // Generate mode - empty image_input per API docs
-      input.image_input = [];
+      if (hasImageInput) {
+        input.image_input = request.image_input;
+      } else {
+        input.image_input = [];
+      }
+      if (request.output_format) input.output_format = request.output_format;
+      if (request.resolution) input.resolution = request.resolution;
+      if (request.google_search) input.google_search = true;
     }
 
     const jobRequest = {
-      model: "nano-banana-2",
+      model: request.model || "nano-banana-2",
       input,
+      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<ImageResponse>(

@@ -4,6 +4,13 @@ import { z } from "zod";
 // Nano Banana 2 - powered by Gemini 3.1 Flash Image
 export const NanoBananaImageSchema = z
   .object({
+    model: z
+      .enum(["nano-banana-2", "nano-banana-2-lite"])
+      .default("nano-banana-2")
+      .optional()
+      .describe(
+        "Nano Banana model: nano-banana-2 supports up to 4K and 14 references; nano-banana-2-lite is the faster 1K model with up to 10 references",
+      ),
     // Text-to-image parameters
     prompt: z
       .string()
@@ -63,6 +70,13 @@ export const NanoBananaImageSchema = z
       .default(false)
       .optional()
       .describe("Enable Google Search grounding for factual image generation"),
+    callBackUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Optional URL for task completion notifications (uses KIE_AI_CALLBACK_URL if not provided)",
+      ),
   })
   .refine(
     (data) => {

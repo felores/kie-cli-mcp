@@ -5,7 +5,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 export const nanoBananaImageTool: ToolDef<typeof NanoBananaImageSchema> = {
   name: "nano_banana_image",
   description:
-    "Generate and edit images using Google's Gemini 3.1 Flash Image (Nano Banana 2) - unified tool with 4K support, up to 14 reference images, Google Search grounding, and improved text rendering. Pricing: 8 credits/1K, 12/2K, 18/4K",
+    "Generate and edit images using Nano Banana 2 or the faster 1K Nano Banana 2 Lite. Nano Banana 2 supports 4K, 14 references, and Google Search grounding; Lite supports up to 10 references.",
   category: "image",
   schema: NanoBananaImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -41,7 +41,7 @@ export const nanoBananaImageTool: ToolDef<typeof NanoBananaImageSchema> = {
                 success: true,
                 response: response,
                 mode: modeDescription,
-                message: `Nano Banana 2 image ${modeDescription} initiated`,
+                message: `${request.model === "nano-banana-2-lite" ? "Nano Banana 2 Lite" : "Nano Banana 2"} image ${modeDescription} initiated`,
               },
               null,
               2,
@@ -53,6 +53,7 @@ export const nanoBananaImageTool: ToolDef<typeof NanoBananaImageSchema> = {
       return ctx.formatError("nano_banana_image", error, {
         prompt:
           "Required for generate/edit modes: text description (max 5000 chars)",
+        model: 'Optional: "nano-banana-2" (default) or "nano-banana-2-lite"',
         image_input:
           "Optional for edit mode: array of up to 14 reference image URLs",
         output_format: 'Optional: "png" or "jpg"',

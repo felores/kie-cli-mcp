@@ -58,7 +58,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 ### Image
 | Tool | Kie.ai Models | Status |
 |------|---------------|--------|
-| `nano_banana_image` | Nano Banana 2 / Gemini 3.1 Flash (generate/edit) | ✅ |
+| `nano_banana_image` | Nano Banana 2 / Nano Banana 2 Lite (generate/edit) | ✅ |
 | `bytedance_seedream_image` | Seedream V4 / V5 Lite (text-to-image/edit) | ✅ |
 | `qwen_image` | Qwen (text-to-image/edit) | ✅ |
 | `gpt_image_2` | GPT Image 2 (text/image-to-image) | ✅ |
