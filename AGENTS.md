@@ -266,6 +266,14 @@ if (apiType === 'veo3') {
 ### Version Management (CRITICAL)
 **ALWAYS check and update versions when making user-facing changes:**
 
+### Release Workflow (Canonical)
+
+1. Bump each affected public package independently: MCP changes require `packages/mcp/package.json` and `packages/mcp/src/index.ts`; CLI changes require `packages/cli/package.json`. Update `package-lock.json`, `CHANGELOG.md`, README model references, `docs/TOOLS.md` (`npm run docs`), and relevant `docs/kie/` contracts.
+2. Verify locally: `npm run typecheck`, `npm run build`, `npm test`, and `npm pack -w @felores/kie-ai-mcp-server --dry-run` plus `npm pack -w @felores/kie-cli --dry-run` for affected packages.
+3. Commit the release preparation, rebase, and push `main`. Create and push tag `vX.Y.Z`, then create the GitHub Release with notes from the changelog.
+4. Publish affected packages to npm with a fresh OTP when manual publishing is required. The release workflow also publishes to npm and GitHub Packages (`https://npm.pkg.github.com/`); monitor its run to completion.
+5. A release is complete only when: commits and tag are pushed, the GitHub Release is visible, intended versions resolve from npm, both intended packages have successful GitHub Packages publish steps, and the working tree is clean.
+
 1. **When to bump version**:
    - **Patch (x.x.X)**: Bug fixes, documentation, internal improvements
    - **Minor (x.X.0)**: New features, new tools, new parameters (backwards compatible)
