@@ -17,6 +17,7 @@ on:
 permissions:
   contents: read
   id-token: write # required for npm provenance (OIDC)
+  packages: write
 
 jobs:
   publish:
@@ -69,3 +70,29 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @felores/kie-ai-mcp-server to GitHub Packages
+        run: |
+          npm config set @felores:registry https://npm.pkg.github.com
+          npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+          VER=$(node -p "require('./packages/mcp/package.json').version")
+          if npm view "@felores/kie-ai-mcp-server@$VER" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "@felores/kie-ai-mcp-server@$VER already published to GitHub Packages, skipping."
+          else
+            npm publish -w @felores/kie-ai-mcp-server --registry=https://npm.pkg.github.com --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+
+      - name: Publish @felores/kie-cli to GitHub Packages
+        run: |
+          npm config set @felores:registry https://npm.pkg.github.com
+          npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+          VER=$(node -p "require('./packages/cli/package.json').version")
+          if npm view "@felores/kie-cli@$VER" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "@felores/kie-cli@$VER already published to GitHub Packages, skipping."
+          else
+            npm publish -w @felores/kie-cli --registry=https://npm.pkg.github.com --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
