@@ -663,12 +663,28 @@ export class KieAiClient {
   ): Promise<KieAiResponse<TaskResponse>> {
     // Determine mode based on presence of image_urls
     const isEdit = !!request.image_urls && request.image_urls.length > 0;
-    const isV5Lite = request.version !== "4";
+    const isV5Lite = request.version === "5-lite" || !request.version;
+    const isV5Pro = request.version === "5-pro";
 
     let model: string;
     let input: any;
 
-    if (isV5Lite) {
+    if (isV5Pro) {
+      if (request.image_urls && request.image_urls.length > 10) {
+        throw new Error("Seedream 5 Pro supports at most 10 reference images");
+      }
+      model = isEdit
+        ? "seedream/5-pro-image-to-image"
+        : "seedream/5-pro-text-to-image";
+      input = {
+        prompt: request.prompt,
+        aspect_ratio: request.aspect_ratio || "1:1",
+        quality: request.quality || "basic",
+        output_format: request.output_format || "png",
+        nsfw_checker: request.nsfw_checker === true,
+      };
+      if (isEdit) input.image_urls = request.image_urls;
+    } else if (isV5Lite) {
       // Seedream 5.0 Lite
       model = isEdit
         ? "seedream/5-lite-image-to-image"

@@ -4,7 +4,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const bytedanceSeedreamImageTool: ToolDef<typeof ByteDanceSeedreamImageSchema> = {
   name: "bytedance_seedream_image",
-  description: "Generate and edit images using ByteDance Seedream models (supports V4 and V5 Lite with 3K output). V5 Lite offers enhanced detail fidelity, multi-image fusion up to 14 refs, and clear small-text rendering",
+  description: "Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.",
   category: "image",
   schema: ByteDanceSeedreamImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -37,7 +37,7 @@ export const bytedanceSeedreamImageTool: ToolDef<typeof ByteDanceSeedreamImageSc
                 {
                   success: true,
                   task_id: response.data.taskId,
-                  message: `ByteDance Seedream ${request.version === "4" ? "V4" : "V5 Lite"} ${mode} task created successfully`,
+                  message: `ByteDance Seedream ${request.version === "4" ? "V4" : request.version === "5-pro" ? "V5 Pro" : "V5 Lite"} ${mode} task created successfully`,
                   parameters: {
                     mode: mode,
                     prompt:

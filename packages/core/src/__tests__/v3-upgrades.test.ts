@@ -140,6 +140,15 @@ describe("NanoBananaImageSchema (Nano Banana 2)", () => {
 // ──────────────────────────────────────────────
 
 describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
+  it("accepts Seedream 5 Pro generation", () => {
+    const result = ByteDanceSeedreamImageSchema.safeParse({
+      prompt: "A clear product infographic",
+      version: "5-pro",
+      quality: "high",
+      output_format: "jpeg",
+    });
+    expect(result.success).toBe(true);
+  });
   describe("version selection", () => {
     it("defaults to 5-lite when version omitted (client treats non-'4' as V5 Lite)", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({

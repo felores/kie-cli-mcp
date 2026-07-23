@@ -768,13 +768,13 @@ export const ByteDanceSeedreamImageSchema = z.object({
     .describe(
       "Array of image URLs for editing mode (optional - if not provided, uses text-to-image). V4: max 10, V4.5: max 14",
     ),
-  // Version selection: "4" for Seedream V4, "5-lite" for Seedream 5.0 Lite
+  // Version selection: V4, Seedream 5.0 Lite, or Seedream 5.0 Pro
   version: z
-    .enum(["4", "5-lite"])
+    .enum(["4", "5-lite", "5-pro"])
     .default("5-lite")
     .optional()
     .describe(
-      "Seedream version: '4' for V4, '5-lite' for V5 Lite (default) with enhanced features",
+      "Seedream version: '4' for V4, '5-lite' for V5 Lite (default), or '5-pro' for controlled 1K/2K generation and editing",
     ),
   // V4 parameters
   image_size: z
@@ -824,6 +824,14 @@ export const ByteDanceSeedreamImageSchema = z.object({
     .describe(
       "Output quality for V5 Lite (V5 Lite only): 'basic' = 2K, 'high' = 3K resolution",
     ),
+  output_format: z
+    .enum(["png", "jpeg"])
+    .optional()
+    .describe("Output format for Seedream 5 Pro: png or jpeg"),
+  nsfw_checker: z
+    .boolean()
+    .optional()
+    .describe("Enable NSFW filtering for Seedream 5 Pro"),
   callBackUrl: z
     .string()
     .url()

@@ -59,7 +59,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | Tool | Kie.ai Models | Status |
 |------|---------------|--------|
 | `nano_banana_image` | Nano Banana 2 / Nano Banana 2 Lite (generate/edit) | ✅ |
-| `bytedance_seedream_image` | Seedream V4 / V5 Lite (text-to-image/edit) | ✅ |
+| `bytedance_seedream_image` | Seedream V4 / V5 Lite / V5 Pro (text-to-image/edit) | ✅ |
 | `qwen_image` | Qwen (text-to-image/edit) | ✅ |
 | `gpt_image_2` | GPT Image 2 (text/image-to-image) | ✅ |
 | `flux_kontext_image` | Flux Kontext Pro/Max | ✅ |
