@@ -109,6 +109,12 @@ ln -s "$PWD/skills/kie-ai" ~/.claude/skills/kie-ai
 
 Then any session can generate media in plain language ("make me an image of…", "turn this photo into a video").
 
+`skills/explainer-video/` builds on it: a full narrated-explainer production pipeline (storyboard JSON → character refs → scene stills → animated clips → voiceover → ffmpeg assembly) with a resumable runner, a storyboard schema, a narrative style guide, and a complete worked example. Install it the same way:
+
+```bash
+cp -r skills/explainer-video ~/.claude/skills/explainer-video
+```
+
 ## Models
 
 A unified, always-current catalog including:
