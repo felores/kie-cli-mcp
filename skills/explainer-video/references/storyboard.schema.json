@@ -69,6 +69,11 @@
           "camera": { "type": "string", "description": "CAMERA move for the animation prompt, e.g. 'slow minimal push-in'. Kept separate from subject motion." },
           "secondary_motion": { "type": "string", "description": "SECONDARY MOTION — a background element moving independently (flickering lamp, drifting bubbles). This is what separates animation from a slideshow." },
           "sound_design": { "type": "string", "description": "SOUND DESIGN for models generating native audio. Only emitted when --sound is passed; narration and music are added at assembly." },
+          "negative_rules": {
+            "type": ["string", "array"],
+            "items": { "type": "string" },
+            "description": "Overrides the storyboard-level NEGATIVE RULES for this scene only. Use when a scene legitimately needs something the global list forbids — e.g. a sign or label the joke depends on, where the global rules ban on-screen text."
+          },
           "characters": {
             "type": "array",
             "items": { "type": "string" },
