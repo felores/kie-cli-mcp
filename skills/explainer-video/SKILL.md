@@ -58,6 +58,29 @@ Storyboard rules that make the pipeline work well:
 - `motion` describes camera/animation for the clip prompt ("slow lateral tracking",
   "static with subtle flicker", "speed ramp") — keep it modest; this is 2D animation.
 
+### Hybrid stills — the main cost lever
+
+Video generation is ~95% of the budget; images and narration are rounding errors.
+Set `"still": true` on a scene and it is **never sent to the video model** — the
+assembler gives its still image a Ken Burns move locally with ffmpeg instead, for free.
+
+```json
+{ "id": 12, "vo": "...", "prompt": "...", "still": true, "still_motion": "pan_right" }
+```
+
+`still_motion`: `zoom_in` (default), `zoom_out`, `pan_left`, `pan_right`, `pan_up`, `static`.
+
+**Which scenes to animate:** spend generation credits only where motion *is* the
+content — an impact, a chase, a transformation, a visual punchline. Talking-point
+scenes, diagrams, montages, establishing shots and end cards read perfectly well as a
+slow push on a good illustration. A 60–70% still ratio is normal and matches how
+hand-made explainer channels actually work.
+
+**Vary the move** between consecutive stills (don't zoom in five times in a row) and
+prefer `static` for text/end cards so type stays crisp.
+
+`--dry-run` prints the estimated cost and how much the still scenes saved.
+
 ## Step 2 — Dry run (cost & sanity preview)
 
 ```bash

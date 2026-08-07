@@ -28,6 +28,15 @@ function flag(name, fallback = undefined) {
 
 const STORYBOARD = flag("storyboard");
 const OUT = flag("out", "build/explainer");
+const FPS = 30;
+
+// Reference kie.ai list prices (USD) as of 2026-08-07, used only for the --dry-run
+// estimate. Override with --price-image / --price-video-sec / --price-tts-1k.
+const PRICE = {
+  image: parseFloat(flag("price-image", "0.04")), //     nano-banana-2, 1K
+  videoSec: parseFloat(flag("price-video-sec", "0.09")), // kling 3.0 turbo i2v 720p
+  tts1k: parseFloat(flag("price-tts-1k", "0.03")), //     elevenlabs turbo 2.5
+};
 const STAGE = flag("stage", "all");
 const DRY = !!flag("dry-run", false);
 const MODE = flag("mode", "std");
@@ -251,19 +260,33 @@ async function stageVoiceover() {
   if (failures.length) throw new Error(`${failures.length} voiceover line(s) failed — re-run to retry`);
 }
 
+const WPM = 145; // narration pace used only until the real audio exists
+const estimatedVoSeconds = (s) => (s.vo.split(/\s+/).length / WPM) * 60;
+
 function sceneTargetSeconds(s) {
-  const voSec = state.vo[s.id]?.seconds ?? 8;
+  const voSec = state.vo[s.id]?.seconds ?? estimatedVoSeconds(s);
   return Math.max(s.min_seconds || 4, voSec + 0.4);
 }
 
+const clipSeconds = (s) => Math.min(15, Math.ceil(sceneTargetSeconds(s)));
+
+const isStill = (s) => s.still === true;
+
 async function stageClips() {
-  console.log(`\n== Clips (${sb.scenes.length} scenes, mode: ${MODE}) ==`);
-  const pending = sb.scenes.filter((s) => !state.clips[s.id]?.file);
+  const animated = sb.scenes.filter((s) => !isStill(s));
+  const stills = sb.scenes.filter(isStill);
+  console.log(
+    `\n== Clips (${animated.length} animated, ${stills.length} still, mode: ${MODE}) ==`,
+  );
+  const pending = animated.filter((s) => !state.clips[s.id]?.file);
   if (DRY) {
     let total = 0;
-    for (const s of sb.scenes) total += Math.min(15, Math.ceil(sceneTargetSeconds(s)));
-    pending.forEach((s) => console.log(`  [dry] kling_video: scene ${s.id} (~${Math.min(15, Math.ceil(sceneTargetSeconds(s)))}s)`));
-    console.log(`  [dry] total clip seconds ≈ ${total}`);
+    for (const s of animated) total += clipSeconds(s);
+    pending.forEach((s) => console.log(`  [dry] kling_video: scene ${s.id} (~${clipSeconds(s)}s)`));
+    if (stills.length) {
+      console.log(`  [dry] ${stills.length} still scene(s) skipped — Ken Burns applied locally at assembly (free)`);
+    }
+    console.log(`  [dry] total animated seconds ≈ ${total}`);
     return;
   }
   const failures = await runPool(pending, async (s) => {
@@ -292,36 +315,99 @@ async function stageClips() {
   if (failures.length) throw new Error(`${failures.length} clip(s) failed — re-run to retry`);
 }
 
+/**
+ * Ken Burns filter chain for a still scene.
+ * The source is upscaled 2x before zoompan — zoompan steps in whole source pixels,
+ * so without this the move visibly stutters.
+ */
+function kenBurnsChain(motion, seconds) {
+  const frames = Math.max(2, Math.round(seconds * FPS));
+  const Z = 1.12; // max zoom
+  const big = `scale=${ARW * 2}:${ARH * 2}:force_original_aspect_ratio=decrease,pad=${ARW * 2}:${ARH * 2}:(ow-iw)/2:(oh-ih)/2`;
+  const step = ((Z - 1) / frames).toFixed(6);
+  const cx = "iw/2-(iw/zoom/2)";
+  const cy = "ih/2-(ih/zoom/2)";
+  let z = `min(1+${step}*on,${Z})`, x = cx, y = cy;
+
+  switch (motion) {
+    case "zoom_out":
+      z = `max(${Z}-${step}*on,1)`;
+      break;
+    case "pan_right":
+      z = `${Z}`;
+      x = `(iw-iw/zoom)*on/${frames}`;
+      break;
+    case "pan_left":
+      z = `${Z}`;
+      x = `(iw-iw/zoom)*(1-on/${frames})`;
+      break;
+    case "pan_up":
+      z = `${Z}`;
+      y = `(ih-ih/zoom)*(1-on/${frames})`;
+      break;
+    case "static":
+      z = "1";
+      break;
+    default: // zoom_in
+      break;
+  }
+  return `${big},zoompan=z='${z}':x='${x}':y='${y}':d=${frames}:s=${ARW}x${ARH}:fps=${FPS}`;
+}
+
 function stageAssemble() {
-  console.log(`\n== Assemble ==`);
+  const stillCount = sb.scenes.filter(isStill).length;
+  console.log(`\n== Assemble (${sb.scenes.length - stillCount} animated, ${stillCount} still) ==`);
   if (DRY) {
     console.log(`  [dry] ${sb.scenes.length} segments → final.mp4`);
     return;
   }
   const segFiles = [];
   for (const s of sb.scenes) {
-    const clip = state.clips[s.id]?.file;
     const vo = state.vo[s.id]?.file;
-    if (!clip || !vo) throw new Error(`assemble: scene ${s.id} missing ${!clip ? "clip" : "vo"}`);
+    if (!vo) throw new Error(`assemble: scene ${s.id} missing vo`);
     const target = sceneTargetSeconds(s).toFixed(2);
     const seg = path.join(OUT, "segments", `scene-${String(s.id).padStart(2, "0")}.mp4`);
-    // Freeze last frame if the clip is shorter than narration; trim if longer.
-    ff(
-      [
-        "-i", clip, "-i", vo,
-        "-filter_complex",
-        `[0:v]tpad=stop_mode=clone:stop_duration=20,trim=0:${target},setpts=PTS-STARTPTS,` +
-          `scale=${ARW}:${ARH}:force_original_aspect_ratio=decrease,pad=${ARW}:${ARH}:(ow-iw)/2:(oh-ih)/2,fps=30[v];` +
-          `[1:a]apad=whole_dur=${target},atrim=0:${target},asetpts=PTS-STARTPTS[a]`,
-        "-map", "[v]", "-map", "[a]",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-ar", "48000", "-ac", "2",
-        seg,
-      ],
-      `segment ${s.id}`,
-    );
+    const audio = `[1:a]apad=whole_dur=${target},atrim=0:${target},asetpts=PTS-STARTPTS[a]`;
+    const enc = [
+      "-map", "[v]", "-map", "[a]",
+      "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
+      "-c:a", "aac", "-ar", "48000", "-ac", "2",
+      "-t", target,
+      seg,
+    ];
+
+    if (isStill(s)) {
+      // No generated clip: pan/zoom the still locally. Costs nothing.
+      const src = state.stills[s.id]?.file;
+      if (!src) throw new Error(`assemble: still scene ${s.id} missing still image`);
+      const kb = kenBurnsChain(s.still_motion || "zoom_in", Number(target));
+      ff(
+        [
+          "-loop", "1", "-i", src, "-i", vo,
+          "-filter_complex",
+          `[0:v]${kb},trim=0:${target},setpts=PTS-STARTPTS[v];${audio}`,
+          ...enc,
+        ],
+        `still segment ${s.id}`,
+      );
+      console.log(`  ✓ segment ${s.id} (${target}s, still/${s.still_motion || "zoom_in"})`);
+    } else {
+      const clip = state.clips[s.id]?.file;
+      if (!clip) throw new Error(`assemble: scene ${s.id} missing clip`);
+      // Freeze last frame if the clip is shorter than narration; trim if longer.
+      ff(
+        [
+          "-i", clip, "-i", vo,
+          "-filter_complex",
+          `[0:v]tpad=stop_mode=clone:stop_duration=20,trim=0:${target},setpts=PTS-STARTPTS,` +
+            `scale=${ARW}:${ARH}:force_original_aspect_ratio=decrease,pad=${ARW}:${ARH}:(ow-iw)/2:(oh-ih)/2,fps=${FPS}[v];${audio}`,
+          ...enc,
+        ],
+        `segment ${s.id}`,
+      );
+      console.log(`  ✓ segment ${s.id} (${target}s, animated)`);
+    }
     segFiles.push(seg);
-    console.log(`  ✓ segment ${s.id} (${target}s)`);
   }
 
   const listFile = path.join(OUT, "segments", "concat.txt");
@@ -363,11 +449,41 @@ if (order.some((s) => !STAGES[s])) {
   process.exit(1);
 }
 
+function printEstimate() {
+  const animated = sb.scenes.filter((s) => !isStill(s));
+  const stills = sb.scenes.filter(isStill);
+  const words = sb.scenes.reduce((n, s) => n + s.vo.split(/\s+/).length, 0);
+  const runtime = sb.scenes.reduce((t, s) => t + sceneTargetSeconds(s), 0);
+  const animSecs = animated.reduce((t, s) => t + clipSeconds(s), 0);
+  const chars = sb.scenes.reduce((n, s) => n + s.vo.length, 0);
+  const imageCount = sb.scenes.length + sb.characters.length;
+
+  const cImg = imageCount * PRICE.image;
+  const cVid = animSecs * PRICE.videoSec;
+  const cTts = (chars / 1000) * PRICE.tts1k;
+  const total = cImg + cVid + cTts;
+
+  console.log(`\n== Estimate ==`);
+  console.log(`  runtime          ≈ ${(runtime / 60).toFixed(1)} min (${words} words)`);
+  console.log(`  scenes           ${sb.scenes.length} (${animated.length} animated, ${stills.length} still)`);
+  console.log(`  images           ${imageCount} × $${PRICE.image} = $${cImg.toFixed(2)}`);
+  console.log(`  animation        ${animSecs}s × $${PRICE.videoSec} = $${cVid.toFixed(2)}`);
+  console.log(`  narration        ${chars} chars = $${cTts.toFixed(2)}`);
+  console.log(`  ---------------------------------------------`);
+  console.log(`  TOTAL            ~$${total.toFixed(2)}   (+ ~20% for retries → ~$${(total * 1.2).toFixed(2)})`);
+  if (stills.length) {
+    const wouldBe = sb.scenes.reduce((t, s) => t + clipSeconds(s), 0);
+    console.log(`  saved by stills  $${((wouldBe - animSecs) * PRICE.videoSec).toFixed(2)} vs animating every scene`);
+  }
+  console.log(`  (reference kie.ai list prices, 2026-08-07; override with --price-* flags)`);
+}
+
 console.log(
   `Storyboard: ${sb.title} — ${sb.scenes.length} scenes, ${sb.characters.length} characters, ${AR}, voice ${VOICE}${DRY ? " [DRY RUN]" : ""}`,
 );
 try {
   for (const name of order) await STAGES[name]();
+  if (DRY) printEstimate();
 } catch (err) {
   console.error(`\n⛔ ${err.message || err}\nState saved — re-run the same command to resume.`);
   process.exit(1);

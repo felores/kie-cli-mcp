@@ -57,6 +57,16 @@
             "description": "Character ids appearing in this scene (their reference images are passed to the generator)"
           },
           "motion": { "type": "string", "description": "Camera/animation direction for the clip, e.g. 'slow lateral tracking'" },
+          "still": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, this scene is NOT sent to the video model. The still image is given a Ken Burns move locally with ffmpeg instead — free. Use for talking-point scenes; reserve animation for beats where motion carries the joke or the action."
+          },
+          "still_motion": {
+            "enum": ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "static"],
+            "default": "zoom_in",
+            "description": "Ken Burns move for still scenes. Vary it across consecutive stills so the video doesn't feel mechanical."
+          },
           "min_seconds": { "type": "number", "minimum": 3, "maximum": 15, "default": 4, "description": "Minimum scene length even if narration is shorter" }
         }
       }
