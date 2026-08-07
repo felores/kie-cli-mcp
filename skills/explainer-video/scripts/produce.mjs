@@ -42,6 +42,7 @@ const DRY = !!flag("dry-run", false);
 const MODE = flag("mode", "std");
 const VOICE_OVERRIDE = flag("voice");
 const CONCURRENCY = parseInt(flag("concurrency", "3"), 10);
+const SOUND = !!flag("sound", false); // let the video model generate native audio
 
 if (!STORYBOARD) {
   console.error(
@@ -176,6 +177,76 @@ function mediaDuration(file) {
 
 const stylize = (p) => `${p}, ${sb.style}`;
 
+const NEGATIVES_DEFAULT = [
+  "no duplicate characters",
+  "no extra limbs",
+  "no warped faces",
+  "no photorealism",
+  "no 3D rendering",
+  "no watermark",
+  "no text or captions",
+];
+
+const asList = (v) => (Array.isArray(v) ? v.join(", ") : v);
+const charById = (id) => sb.characters.find((c) => c.id === id);
+
+/**
+ * Structured image prompt, block form. Blocks the model can't confuse:
+ * STYLE LOCK / SUBJECT COUNT / SCENE / CHARACTERS / ENVIRONMENT / COLOR PALETTE /
+ * COMPOSITION / ASPECT RATIO / NEGATIVE RULES.
+ * Scenes that only set `prompt` still get a valid (shorter) prompt.
+ */
+function buildImagePrompt(s) {
+  const lines = [`STYLE LOCK: ${sb.style}`];
+  if (s.subject_count) lines.push(`SUBJECT COUNT: ${s.subject_count}`);
+  lines.push(`SCENE: ${s.prompt}`);
+
+  const cast = (s.characters || []).map(charById).filter((c) => c && c.short);
+  if (cast.length) lines.push(`CHARACTERS: ${cast.map((c) => c.short).join(" | ")}`);
+
+  if (s.environment) lines.push(`ENVIRONMENT: ${s.environment}`);
+  const palette = s.palette || sb.palette;
+  if (palette) lines.push(`COLOR PALETTE: ${palette}`);
+  if (s.composition) lines.push(`COMPOSITION: ${s.composition}`);
+  lines.push(`ASPECT RATIO: ${AR}`);
+
+  const neg = asList(s.negative_rules || sb.negative_rules) || NEGATIVES_DEFAULT.join(", ");
+  lines.push(`NEGATIVE RULES: ${neg}`);
+  return lines.join("\n");
+}
+
+/** Character reference sheets carry the same locks — they are the identity source of truth. */
+function buildCharacterPrompt(c) {
+  const neg = asList(sb.negative_rules) || NEGATIVES_DEFAULT.join(", ");
+  return [
+    `STYLE LOCK: ${sb.style}`,
+    `SUBJECT COUNT: ONE character only.`,
+    `CHARACTER SHEET: ${c.prompt}`,
+    `COMPOSITION: model sheet on a plain empty background, views and expressions evenly spaced, full body visible, no cropping.`,
+    `ASPECT RATIO: ${AR}`,
+    `NEGATIVE RULES: ${neg}`,
+  ].join("\n");
+}
+
+/** Structured animation prompt; the trailing STYLE LOCK is what stops mid-clip drift. */
+function buildAnimationPrompt(s, seconds) {
+  const lines = [
+    `INPUT FRAME: the provided still image for this scene.`,
+    `MOTION: ${s.motion || "subtle ambient motion only"}`,
+  ];
+  if (s.secondary_motion) lines.push(`SECONDARY MOTION: ${s.secondary_motion}`);
+  if (s.camera) lines.push(`CAMERA: ${s.camera}`);
+  lines.push(`DURATION: ${seconds} seconds.`);
+  if (SOUND && s.sound_design) lines.push(`SOUND DESIGN: ${s.sound_design}`);
+  lines.push(
+    `STYLE LOCK: preserve the exact art style, character design, proportions, colors and line weight of the input image. No morphing, no style drift, no new characters entering frame.`,
+  );
+  lines.push(
+    `STRICT RULES: no on-screen text, no captions, no watermark, no logos${SOUND ? ", no music, no speech" : ""}.`,
+  );
+  return lines.join("\n");
+}
+
 async function stageCharacters() {
   console.log(`\n== Characters (${sb.characters.length}) ==`);
   const pending = sb.characters.filter((c) => !state.characters[c.id]?.file);
@@ -187,7 +258,7 @@ async function stageCharacters() {
     console.log(`  → character ${c.id}`);
     const resp = runKie([
       "nano_banana_image",
-      "--prompt", stylize(c.prompt),
+      "--prompt", buildCharacterPrompt(c),
       "--aspect_ratio", AR,
       "--output_format", "png",
     ]);
@@ -217,7 +288,7 @@ async function stageStills() {
       .filter(Boolean);
     const cliArgs = [
       "nano_banana_image",
-      "--prompt", stylize(s.prompt),
+      "--prompt", buildImagePrompt(s),
       "--aspect_ratio", AR,
       "--output_format", "png",
     ];
@@ -295,14 +366,15 @@ async function stageClips() {
     // Kling caps at 15s; assembler freezes the last frame for longer narration.
     const dur = Math.max(3, Math.min(15, Math.ceil(sceneTargetSeconds(s))));
     console.log(`  → clip ${s.id} (${dur}s)`);
-    const prompt = `${s.motion || "subtle ambient animation"}. ${s.prompt}. Flat 2D cartoon animation, smooth minimal motion, no camera shake beyond direction given.`;
-    const resp = runKie([
+    const cliArgs = [
       "kling_video",
-      "--prompt", prompt,
+      "--prompt", buildAnimationPrompt(s, dur),
       "--image_urls", still.url,
       "--duration", String(dur),
       "--mode", MODE,
-    ]);
+    ];
+    if (SOUND) cliArgs.push("--sound");
+    const resp = runKie(cliArgs);
     if (resp.success === false) throw new Error(`clip ${s.id}: ${resp.error}`);
     const taskId = extractTaskId(resp);
     const url = await pollTask(taskId, { intervalMs: 15_000, timeoutMs: 30 * 60_000, label: `clip ${s.id}` });
@@ -435,6 +507,26 @@ function stageAssemble() {
 }
 
 // ---------- Main ----------
+
+// --show-prompts <id|all>: print the exact prompts that would be sent, then exit.
+const SHOW = flag("show-prompts");
+if (SHOW) {
+  const pick = SHOW === true || SHOW === "all" ? sb.scenes : sb.scenes.filter((s) => String(s.id) === String(SHOW));
+  if (SHOW === true || SHOW === "all") {
+    for (const c of sb.characters) {
+      console.log(`\n──────── CHARACTER ${c.id} ────────\n${buildCharacterPrompt(c)}`);
+    }
+  }
+  for (const s of pick) {
+    console.log(`\n──────── SCENE ${s.id} · IMAGE ────────\n${buildImagePrompt(s)}`);
+    if (!isStill(s)) {
+      console.log(`\n──────── SCENE ${s.id} · ANIMATION ────────\n${buildAnimationPrompt(s, clipSeconds(s))}`);
+    } else {
+      console.log(`\n(scene ${s.id} is a still — Ken Burns "${s.still_motion || "zoom_in"}", no animation prompt)`);
+    }
+  }
+  process.exit(0);
+}
 
 const STAGES = {
   characters: stageCharacters,

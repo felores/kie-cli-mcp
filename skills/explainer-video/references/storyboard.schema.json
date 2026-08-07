@@ -9,7 +9,17 @@
     "aspect_ratio": { "enum": ["16:9", "9:16", "1:1"], "default": "16:9" },
     "style": {
       "type": "string",
-      "description": "Global style string appended to every image prompt (look, line quality, palette, lighting)"
+      "description": "STYLE LOCK — the global look emitted at the top of every image prompt and repeated in every animation prompt. Be specific about line quality, shading model, and how named vs background characters are drawn; this is the single biggest lever on cross-scene consistency."
+    },
+    "negative_rules": {
+      "type": ["string", "array"],
+      "items": { "type": "string" },
+      "description": "NEGATIVE RULES emitted on every image prompt, e.g. no duplicate characters, no extra limbs, no warped faces, no photorealism, no 3D rendering, no watermark, no text.",
+      "default": []
+    },
+    "palette": {
+      "type": "string",
+      "description": "Default COLOR PALETTE for scenes that don't override it."
     },
     "voice": {
       "type": "object",
@@ -36,7 +46,8 @@
         "required": ["id", "prompt"],
         "properties": {
           "id": { "type": "string", "description": "Short id referenced by scenes, e.g. 'A'" },
-          "prompt": { "type": "string", "description": "Reference-sheet prompt (appearance, outfit, age) — style string is appended automatically" }
+          "prompt": { "type": "string", "description": "Reference-sheet prompt (appearance, outfit, age) — style string is appended automatically" },
+          "short": { "type": "string", "description": "One-line description injected into the CHARACTERS block of any scene this character appears in. Keeps identity stable alongside the reference image." }
         }
       }
     },
@@ -50,7 +61,14 @@
           "id": { "type": "integer", "description": "Scene number (ordering)" },
           "label": { "type": "string", "description": "Optional act/beat label, e.g. 'Hook', 'Mechanism'" },
           "vo": { "type": "string", "description": "Narration line for this scene. Keep under ~35 words (≈14s spoken)" },
-          "prompt": { "type": "string", "description": "Still-image prompt — style string and character refs are added automatically" },
+          "prompt": { "type": "string", "description": "SCENE — what is happening in the frame. The STYLE LOCK, CHARACTERS, ASPECT RATIO and NEGATIVE RULES blocks are assembled around it automatically." },
+          "subject_count": { "type": "string", "description": "SUBJECT COUNT, e.g. 'ONE character only — the Field Researcher'. Explicitly capping the cast is the most effective guard against duplicated/extra characters." },
+          "environment": { "type": "string", "description": "ENVIRONMENT in depth layers: foreground / midground / background." },
+          "palette": { "type": "string", "description": "COLOR PALETTE for this scene; overrides the storyboard default. Use it to carry the emotional beat." },
+          "composition": { "type": "string", "description": "COMPOSITION, e.g. 'medium close-up from front', 'wide establishing shot'." },
+          "camera": { "type": "string", "description": "CAMERA move for the animation prompt, e.g. 'slow minimal push-in'. Kept separate from subject motion." },
+          "secondary_motion": { "type": "string", "description": "SECONDARY MOTION — a background element moving independently (flickering lamp, drifting bubbles). This is what separates animation from a slideshow." },
+          "sound_design": { "type": "string", "description": "SOUND DESIGN for models generating native audio. Only emitted when --sound is passed; narration and music are added at assembly." },
           "characters": {
             "type": "array",
             "items": { "type": "string" },

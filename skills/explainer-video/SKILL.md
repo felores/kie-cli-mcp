@@ -46,6 +46,45 @@ narrative formula in `references/style-guide.md` — hook → bridge → mechani
 application → obstacle & fixes → bookend + CTA. One scene = one narration sentence =
 one visual metaphor = 8–12 seconds.
 
+### Prompts are assembled in labelled blocks
+
+You write the *content*; the runner assembles the structure. Every image prompt goes out as:
+
+```
+STYLE LOCK: …        the storyboard's `style`, verbatim, on every single prompt
+SUBJECT COUNT: …     scene.subject_count
+SCENE: …             scene.prompt
+CHARACTERS: …        `short` line of each character listed in scene.characters
+ENVIRONMENT: …       scene.environment, in foreground/midground/background layers
+COLOR PALETTE: …     scene.palette, else storyboard palette
+COMPOSITION: …       scene.composition
+ASPECT RATIO: …
+NEGATIVE RULES: …    storyboard negative_rules, else a sane default list
+```
+
+and every animation prompt as `INPUT FRAME / MOTION / SECONDARY MOTION / CAMERA /
+DURATION / STYLE LOCK / STRICT RULES`.
+
+Three of those blocks do most of the work:
+
+- **SUBJECT COUNT** — the single most effective guard against duplicated or extra
+  characters, the most common failure in multi-scene generation. Always state it
+  ("ONE orca and ONE stick figure only", "no humans").
+- **STYLE LOCK repeated on the animation prompt** — stops the video model drifting
+  off-model partway through a clip.
+- **SECONDARY MOTION** — one background element moving independently of the subject.
+  It is the difference between animation and a slideshow, and costs nothing.
+
+Every field is optional: a storyboard with only `style` + `prompt` still produces a
+valid (shorter) block prompt, so older storyboards keep working.
+
+Inspect exactly what will be sent before spending anything:
+
+```bash
+node skills/explainer-video/scripts/produce.mjs --storyboard my.json --show-prompts 4    # one scene
+node skills/explainer-video/scripts/produce.mjs --storyboard my.json --show-prompts all  # everything
+```
+
 Storyboard rules that make the pipeline work well:
 
 - `style` is appended to **every** image prompt: keep it as a single reusable style
