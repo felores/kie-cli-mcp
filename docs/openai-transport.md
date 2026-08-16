@@ -69,8 +69,8 @@ Environment variables:
 |---|---|---|---|
 | `kie-nano-banana-image` | `nano_banana_image` | image gen/edit | prompt, n, quality, size, up to 14 image references |
 | `kie-gpt-image-2` | `gpt_image_2` | image gen/edit | prompt, n, quality, size, up to 16 image references |
-| `kie-bytedance-video` | `bytedance_seedance_video` (standard) | video | prompt, 4-15s, 480p/720p, aspect ratio, up to 7 image refs |
-| `kie-bytedance-fast-video` | `bytedance_seedance_video` (fast) | video | prompt, 4-15s, 480p/720p, aspect ratio, up to 7 image refs |
+| `kie-bytedance-video` | `bytedance_seedance_video` (Seedance 2.5) | video | prompt, optional seconds, size, resolution_name, and generate_audio |
+| `kie-bytedance-fast-video` | `bytedance_seedance_video` (Seedance 2.5) | video | Legacy alias. It uses the same Seedance 2.5 model and does not select a fast mode. |
 
 Video model IDs intentionally omit `seedance` so consumers use the generic video route, not an Ark-specific branch.
 

@@ -188,7 +188,7 @@
 - 1080p output
 - Efficient compute performance
 
-**Suggested Tool**: Update `bytedance_seedance_video` with `fast` quality option
+**Suggested Tool**: Superseded by `bytedance_seedance_video` on Seedance 2.5; it has no documented fast mode.
 
 ---
 

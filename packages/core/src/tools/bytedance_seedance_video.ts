@@ -4,7 +4,8 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSchema> = {
   name: "bytedance_seedance_video",
-  description: "Generate videos with ByteDance Seedance 2.0: standard, fast, or lower-cost Mini modes with multimodal references and native audio.",
+  description:
+    "Generate videos with ByteDance Seedance 2.5 using text, first/last frames, or multimodal image/video/audio references.",
   category: "video",
   schema: ByteDanceSeedanceVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -18,9 +19,6 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
         await ctx.client.generateByteDanceSeedanceVideo(request);
 
       if (response.code === 200 && response.data?.taskId) {
-        const mode = request.mode || "standard";
-        const hasFrameInput = !!request.first_frame_url;
-
         // Store task in database
         await ctx.db.createTask({
           task_id: response.data.taskId,
@@ -36,17 +34,13 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
                 {
                   success: true,
                   task_id: response.data.taskId,
-                  message: `ByteDance Seedance 2.0 ${mode} generation task created successfully`,
+                  message:
+                    "ByteDance Seedance 2.5 video generation task created successfully",
                   parameters: {
-                    mode,
                     prompt:
                       request.prompt.substring(0, 100) +
                       (request.prompt.length > 100 ? "..." : ""),
-                    aspect_ratio: request.aspect_ratio || "16:9",
-                    resolution: request.resolution || "720p",
-                    duration: request.duration || 5,
-                    generate_audio: request.generate_audio !== false,
-                    ...(hasFrameInput && {
+                    ...(request.first_frame_url && {
                       first_frame_url: request.first_frame_url,
                     }),
                     ...(request.last_frame_url && {
@@ -61,11 +55,23 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
                     ...(request.reference_audio_urls?.length && {
                       reference_audios: request.reference_audio_urls.length,
                     }),
+                    ...(request.return_last_frame !== undefined && {
+                      return_last_frame: request.return_last_frame,
+                    }),
+                    ...(request.generate_audio !== undefined && {
+                      generate_audio: request.generate_audio,
+                    }),
+                    ...(request.resolution && { resolution: request.resolution }),
+                    ...(request.aspect_ratio && {
+                      aspect_ratio: request.aspect_ratio,
+                    }),
+                    ...(request.duration !== undefined && {
+                      duration: request.duration,
+                    }),
                   },
                   next_steps: [
                     "Use get_task_status to check generation progress",
                     "Task completion will be sent to the provided callback URL",
-                    `${mode} mode generation typically takes 2-5 minutes depending on duration and complexity`,
                   ],
                 },
                 null,
@@ -84,35 +90,38 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
       if (error instanceof z.ZodError) {
         return ctx.formatError("bytedance_seedance_video", error, {
           prompt:
-            "Required: Text prompt for video generation (3-20000 characters)",
-          mode: 'Optional: Generation mode: "standard", "fast", or "mini" (default: standard)',
-          first_frame_url: "Optional: URL of image to use as first frame",
-          last_frame_url: "Optional: URL of image to use as last frame",
+            "Required: text prompt for Seedance 2.5 video generation",
+          first_frame_url: "Optional: URL of image to use as the first frame",
+          last_frame_url:
+            "Optional: URL of image to use as the last frame; requires first_frame_url",
           reference_image_urls:
-            "Optional: Reference images for style guidance (up to 9)",
+            "Optional: reference images for multimodal reference-to-video",
           reference_video_urls:
-            "Optional: Reference videos for motion guidance (up to 3)",
+            "Optional: reference videos for multimodal reference-to-video",
           reference_audio_urls:
-            "Optional: Reference audio for sound-guided generation (up to 3)",
-          aspect_ratio: "Optional: Video aspect ratio (default: 16:9)",
+            "Optional: reference audio for multimodal reference-to-video",
+          return_last_frame: "Optional: return the generated last frame",
+          aspect_ratio: "Optional: video aspect ratio",
           resolution:
-            'Optional: Video resolution: "480p" or "720p" (default: 720p)',
-          duration: "Optional: Video duration in seconds 4-15 (default: 5)",
-          generate_audio: "Optional: Generate native audio (default: true)",
-          web_search:
-            "Optional: Enable web search for prompt enhancement (default: false)",
-          nsfw_checker:
-            "Optional: Enable NSFW content filtering (default: false)",
+            "Optional: video resolution (the official example uses 720p)",
+          duration: "Optional: integer video duration in seconds",
+          generate_audio: "Optional: generate audio for the video",
           callBackUrl: "Optional: URL for task completion notifications",
         });
       }
 
       return ctx.formatError("bytedance_seedance_video", error, {
-        prompt: "Required: Text prompt for video generation",
-        mode: 'Optional: "standard", "fast", or "mini"',
+        prompt: "Required: text prompt for Seedance 2.5 video generation",
+        first_frame_url: "Optional: first-frame image URL",
+        last_frame_url: "Optional: last-frame image URL (requires first_frame_url)",
+        reference_image_urls: "Optional: multimodal reference image URLs",
+        reference_video_urls: "Optional: multimodal reference video URLs",
+        reference_audio_urls: "Optional: multimodal reference audio URLs",
+        return_last_frame: "Optional: return the generated last frame",
         aspect_ratio: "Optional: Video aspect ratio",
-        resolution: 'Optional: "480p" or "720p"',
-        duration: "Optional: Duration in seconds 4-15",
+        resolution: "Optional: video resolution",
+        duration: "Optional: integer duration in seconds",
+        generate_audio: "Optional: generate audio for the video",
         callBackUrl: "Optional: URL for task completion notifications",
       });
     }

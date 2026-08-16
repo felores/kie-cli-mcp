@@ -448,84 +448,58 @@ export const ElevenLabsSoundEffectsSchema = z.object({
     ),
 });
 
-// ByteDance Seedance 2.0 - Multimodal video generation with native audio
+// ByteDance Seedance 2.5 video generation.
 export const ByteDanceSeedanceVideoSchema = z
   .object({
     prompt: z
       .string()
-      .min(3)
-      .max(20000)
-      .describe("Text prompt for video generation (3-20000 characters)"),
-    // Mode: standard, fast, or the lower-cost Seedance 2.0 Mini
-    mode: z
-      .enum(["standard", "fast", "mini"])
-      .default("standard")
-      .optional()
-      .describe(
-        "Generation mode: standard (higher quality), fast (iterative workflows), or mini (lowest-cost, fastest workflow)",
-      ),
-    // Frame control
+      .min(1)
+      .describe("Text prompt for video generation"),
     first_frame_url: z
       .string()
       .url()
       .optional()
-      .describe("URL of image to use as the first frame (optional)"),
+      .describe("URL of the first-frame image for image-to-video"),
     last_frame_url: z
       .string()
       .url()
       .optional()
-      .describe("URL of image to use as the last frame (optional)"),
-    // Multimodal references
+      .describe("URL of the last-frame image; requires first_frame_url"),
     reference_image_urls: z
       .array(z.string().url())
-      .max(9)
       .optional()
-      .describe("Reference images for style/subject guidance (up to 9)"),
+      .describe("Reference image URLs for multimodal reference-to-video"),
     reference_video_urls: z
       .array(z.string().url())
-      .max(3)
       .optional()
-      .describe("Reference videos for motion/style guidance (up to 3)"),
+      .describe("Reference video URLs for multimodal reference-to-video"),
     reference_audio_urls: z
       .array(z.string().url())
-      .max(3)
       .optional()
-      .describe("Reference audio for sound-guided generation (up to 3)"),
-    // Output settings
+      .describe("Reference audio URLs for multimodal reference-to-video"),
+    return_last_frame: z
+      .boolean()
+      .optional()
+      .describe("Return the generated last frame when requested"),
+    generate_audio: z
+      .boolean()
+      .optional()
+      .describe("Generate audio for the video when requested"),
+    resolution: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Output resolution (the official example uses 720p)"),
     aspect_ratio: z
-      .enum(["1:1", "9:16", "16:9", "4:3", "3:4", "21:9", "9:21", "adaptive"])
-      .default("16:9")
+      .string()
+      .min(1)
       .optional()
       .describe("Aspect ratio of the generated video"),
-    resolution: z
-      .enum(["480p", "720p"])
-      .default("720p")
-      .optional()
-      .describe("Video resolution: 480p for faster, 720p for balance"),
     duration: z
       .number()
       .int()
-      .min(4)
-      .max(15)
-      .default(5)
       .optional()
-      .describe("Duration of video in seconds (4-15)"),
-    // Audio & safety
-    generate_audio: z
-      .boolean()
-      .default(true)
-      .optional()
-      .describe("Generate native audio for the video"),
-    web_search: z
-      .boolean()
-      .default(false)
-      .optional()
-      .describe("Enable web search to enhance prompt understanding"),
-    nsfw_checker: z
-      .boolean()
-      .default(false)
-      .optional()
-      .describe("Enable NSFW content filtering"),
+      .describe("Video duration in seconds (the official example uses 15)"),
     callBackUrl: z
       .string()
       .url()
@@ -534,26 +508,32 @@ export const ByteDanceSeedanceVideoSchema = z
         "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
       ),
   })
-  .refine(
-    (data) => {
-      // "adaptive" aspect_ratio only valid with first_frame_url
-      if (data.aspect_ratio === "adaptive" && !data.first_frame_url) {
-        return false;
-      }
-      const hasFrames = !!data.first_frame_url || !!data.last_frame_url;
-      const hasReferences =
-        !!data.reference_image_urls?.length ||
-        !!data.reference_video_urls?.length ||
-        !!data.reference_audio_urls?.length;
-      if (hasFrames && hasReferences) return false;
-      return true;
-    },
-    {
-      message:
-        "aspect_ratio 'adaptive' requires first_frame_url, and frame inputs cannot be combined with reference inputs",
-      path: [],
-    },
-  );
+  .strict()
+  .superRefine((data, ctx) => {
+    const hasFrames = Boolean(data.first_frame_url || data.last_frame_url);
+    const hasReferences = Boolean(
+      data.reference_image_urls?.length ||
+        data.reference_video_urls?.length ||
+        data.reference_audio_urls?.length,
+    );
+
+    if (data.last_frame_url && !data.first_frame_url) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["last_frame_url"],
+        message: "last_frame_url requires first_frame_url.",
+      });
+    }
+
+    if (hasFrames && hasReferences) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message:
+          "Frame inputs and multimodal reference inputs are mutually exclusive.",
+      });
+    }
+  });
 
 export const RunwayAlephVideoSchema = z.object({
   prompt: z
@@ -1861,69 +1841,62 @@ export const KlingVideoSchema = z
 
 export type KlingVideoRequest = z.infer<typeof KlingVideoSchema>;
 
-// Hailuo Video - Unified tool for text-to-video and image-to-video (standard/pro quality)
-// Supports Hailuo 02 and Hailuo 2.3 versions
+// MiniMax H3 (Hailuo 03) video generation.
 export const HailuoVideoSchema = z
   .object({
     prompt: z
       .string()
       .min(1)
-      .max(1500)
-      .describe(
-        "Text prompt describing the desired video content (max 1500 characters)",
-      ),
+      .describe("Text prompt describing the desired video content"),
     imageUrl: z
       .string()
       .url()
       .optional()
       .describe(
-        "URL of input image for image-to-video mode (optional - if not provided, uses text-to-video)",
+        "First-frame image URL for image-to-video mode. Cannot be combined with reference inputs.",
       ),
     endImageUrl: z
       .string()
       .url()
       .optional()
       .describe(
-        "URL of end frame image for image-to-video (optional - requires imageUrl)",
+        "Optional last-frame image URL for image-to-video mode. Requires imageUrl.",
       ),
-    // Version selection: "02" (original) or "2.3" (new, better motion/expressions)
-    version: z
-      .enum(["02", "2.3"])
-      .default("02")
+    referenceImageUrls: z
+      .array(z.string().url())
+      .min(1)
+      .max(9)
       .optional()
       .describe(
-        "Hailuo model version: '02' (original) or '2.3' (better motion, expressions, 1080P support)",
+        "Reference image URLs for reference-to-video mode (up to 9 images).",
       ),
-    quality: z
-      .enum(["standard", "pro"])
-      .default("standard")
+    referenceVideoUrls: z
+      .array(z.string().url())
+      .min(1)
+      .max(3)
       .optional()
       .describe(
-        "Quality level of video generation (standard for faster, pro for higher quality)",
+        "Reference video URLs for reference-to-video mode (up to 3 videos).",
       ),
-    // Standard quality only parameters
+    referenceAudioUrls: z
+      .array(z.string().url())
+      .min(1)
+      .max(3)
+      .optional()
+      .describe(
+        "Reference audio URLs for reference-to-video mode (up to 3 audio files).",
+      ),
     duration: z
-      .enum(["6", "10"])
-      .default("6")
+      .number()
+      .int()
+      .min(4)
+      .max(15)
+      .describe("Video duration in seconds (4-15)."),
+    aspectRatio: z
+      .enum(["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"])
       .optional()
       .describe(
-        "Duration of video in seconds (standard quality only). Note: 10s not supported with 1080P in v2.3",
-      ),
-    // Resolution: 512P/768P for 02, 768P/1080P for 2.3
-    resolution: z
-      .enum(["512P", "768P", "1080P"])
-      .default("768P")
-      .optional()
-      .describe(
-        "Resolution of video (standard quality only). v02: 512P/768P, v2.3: 768P/1080P",
-      ),
-    // Common parameters
-    promptOptimizer: z
-      .boolean()
-      .default(true)
-      .optional()
-      .describe(
-        "Whether to use the model's prompt optimizer for better results",
+        "Output aspect ratio. Required for text-to-video; reference-to-video also supports adaptive.",
       ),
     callBackUrl: z
       .string()
@@ -1933,52 +1906,55 @@ export const HailuoVideoSchema = z
         "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
       ),
   })
-  .refine(
-    (data) => {
-      const hasImageUrl = !!data.imageUrl;
+  .strict()
+  .superRefine((data, ctx) => {
+    const hasReferenceInputs = Boolean(
+      data.referenceImageUrls?.length ||
+        data.referenceVideoUrls?.length ||
+        data.referenceAudioUrls?.length,
+    );
 
-      // At least prompt is always required
-      if (!data.prompt) {
-        return false;
+    if (data.endImageUrl && !data.imageUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endImageUrl"],
+        message: "endImageUrl requires imageUrl.",
+      });
+    }
+
+    if (data.imageUrl && hasReferenceInputs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message:
+          "imageUrl and reference inputs select different MiniMax H3 modes and cannot be combined.",
+      });
+    }
+
+    if (data.imageUrl && data.aspectRatio) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["aspectRatio"],
+        message: "aspectRatio is not supported for image-to-video mode.",
+      });
+    }
+
+    if (!data.imageUrl && !hasReferenceInputs) {
+      if (!data.aspectRatio) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["aspectRatio"],
+          message: "aspectRatio is required for text-to-video mode.",
+        });
+      } else if (data.aspectRatio === "adaptive") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["aspectRatio"],
+          message: "adaptive aspectRatio is only supported for reference-to-video mode.",
+        });
       }
-
-      // Image-to-video mode requires imageUrl
-      if (hasImageUrl && !data.prompt) {
-        return false;
-      }
-
-      // Text-to-video mode requires only prompt
-      if (!hasImageUrl && data.endImageUrl) {
-        return false; // endImageUrl only valid with imageUrl
-      }
-
-      // Hailuo 2.3 specific: 10s duration not supported with 1080P
-      if (
-        data.version === "2.3" &&
-        data.duration === "10" &&
-        data.resolution === "1080P"
-      ) {
-        return false;
-      }
-
-      // Hailuo 2.3 doesn't support 512P
-      if (data.version === "2.3" && data.resolution === "512P") {
-        return false;
-      }
-
-      // Hailuo 02 doesn't support 1080P
-      if (data.version === "02" && data.resolution === "1080P") {
-        return false;
-      }
-
-      return true;
-    },
-    {
-      message:
-        "Invalid parameter combination. Choose mode: 1) prompt only (text-to-video), or 2) prompt + imageUrl (image-to-video). endImageUrl is only valid with imageUrl. For 2.3: 10s+1080P not supported, 512P not available. For 02: 1080P not available.",
-      path: [],
-    },
-  );
+    }
+  });
 
 export type HailuoVideoRequest = z.infer<typeof HailuoVideoSchema>;
 

@@ -215,25 +215,23 @@ Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo 
 
 ### bytedance_seedance_video
 
-Generate videos with ByteDance Seedance 2.0: standard, fast, or lower-cost Mini modes with multimodal references and native audio.
+Generate videos with ByteDance Seedance 2.5 using text, first/last frames, or multimodal image/video/audio references.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `prompt` | string | yes | Text prompt for video generation (3-20000 characters) |
-| `mode` | `standard` / `fast` / `mini` | no | Generation mode: standard (higher quality), fast (iterative workflows), or mini (lowest-cost, fastest workflow) (default: `"standard"`) |
-| `first_frame_url` | string | no | URL of image to use as the first frame (optional) |
-| `last_frame_url` | string | no | URL of image to use as the last frame (optional) |
-| `reference_image_urls` | array | no | Reference images for style/subject guidance (up to 9) |
-| `reference_video_urls` | array | no | Reference videos for motion/style guidance (up to 3) |
-| `reference_audio_urls` | array | no | Reference audio for sound-guided generation (up to 3) |
-| `aspect_ratio` | `1:1` / `9:16` / `16:9` / `4:3` / `3:4` / `21:9` / `9:21` / `adaptive` | no | Aspect ratio of the generated video (default: `"16:9"`) |
-| `resolution` | `480p` / `720p` | no | Video resolution: 480p for faster, 720p for balance (default: `"720p"`) |
-| `duration` | integer | no | Duration of video in seconds (4-15) (default: `5`) |
-| `generate_audio` | boolean | no | Generate native audio for the video (default: `true`) |
-| `web_search` | boolean | no | Enable web search to enhance prompt understanding (default: `false`) |
-| `nsfw_checker` | boolean | no | Enable NSFW content filtering (default: `false`) |
+| `prompt` | string | yes | Text prompt for video generation |
+| `first_frame_url` | string | no | URL of the first-frame image for image-to-video |
+| `last_frame_url` | string | no | URL of the last-frame image; requires first_frame_url |
+| `reference_image_urls` | array | no | Reference image URLs for multimodal reference-to-video |
+| `reference_video_urls` | array | no | Reference video URLs for multimodal reference-to-video |
+| `reference_audio_urls` | array | no | Reference audio URLs for multimodal reference-to-video |
+| `return_last_frame` | boolean | no | Return the generated last frame when requested |
+| `generate_audio` | boolean | no | Generate audio for the video when requested |
+| `resolution` | string | no | Output resolution (the official example uses 720p) |
+| `aspect_ratio` | string | no | Aspect ratio of the generated video |
+| `duration` | integer | no | Video duration in seconds (the official example uses 15) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### gemini_omni
@@ -281,20 +279,20 @@ Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, tex
 
 ### hailuo_video
 
-Generate videos using Hailuo AI models (unified tool for text-to-video and image-to-video with standard/pro quality). Supports v02 (original) and v2.3 (enhanced motion/expressions, 1080P)
+Generate videos using MiniMax H3 (Hailuo 03) with text-to-video, image-to-video, or multimodal reference-to-video inputs.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `prompt` | string | yes | Text prompt describing the desired video content (max 1500 characters) |
-| `imageUrl` | string | no | URL of input image for image-to-video mode (optional - if not provided, uses text-to-video) |
-| `endImageUrl` | string | no | URL of end frame image for image-to-video (optional - requires imageUrl) |
-| `version` | `02` / `2.3` | no | Hailuo model version: '02' (original) or '2.3' (better motion, expressions, 1080P support) (default: `"02"`) |
-| `quality` | `standard` / `pro` | no | Quality level of video generation (standard for faster, pro for higher quality) (default: `"standard"`) |
-| `duration` | `6` / `10` | no | Duration of video in seconds (standard quality only). Note: 10s not supported with 1080P in v2.3 (default: `"6"`) |
-| `resolution` | `512P` / `768P` / `1080P` | no | Resolution of video (standard quality only). v02: 512P/768P, v2.3: 768P/1080P (default: `"768P"`) |
-| `promptOptimizer` | boolean | no | Whether to use the model's prompt optimizer for better results (default: `true`) |
+| `prompt` | string | yes | Text prompt describing the desired video content |
+| `imageUrl` | string | no | First-frame image URL for image-to-video mode. Cannot be combined with reference inputs. |
+| `endImageUrl` | string | no | Optional last-frame image URL for image-to-video mode. Requires imageUrl. |
+| `referenceImageUrls` | array | no | Reference image URLs for reference-to-video mode (up to 9 images). |
+| `referenceVideoUrls` | array | no | Reference video URLs for reference-to-video mode (up to 3 videos). |
+| `referenceAudioUrls` | array | no | Reference audio URLs for reference-to-video mode (up to 3 audio files). |
+| `duration` | integer | yes | Video duration in seconds (4-15). |
+| `aspectRatio` | `adaptive` / `21:9` / `16:9` / `4:3` / `1:1` / `3:4` / `9:16` | no | Output aspect ratio. Required for text-to-video; reference-to-video also supports adaptive. |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### happyhorse_video

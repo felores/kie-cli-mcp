@@ -75,12 +75,12 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 |------|---------------|--------|
 | `veo3_generate_video` | Veo 3 / 3.1 (text/image-to-video) | ✅ |
 | `veo3_get_1080p_video` | Veo 3 1080p retrieval | ✅ |
-| `bytedance_seedance_video` | Seedance 2.0 (standard/fast/mini, multimodal refs, native audio) | ✅ |
+| `bytedance_seedance_video` | Seedance 2.5 (text, frame, or multimodal reference-to-video) | ✅ |
 | `runway_aleph_video` | Runway Aleph (video-to-video) | ✅ |
 | `wan_video` | Wan 2.7 (T2V/I2V/R2V/video-edit) | ✅ |
 | `wan_animate` | Wan Animate (animation/character replace) | ✅ |
 | `happyhorse_video` | HappyHorse 1.0 (T2V/I2V/R2V/video-edit) | ✅ |
-| `hailuo_video` | Hailuo 02 / 2.3 (standard/pro) | ✅ |
+| `hailuo_video` | MiniMax H3 (Hailuo 03: text/image/reference-to-video) | ✅ |
 | `kling_video` | Kling 3.0 (text/image-to-video, multi-shot, native audio) | ✅ |
 | `grok_imagine` | xAI Grok Imagine (text/image to image/video, upscale) | ✅ |
 | `infinitalk_lip_sync` | MeiGen-AI InfiniTalk (lip-sync talking video) | ✅ |

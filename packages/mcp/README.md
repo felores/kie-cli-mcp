@@ -1,8 +1,8 @@
 # @felores/kie-ai-mcp-server
 
 MCP server for the [Kie.ai](https://kie.ai) APIs: image, video, music and speech
-generation across Nano Banana, Veo3, Suno, ElevenLabs, ByteDance, Qwen, Runway,
-Midjourney, Wan, Hailuo, Kling, GPT Image 2, Flux Kontext, Recraft, Ideogram,
+generation across Nano Banana, Veo3, Suno, ElevenLabs, ByteDance Seedance 2.5, Qwen, Runway,
+Midjourney, Wan, MiniMax H3 (Hailuo 03), Kling, GPT Image 2, Flux Kontext, Recraft, Ideogram,
 Topaz, HappyHorse and more. Exposes every model as an MCP tool to Claude Desktop
 and other MCP clients.
 

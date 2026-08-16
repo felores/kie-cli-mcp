@@ -116,7 +116,7 @@ A unified, always-current catalog including:
 - **Google Veo 3**: cinematic video with synchronized audio and 1080p output
 - **Nano Banana 2 / Nano Banana 2 Lite**: high-resolution or fast 1K image generation and editing
 - **Suno V5 / V5.5**: music generation with realistic vocals and V5.5 duration control
-- **Kling 3.0**, **Wan 2.7**, **Hailuo 02**, **ByteDance Seedance 2.0 / Mini**, **OmniHuman 1.5**, **Gemini Omni**, **HappyHorse**, **Runway Aleph**, **Midjourney**: video generation, avatars, and editing
+- **Kling 3.0**, **Wan 2.7**, **MiniMax H3 (Hailuo 03)**, **ByteDance Seedance 2.5**, **OmniHuman 1.5**, **Gemini Omni**, **HappyHorse**, **Runway Aleph**, **Midjourney**: video generation, avatars, and editing
 - **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Ideogram**, **Recraft**, **Topaz**: image generation, editing, reframing, background removal, upscaling
 - **ElevenLabs**: text-to-speech and sound effects
 

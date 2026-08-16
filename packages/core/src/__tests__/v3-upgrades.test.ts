@@ -3,6 +3,7 @@ import {
   ByteDanceSeedreamImageSchema,
   KlingVideoSchema,
   ByteDanceSeedanceVideoSchema,
+  HailuoVideoSchema,
   SunoGenerateSchema,
   OmniHumanVideoSchema,
   GeminiOmniSchema,
@@ -262,22 +263,118 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
   });
 });
 
-describe("ByteDanceSeedanceVideoSchema (Seedance 2.0 Mini)", () => {
-  it("accepts Mini mode", () => {
+describe("ByteDanceSeedanceVideoSchema (Seedance 2.5)", () => {
+  it("accepts documented 2.5 inputs without injecting defaults", () => {
     expect(
       ByteDanceSeedanceVideoSchema.safeParse({
-        prompt: "A fast product video",
-        mode: "mini",
+        prompt: "A product video",
       }).success,
     ).toBe(true);
   });
 
-  it("rejects frame and reference modes together", () => {
+  it("accepts first and last frame inputs", () => {
+    expect(
+      ByteDanceSeedanceVideoSchema.safeParse({
+        prompt: "Transition between the supplied frames",
+        first_frame_url: "https://example.com/start.png",
+        last_frame_url: "https://example.com/end.png",
+        return_last_frame: true,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects mutually exclusive frame and reference inputs", () => {
     expect(
       ByteDanceSeedanceVideoSchema.safeParse({
         prompt: "A video",
         first_frame_url: "https://example.com/start.png",
         reference_image_urls: ["https://example.com/reference.png"],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a last frame without a first frame", () => {
+    expect(
+      ByteDanceSeedanceVideoSchema.safeParse({
+        prompt: "A video",
+        last_frame_url: "https://example.com/end.png",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects removed Seedance 2.0 fields", () => {
+    expect(
+      ByteDanceSeedanceVideoSchema.safeParse({
+        prompt: "A video",
+        mode: "fast",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("HailuoVideoSchema (MiniMax H3)", () => {
+  it("accepts text-to-video with an explicit supported aspect ratio", () => {
+    expect(
+      HailuoVideoSchema.safeParse({
+        prompt: "A cinematic sunset over the ocean",
+        duration: 6,
+        aspectRatio: "16:9",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts first and last frame image-to-video", () => {
+    expect(
+      HailuoVideoSchema.safeParse({
+        prompt: "Transition smoothly between the two scenes",
+        imageUrl: "https://example.com/first-frame.jpg",
+        endImageUrl: "https://example.com/last-frame.jpg",
+        duration: 6,
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts multimodal reference-to-video", () => {
+    expect(
+      HailuoVideoSchema.safeParse({
+        prompt: "Use the references for the character, movement, and voice",
+        referenceImageUrls: ["https://example.com/character.png"],
+        referenceVideoUrls: ["https://example.com/motion.mp4"],
+        referenceAudioUrls: ["https://example.com/voice.mp3"],
+        duration: 8,
+        aspectRatio: "adaptive",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects mutually exclusive frame and reference inputs", () => {
+    expect(
+      HailuoVideoSchema.safeParse({
+        prompt: "A video",
+        imageUrl: "https://example.com/first-frame.jpg",
+        referenceImageUrls: ["https://example.com/reference.jpg"],
+        duration: 6,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects invalid reference source URLs", () => {
+    expect(
+      HailuoVideoSchema.safeParse({
+        prompt: "Use the supplied video reference for the motion",
+        referenceVideoUrls: ["not-a-url"],
+        duration: 6,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects legacy Hailuo fields instead of silently ignoring them", () => {
+    expect(
+      HailuoVideoSchema.safeParse({
+        prompt: "A video",
+        duration: 6,
+        aspectRatio: "16:9",
+        quality: "pro",
       }).success,
     ).toBe(false);
   });

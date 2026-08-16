@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.1] - 2026-08-16
+
+### Changed
+- `hailuo_video` now uses MiniMax H3 (Hailuo 03). The public tool name is
+  unchanged, while requests now route to the H3 text-to-video,
+  image-to-video, or reference-to-video models.
+- The tool accepts camelCase H3 inputs: `imageUrl`/`endImageUrl` for first/last
+  frames and `referenceImageUrls`, `referenceVideoUrls`, and
+  `referenceAudioUrls` for multimodal reference generation. It validates that
+  image and reference modes are mutually exclusive.
+- Removed legacy Hailuo 02/2.3 `version`, `quality`, `resolution`, and
+  `promptOptimizer` fields. They now fail validation instead of being mapped to
+  MiniMax H3 semantics.
+- `bytedance_seedance_video` now uses Seedance 2.5. The public
+  tool name is unchanged and every request now uses
+  `bytedance/seedance-2-5` through `/jobs/createTask`.
+- Removed Seedance 2.0 `mode` (`standard`/`fast`/`mini`), `web_search`, and
+  `nsfw_checker` inputs. The 2.5 tool accepts text, first/last frames, or
+  multimodal image/video/audio references, which are mutually exclusive.
+- `return_last_frame` is now an optional boolean and is sent only when supplied.
+  Removed undocumented Seedance 2.0 limits and defaults from the public schema.
+
 ## [3.6.0] - 2026-07-23
 
 ### Added

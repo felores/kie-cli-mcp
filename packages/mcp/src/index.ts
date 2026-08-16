@@ -82,7 +82,7 @@ class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "3.6.0";
+  static readonly VERSION = "3.6.1";
 
   constructor() {
     // Initialize client with config from environment
@@ -879,10 +879,10 @@ The system automatically detects user intent:
 ## 🔧 Intelligent Parameter Selection
 
 ### **Video Parameters**
-- **ByteDance Seedance 2.0**:
-  - Default: \`mode: "standard"\`, \`resolution: "720p"\`, \`generate_audio: true\`
-  - Fast/Iterative: \`mode: "fast"\`, \`resolution: "480p"\`
-  - Higher Quality: \`mode: "standard"\`, \`resolution: "720p"\`
+- **ByteDance Seedance 2.5**:
+  - Use one prompt with optional first/last frames or multimodal image/video/audio references.
+  - Frame inputs and multimodal references cannot be combined.
+  - The official example uses \`resolution: "720p"\` and \`duration: 15\`; no defaults are imposed by this server.
 
 - **Veo3**:
   - Default: \`model: "veo3_fast"\`
@@ -910,7 +910,7 @@ The system automatically detects user intent:
 - **Cost Strategy**: Lowest cost, fast generation
 
 ### **Professional Commercial Work**
-- **Video**: ByteDance Seedance Pro, 1080p
+- **Video**: ByteDance Seedance 2.5 with the documented input scenario
 - **Images**: OpenAI 4o or Flux Kontext, professional quality
 - **Audio**: ElevenLabs Pro or Suno V5
 - **Cost Strategy**: Balanced quality and cost
@@ -1032,7 +1032,7 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 | Model | Max Resolution | Quality Modes | Duration | Speed | Key Strengths |
 |-------|---------------|---------------|----------|-------|---------------|
 | **Google Veo3** | 1080p | veo3/veo3_fast | Default | Medium | Premium cinematic quality, 1080p support |
-| **ByteDance Seedance 2.0** | 720p | standard/fast | 4-15s | Medium | Multimodal refs, native audio, adaptive aspect |
+| **ByteDance Seedance 2.5** | Example: 720p | Single model | Example: 15s | Medium | Text, first/last frames, or multimodal refs |
 | **Wan Video 2.5** | 1080p | Single | 5-10s | Fast | Quick generation, social media |
 | **Runway Aleph** | 1080p | Single | Source | Medium | Video-to-video editing, style transfer |
 
@@ -1041,19 +1041,19 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 ### Default Settings (Cost-Effective)
 - **Resolution**: 720p (unless user requests high quality)
 - **Quality Mode**: standard/fast (unless user requests "fast" explicitly)
-- **Model**: ByteDance Seedance 2.0 standard as default
+- **Model**: ByteDance Seedance 2.5
 
 ### High Quality Upgrades
-- **User says "high quality"**: Standard mode + 720p (already default)
+- **User says "high quality"**: Use the requested documented Seedance 2.5 inputs
 - **User says "cinematic"**: Veo3 model
-- **User says "fast/quick"**: Seedance fast mode + 480p
+- **User says "fast/quick"**: Choose a speed-oriented model with documented fast behavior
 
 ## Use Case Recommendations
 
 - **Cinematic/Premium Content**: Veo3 (model: "veo3")
-- **Professional/Commercial**: ByteDance Seedance 2.0 (mode: "standard")
-- **Social Media/Fast**: ByteDance Seedance 2.0 fast or Wan Video 2.5
-- **Multimodal (refs + audio)**: ByteDance Seedance 2.0 with reference URLs
+- **Professional/Commercial**: ByteDance Seedance 2.5
+- **Social Media/Fast**: Wan Video 2.5
+- **Multimodal (refs + audio)**: ByteDance Seedance 2.5 with reference URLs
 - **Video Editing**: Runway Aleph (existing video transformation)
 
 ## Parameter Mapping
@@ -1062,11 +1062,11 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 - **Text-to-Video**: All models (prompt only)
 - **Image-to-Video**: Veo3 (imageUrls), Seedance (first_frame_url), Wan (image_url)
 - **Video-to-Video**: Runway Aleph (videoUrl)
-- **Multimodal Refs**: Seedance 2.0 (reference_image/video/audio_urls)
+- **Multimodal Refs**: Seedance 2.5 (reference_image_urls, reference_video_urls, reference_audio_urls)
 
 ### Quality Control
 - **Veo3**: model selection (veo3 vs veo3_fast)
-- **Seedance 2.0**: mode (standard vs fast) + resolution
+- **Seedance 2.5**: one fixed model with optional resolution
 - **Wan**: resolution parameter only
 - **Runway**: implicit (no quality settings)
 
@@ -1086,7 +1086,7 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 ### **CRITICAL COST CONTROL RULES**
 - **Resolution**: ALWAYS use \`"720p"\` unless user explicitly requests high quality
 - **Quality Level**: ALWAYS use **lite/fast** versions unless user requests "high quality"
-- **Model Selection**: bytedance_seedance_video with \`mode: "standard"\` as default
+- **Model Selection**: bytedance_seedance_video uses the fixed Seedance 2.5 model
 
 ### **Quality Upgrade Logic**
 

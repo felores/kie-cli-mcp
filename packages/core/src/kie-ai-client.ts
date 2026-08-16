@@ -519,49 +519,27 @@ export class KieAiClient {
   async generateByteDanceSeedanceVideo(
     request: ByteDanceSeedanceVideoRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
-    // Seedance 2.0 variants
-    const model =
-      request.mode === "mini"
-        ? "bytedance/seedance-2-mini"
-        : request.mode === "fast"
-          ? "bytedance/seedance-2-fast"
-          : "bytedance/seedance-2";
-
-    const input: any = {
+    const input: Record<string, unknown> = {
       prompt: request.prompt,
-      aspect_ratio: request.aspect_ratio || "16:9",
-      resolution: request.resolution || "720p",
-      duration: request.duration || 5,
-      generate_audio: request.generate_audio !== false,
-      nsfw_checker: request.nsfw_checker === true,
     };
 
-    // Frame control
-    if (request.first_frame_url) {
-      input.first_frame_url = request.first_frame_url;
-    }
-    if (request.last_frame_url) {
-      input.last_frame_url = request.last_frame_url;
-    }
-
-    // Multimodal references
-    if (request.reference_image_urls?.length) {
-      input.reference_image_urls = request.reference_image_urls;
-    }
-    if (request.reference_video_urls?.length) {
-      input.reference_video_urls = request.reference_video_urls;
-    }
-    if (request.reference_audio_urls?.length) {
-      input.reference_audio_urls = request.reference_audio_urls;
-    }
-
-    // Web search
-    if (request.web_search) {
-      input.web_search = true;
+    for (const key of [
+      "first_frame_url",
+      "last_frame_url",
+      "reference_image_urls",
+      "reference_video_urls",
+      "reference_audio_urls",
+      "generate_audio",
+      "resolution",
+      "aspect_ratio",
+      "duration",
+      "return_last_frame",
+    ] as const) {
+      if (request[key] !== undefined) input[key] = request[key];
     }
 
     const jobRequest = {
-      model,
+      model: "bytedance/seedance-2-5",
       input,
       callBackUrl: this.callbackUrl(request.callBackUrl),
     };
@@ -1118,47 +1096,36 @@ export class KieAiClient {
   async generateHailuoVideo(
     request: HailuoVideoRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
-    const isImageToVideo = !!request.imageUrl;
-    const quality = request.quality || "standard";
-    const version = request.version || "02";
-
-    // Model name varies by version: "02" or "2-3"
-    const versionPrefix = version === "2.3" ? "2-3" : "02";
-
+    const hasReferenceInputs = Boolean(
+      request.referenceImageUrls?.length ||
+        request.referenceVideoUrls?.length ||
+        request.referenceAudioUrls?.length,
+    );
     let model: string;
-    if (isImageToVideo) {
-      model =
-        quality === "pro"
-          ? `hailuo/${versionPrefix}-image-to-video-pro`
-          : `hailuo/${versionPrefix}-image-to-video-standard`;
-    } else {
-      model =
-        quality === "pro"
-          ? `hailuo/${versionPrefix}-text-to-video-pro`
-          : `hailuo/${versionPrefix}-text-to-video-standard`;
-    }
-
-    const input: any = {
+    const input: Record<string, unknown> = {
       prompt: request.prompt,
-      prompt_optimizer: request.promptOptimizer !== false,
+      duration: request.duration,
     };
 
-    // Add image-to-video specific parameters
-    if (isImageToVideo) {
-      input.image_url = request.imageUrl;
-      if (request.endImageUrl) {
-        input.end_image_url = request.endImageUrl;
+    if (request.imageUrl) {
+      model = "minimax-h3/image-to-video";
+      input.first_frame_url = request.imageUrl;
+      if (request.endImageUrl) input.last_frame_url = request.endImageUrl;
+    } else if (hasReferenceInputs) {
+      model = "minimax-h3/reference-to-video";
+      if (request.referenceImageUrls) {
+        input.reference_image_urls = request.referenceImageUrls;
       }
-      // Standard quality only: duration and resolution
-      if (quality === "standard") {
-        input.duration = request.duration || "6";
-        input.resolution = request.resolution || "768P";
+      if (request.referenceVideoUrls) {
+        input.reference_video_urls = request.referenceVideoUrls;
       }
+      if (request.referenceAudioUrls) {
+        input.reference_audio_urls = request.referenceAudioUrls;
+      }
+      if (request.aspectRatio) input.aspect_ratio = request.aspectRatio;
     } else {
-      // Text-to-video standard quality only: duration
-      if (quality === "standard") {
-        input.duration = request.duration || "6";
-      }
+      model = "minimax-h3/text-to-video";
+      input.aspect_ratio = request.aspectRatio;
     }
 
     const jobRequest = {

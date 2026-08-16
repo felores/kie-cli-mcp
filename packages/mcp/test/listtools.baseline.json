@@ -1,107 +1,70 @@
 [
   {
     "name": "bytedance_seedance_video",
-    "description": "Generate videos with ByteDance Seedance 2.0 — multimodal inputs (image/video/audio references), native audio generation, standard and fast modes",
+    "description": "Generate videos with ByteDance Seedance 2.5 using text, first/last frames, or multimodal image/video/audio references.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt for video generation (3-20000 characters)",
-          "minLength": 3,
-          "maxLength": 20000
-        },
-        "mode": {
-          "type": "string",
-          "description": "Generation mode — standard (seedance-2, higher quality) or fast (seedance-2-fast, iterative workflows)",
-          "enum": [
-            "standard",
-            "fast"
-          ],
-          "default": "standard"
+          "minLength": 1,
+          "description": "Text prompt for video generation"
         },
         "first_frame_url": {
           "type": "string",
-          "description": "URL of image to use as the first frame (optional)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the first-frame image for image-to-video"
         },
         "last_frame_url": {
           "type": "string",
-          "description": "URL of image to use as the last frame (optional)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the last-frame image; requires first_frame_url"
         },
         "reference_image_urls": {
           "type": "array",
-          "description": "Reference images for style/subject guidance (up to 9)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 9
+          "description": "Reference image URLs for multimodal reference-to-video"
         },
         "reference_video_urls": {
           "type": "array",
-          "description": "Reference videos for motion/style guidance (up to 3)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 3
+          "description": "Reference video URLs for multimodal reference-to-video"
         },
         "reference_audio_urls": {
           "type": "array",
-          "description": "Reference audio for sound-guided generation (up to 3)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 3
+          "description": "Reference audio URLs for multimodal reference-to-video"
         },
-        "aspect_ratio": {
-          "type": "string",
-          "description": "Aspect ratio of the generated video",
-          "enum": [
-            "1:1",
-            "9:16",
-            "16:9",
-            "4:3",
-            "3:4",
-            "21:9",
-            "9:21",
-            "adaptive"
-          ],
-          "default": "16:9"
-        },
-        "resolution": {
-          "type": "string",
-          "description": "Video resolution — 480p for faster, 720p for balance",
-          "enum": [
-            "480p",
-            "720p"
-          ],
-          "default": "720p"
-        },
-        "duration": {
-          "type": "integer",
-          "description": "Duration of video in seconds (4-15)",
-          "minimum": 4,
-          "maximum": 15,
-          "default": 5
+        "return_last_frame": {
+          "type": "boolean",
+          "description": "Return the generated last frame when requested"
         },
         "generate_audio": {
           "type": "boolean",
-          "description": "Generate native audio for the video",
-          "default": true
+          "description": "Generate audio for the video when requested"
         },
-        "web_search": {
-          "type": "boolean",
-          "description": "Enable web search to enhance prompt understanding",
-          "default": false
+        "resolution": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Output resolution (the official example uses 720p)"
         },
-        "nsfw_checker": {
-          "type": "boolean",
-          "description": "Enable NSFW content filtering",
-          "default": false
+        "aspect_ratio": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Aspect ratio of the generated video"
+        },
+        "duration": {
+          "type": "integer",
+          "description": "Video duration in seconds (the official example uses 15)"
         },
         "callBackUrl": {
           "type": "string",
@@ -111,7 +74,8 @@
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {

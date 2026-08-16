@@ -79,7 +79,7 @@ function mockProviderForTask(taskId: string, state = "submit") {
 }
 
 describe("KIE OpenAI video contract", () => {
-  test("video creation maps model, prompt, seconds, size, resolution, and audio controls", async () => {
+    test("video creation maps documented Seedance 2.5 inputs", async () => {
     const dataDir = await makeDataDir();
     const calls = mockProviderForTask("vid-1", "submit");
     const app = express();
@@ -101,7 +101,6 @@ describe("KIE OpenAI video contract", () => {
         seconds: 5,
         size: "1280x720",
         resolution_name: "720p",
-        preset: "normal",
         generate_audio: true,
       }),
     });
@@ -119,7 +118,7 @@ describe("KIE OpenAI video contract", () => {
     router.close();
   });
 
-  test("fast model alias selects fast mode", async () => {
+  test("fast model alias routes to the fixed Seedance 2.5 model", async () => {
     const dataDir = await makeDataDir();
     const calls = mockProviderForTask("vid-2", "submit");
     const app = express();
@@ -142,7 +141,7 @@ describe("KIE OpenAI video contract", () => {
         size: "720x1280",
       }),
     });
-    expect(calls.createBodies[0].model).toBe("bytedance/seedance-2-fast");
+    expect(calls.createBodies[0].model).toBe("bytedance/seedance-2-5");
     expect((calls.createBodies[0].input as Record<string, unknown>).aspect_ratio).toBe("9:16");
     router.close();
   });
@@ -197,8 +196,9 @@ describe("KIE OpenAI video contract", () => {
     router.close();
   });
 
-  test("duration outside 4-15 is rejected", async () => {
+  test("does not impose undocumented duration limits", async () => {
     const dataDir = await makeDataDir();
+    const calls = mockProviderForTask("vid-duration", "submit");
     const app = express();
     const router = createKieOpenAiRouter({
       apiKey: "test-key",
@@ -218,7 +218,8 @@ describe("KIE OpenAI video contract", () => {
         seconds: 3,
       }),
     });
-    expect(response.status).toBe(422);
+    expect(response.status).toBe(200);
+    expect((calls.createBodies[0].input as Record<string, unknown>).duration).toBe(3);
     router.close();
   });
 
@@ -606,7 +607,7 @@ describe("KIE OpenAI video contract", () => {
     router.close();
   });
 
-  test("web_search and generate_audio are preserved in provider payload", async () => {
+  test("generate_audio is preserved and removed web_search is rejected", async () => {
     const dataDir = await makeDataDir();
     const calls = mockProviderForTask("vid-12", "submit");
     const app = express();
@@ -619,7 +620,7 @@ describe("KIE OpenAI video contract", () => {
     app.use(router);
     const base = await serve(app);
 
-    await fetch(`${base}/v1/videos`, {
+    const response = await fetch(`${base}/v1/videos`, {
       method: "POST",
       headers: { "content-type": "application/json", "Idempotency-Key": "audio-1" },
       body: JSON.stringify({
@@ -630,9 +631,8 @@ describe("KIE OpenAI video contract", () => {
         web_search: true,
       }),
     });
-    const input = calls.createBodies[0].input as Record<string, unknown>;
-    expect(input.generate_audio).toBe(false);
-    expect(input.web_search).toBe(true);
+    expect(response.status).toBe(422);
+    expect(calls.createBodies).toHaveLength(0);
     router.close();
   });
 

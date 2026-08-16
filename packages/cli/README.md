@@ -58,8 +58,8 @@ Tools that return a `success: false` payload set a non-zero exit code.
 
 Run `kie-cli --help` for the current list. Tools are grouped by category
 (`image`, `video`, `audio`, `utility`) and include Nano Banana, Veo3, Suno,
-ElevenLabs, ByteDance Seedance/Seedream, Qwen, Runway Aleph, Midjourney, Wan,
-Hailuo, Kling, GPT Image 2, Flux Kontext, Recraft, Ideogram, Topaz, HappyHorse
+ElevenLabs, ByteDance Seedance 2.5/Seedream, Qwen, Runway Aleph, Midjourney, Wan,
+MiniMax H3 (Hailuo 03), Kling, GPT Image 2, Flux Kontext, Recraft, Ideogram, Topaz, HappyHorse
 and more.
 
 ## License

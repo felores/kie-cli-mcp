@@ -5,7 +5,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
   name: "hailuo_video",
   description:
-    "Generate videos using Hailuo AI models (unified tool for text-to-video and image-to-video with standard/pro quality). Supports v02 (original) and v2.3 (enhanced motion/expressions, 1080P)",
+    "Generate videos using MiniMax H3 (Hailuo 03) with text-to-video, image-to-video, or multimodal reference-to-video inputs.",
   category: "video",
   schema: HailuoVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -16,12 +16,17 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
 
       const response = await ctx.client.generateHailuoVideo(request);
 
-      const version = request.version || "02";
-      let modeDescription: string;
+      let mode: "text-to-video" | "image-to-video" | "reference-to-video";
       if (request.imageUrl) {
-        modeDescription = `v${version} image-to-video (${request.quality || "standard"} quality)`;
+        mode = "image-to-video";
+      } else if (
+        request.referenceImageUrls?.length ||
+        request.referenceVideoUrls?.length ||
+        request.referenceAudioUrls?.length
+      ) {
+        mode = "reference-to-video";
       } else {
-        modeDescription = `v${version} text-to-video (${request.quality || "standard"} quality)`;
+        mode = "text-to-video";
       }
 
       if (response.code === 200 && response.data?.taskId) {
@@ -31,7 +36,7 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
           status: "pending",
         });
       } else {
-        throw new Error(response.msg || "Failed to create Hailuo video task");
+        throw new Error(response.msg || "Failed to create MiniMax H3 video task");
       }
 
       return {
@@ -42,23 +47,22 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
               {
                 success: true,
                 task_id: response.data?.taskId,
-                mode: modeDescription,
-                message: `Hailuo ${modeDescription} task created successfully`,
+                mode,
+                message: `MiniMax H3 ${mode} task created successfully`,
                 parameters: {
-                  version,
                   prompt: request.prompt,
                   imageUrl: request.imageUrl,
                   endImageUrl: request.endImageUrl,
-                  quality: request.quality || "standard",
-                  duration: request.duration || "6",
-                  resolution: request.resolution || "768P",
-                  promptOptimizer: request.promptOptimizer !== false,
+                  referenceImageUrls: request.referenceImageUrls,
+                  referenceVideoUrls: request.referenceVideoUrls,
+                  referenceAudioUrls: request.referenceAudioUrls,
+                  duration: request.duration,
+                  aspectRatio: request.aspectRatio,
                   callBackUrl: request.callBackUrl,
                 },
                 next_steps: [
                   "Use get_task_status to check generation progress",
                   "Task completion will be sent to the provided callback URL",
-                  "Video generation typically takes 1-3 minutes for standard, 3-5 minutes for pro quality",
                 ],
               },
               null,
@@ -70,34 +74,31 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return ctx.formatError("hailuo_video", error, {
-          prompt: "Required: video description (max 1500 chars)",
-          imageUrl: "Optional: image URL for image-to-video mode",
+          prompt: "Required: video description",
+          duration: "Required: integer video duration from 4 to 15 seconds",
+          aspectRatio:
+            "Text-to-video: required output ratio (21:9, 16:9, 4:3, 1:1, 3:4, or 9:16). Reference-to-video also accepts adaptive.",
+          imageUrl: "Image-to-video: first-frame image URL",
           endImageUrl:
-            "Optional: end frame image URL for image-to-video (requires imageUrl)",
-          version:
-            'Optional: model version "02" (default) or "2.3" (enhanced motion)',
-          quality: 'Optional: quality level "standard" (default) or "pro"',
-          duration:
-            'Optional: video duration "6" (default) or "10" (10s not supported with 1080P in v2.3)',
-          resolution:
-            'Optional: resolution "512P"/"768P" for v02, "768P"/"1080P" for v2.3',
-          promptOptimizer:
-            "Optional: enable prompt optimization (default: true)",
+            "Image-to-video: optional last-frame image URL (requires imageUrl)",
+          referenceImageUrls:
+            "Reference-to-video: up to 9 reference image URLs",
+          referenceVideoUrls:
+            "Reference-to-video: up to 3 reference video URLs",
+          referenceAudioUrls:
+            "Reference-to-video: up to 3 reference audio URLs",
           callBackUrl:
             "Optional: callback URL for notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
         });
       }
 
       return ctx.formatError("hailuo_video", error, {
-        prompt: "Required: text description for video generation",
-        imageUrl: "Optional: image URL for image-to-video mode",
-        endImageUrl: "Optional: end frame image for image-to-video",
-        quality: "Optional: quality level (standard or pro)",
-        duration:
-          "Optional: video duration in seconds (6 or 10 for standard only)",
-        resolution:
-          "Optional: video resolution (512P or 768P for standard only)",
-        promptOptimizer: "Optional: enable prompt optimization",
+        prompt: "Required: text description for MiniMax H3 video generation",
+        duration: "Required: integer video duration from 4 to 15 seconds",
+        imageUrl: "Image-to-video: first-frame image URL",
+        referenceImageUrls: "Reference-to-video: reference image URLs",
+        referenceVideoUrls: "Reference-to-video: reference video URLs",
+        referenceAudioUrls: "Reference-to-video: reference audio URLs",
         callBackUrl: "Optional: URL for task completion notifications",
       });
     }

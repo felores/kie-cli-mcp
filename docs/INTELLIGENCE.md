@@ -54,7 +54,7 @@ Single tools automatically detect operation mode based on parameter combinations
 
 **Unified Tools with Auto-Detection**:
 - **`nano_banana_image`**: Generate/Edit/Upscale based on parameters
-- **`bytedance_seedance_video`**: Text-to-video vs Image-to-video based on `image_url` presence
+- **`bytedance_seedance_video`**: Text-to-video, frame-to-video, or multimodal reference-to-video based on snake_case inputs
 - **`openai_4o_image`**: Generate/Edit/Variants based on `filesUrl` and `maskUrl` combination
 - **`qwen_image`**: Text-to-image vs Image editing based on `image_url` presence
 - **`sora_video`**: Text-to-video/Image-to-video/Storyboard based on `filesUrl` presence
@@ -93,13 +93,16 @@ Single tools automatically detect operation mode based on parameter combinations
 
 #### Video Tools
 
-**ByteDance Seedance - Two Modes:**
+**ByteDance Seedance 2.5 - Three Input Scenarios:**
 ```typescript
 // Text-to-video mode
 { "prompt": "A dancing robot" }
 
 // Image-to-video mode
-{ "prompt": "Animate this", "image_url": "url" }
+{ "prompt": "Animate this", "first_frame_url": "url" }
+
+// Multimodal reference-to-video mode
+{ "prompt": "Use these references", "reference_image_urls": ["url"] }
 ```
 
 **Sora 2 - Three Modes:**
@@ -205,12 +208,11 @@ This system ensures **optimal user experience** while maintaining **cost control
 
 **System Automatically Chooses:**
 - **Tool**: `bytedance_seedance_video` (default video model)
-- **Quality**: `"lite"` (detected "quick" → cost-effective)
-- **Resolution**: `"720p"` (default for cost control)
-- **Endpoint**: `bytedance/v1-lite-text-to-video`
-- **Duration**: `"5"` (optimal for social media)
+- **Input scenario**: Text-to-video
+- **Endpoint**: `bytedance/seedance-2-5` through `/jobs/createTask`
+- **Parameters**: Supply only requested options; Seedance 2.5 has no server-imposed defaults
 
-**Cost**: Lowest tier (1x baseline)
+**Cost**: Check current provider pricing before submission
 
 ---
 
@@ -223,12 +225,11 @@ This system ensures **optimal user experience** while maintaining **cost control
 
 **System Automatically Chooses:**
 - **Tool**: `bytedance_seedance_video` (default video model)
-- **Quality**: `"pro"` (detected "high quality" → premium)
-- **Resolution**: `"1080p"` (high quality default)
-- **Endpoint**: `bytedance/v1-pro-text-to-video`
-- **Duration**: `"5"` (professional standard)
+- **Input scenario**: Text-to-video or a documented frame/reference scenario
+- **Endpoint**: `bytedance/seedance-2-5` through `/jobs/createTask`
+- **Parameters**: Use the requested resolution and duration; do not infer unsupported quality tiers
 
-**Cost**: Highest tier (4-6x baseline)
+**Cost**: Check current provider pricing before submission
 
 ---
 
@@ -241,11 +242,10 @@ This system ensures **optimal user experience** while maintaining **cost control
 
 **System Automatically Chooses:**
 - **Tool**: `bytedance_seedance_video`
-- **Quality**: `"pro"` (detected "professional" → premium)
 - **Resolution**: `"720p"` (explicitly requested)
-- **Endpoint**: `bytedance/v1-pro-text-to-video`
+- **Endpoint**: `bytedance/seedance-2-5` through `/jobs/createTask`
 
-**Cost**: Medium tier (~2x baseline) - Pro quality at reduced resolution
+**Cost**: Check current provider pricing before submission
 
 ---
 

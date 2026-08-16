@@ -60,9 +60,7 @@ const ALLOWED_JSON_FIELDS = new Set([
   "seconds",
   "size",
   "resolution_name",
-  "preset",
   "generate_audio",
-  "web_search",
 ]);
 
 const ALLOWED_MULTIPART_FIELDS = new Set([
@@ -71,9 +69,7 @@ const ALLOWED_MULTIPART_FIELDS = new Set([
   "seconds",
   "size",
   "resolution_name",
-  "preset",
   "generate_audio",
-  "web_search",
 ]);
 
 const ALLOWED_MULTIPART_FILE_FIELDS = new Set([
@@ -102,11 +98,10 @@ export interface VideoAdapterContext {
 interface NormalizedVideoRequest {
   model: KieVideoModel;
   prompt: string;
-  duration: number;
-  aspectRatio: string;
-  resolution: string;
-  generateAudio: boolean;
-  webSearch: boolean;
+  duration?: number;
+  aspectRatio?: string;
+  resolution?: string;
+  generateAudio?: boolean;
   imageRefs: MultipartImageFile[];
   videoRefs: MultipartImageFile[];
   audioRefs: MultipartImageFile[];
@@ -167,25 +162,25 @@ function readPrompt(value: unknown): string {
   return prompt;
 }
 
-function readDuration(value: unknown): number {
-  if (value === undefined) return 5;
+function readDuration(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
   const duration =
     typeof value === "number"
       ? value
       : typeof value === "string" && value.trim() !== ""
         ? Number(value)
         : Number.NaN;
-  if (!Number.isInteger(duration) || duration < 4 || duration > 15) {
+  if (!Number.isInteger(duration)) {
     throw invalidSetting(
-      "The seconds setting must be an integer from 4 to 15.",
+      "The seconds setting must be an integer.",
       "seconds",
     );
   }
   return duration;
 }
 
-function readAspectRatio(value: unknown): string {
-  if (value === undefined || value === "auto" || value === "") return "16:9";
+function readAspectRatio(value: unknown): string | undefined {
+  if (value === undefined || value === "auto" || value === "") return undefined;
   if (typeof value !== "string") {
     throw invalidSetting("The size setting is invalid.", "size");
   }
@@ -199,32 +194,22 @@ function readAspectRatio(value: unknown): string {
   return ratio;
 }
 
-function readResolution(value: unknown): string {
-  if (value === undefined) return "720p";
-  if (value !== "480p" && value !== "720p") {
+function readResolution(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim() === "") {
     throw invalidSetting(
-      "The resolution_name must be 480p or 720p.",
+      "The resolution_name setting is invalid.",
       "resolution_name",
     );
   }
   return value;
 }
 
-function readPreset(value: unknown): void {
-  if (value !== undefined && value !== "normal") {
-    throw invalidSetting(
-      "The preset must be 'normal' or omitted.",
-      "preset",
-    );
-  }
-}
-
 function readBoolean(
   value: unknown,
   field: string,
-  defaultValue: boolean,
-): boolean {
-  if (value === undefined) return defaultValue;
+): boolean | undefined {
+  if (value === undefined) return undefined;
   if (typeof value === "boolean") return value;
   if (value === "true") return true;
   if (value === "false") return false;
@@ -254,8 +239,7 @@ function normalizeJsonVideoRequest(body: unknown): NormalizedVideoRequest {
     duration: readDuration(body.seconds),
     aspectRatio: readAspectRatio(body.size),
     resolution: readResolution(body.resolution_name),
-    generateAudio: readBoolean(body.generate_audio, "generate_audio", true),
-    webSearch: readBoolean(body.web_search, "web_search", false),
+    generateAudio: readBoolean(body.generate_audio, "generate_audio"),
     imageRefs: [],
     videoRefs: [],
     audioRefs: [],
@@ -315,14 +299,13 @@ function partitionMultipartFiles(files: MultipartImageFile[]): {
     }
   }
 
-  if (images.length > 9) {
-    throw invalidReference("At most 9 image references are supported.", "input_reference");
+  if (lastFrame && !firstFrame) {
+    throw invalidReference("last_frame requires first_frame.", "last_frame");
   }
-  if (videos.length > 3) {
-    throw invalidReference("At most 3 video references are supported.", "reference_video");
-  }
-  if (audios.length > 3) {
-    throw invalidReference("At most 3 audio references are supported.", "reference_audio");
+  if ((firstFrame || lastFrame) && (images.length || videos.length || audios.length)) {
+    throw invalidReference(
+      "Frame inputs and multimodal reference inputs cannot be combined.",
+    );
   }
 
   return { images, videos, audios, firstFrame, lastFrame };
@@ -351,12 +334,6 @@ async function normalizeMultipartVideoRequest(
     generateAudio: readBoolean(
       formValue(parsed.fields, "generate_audio"),
       "generate_audio",
-      true,
-    ),
-    webSearch: readBoolean(
-      formValue(parsed.fields, "web_search"),
-      "web_search",
-      false,
     ),
     imageRefs: partitioned.images,
     videoRefs: partitioned.videos,
@@ -383,7 +360,6 @@ function videoRequestFingerprint(input: NormalizedVideoRequest): string {
         aspectRatio: input.aspectRatio,
         resolution: input.resolution,
         generateAudio: input.generateAudio,
-        webSearch: input.webSearch,
         images: input.imageRefs.map(fileHash),
         videos: input.videoRefs.map(fileHash),
         audios: input.audioRefs.map(fileHash),
@@ -406,15 +382,14 @@ function buildSeedanceRequest(
   callbackUrl?: string,
 ): ByteDanceSeedanceVideoRequest {
   const payload: Record<string, unknown> = {
-    mode: input.model === "kie-bytedance-fast-video" ? "fast" : "standard",
     prompt: input.prompt,
-    aspect_ratio: input.aspectRatio,
-    resolution: input.resolution,
-    duration: input.duration,
-    generate_audio: input.generateAudio,
-    web_search: input.webSearch,
-    nsfw_checker: false,
   };
+  if (input.aspectRatio) payload.aspect_ratio = input.aspectRatio;
+  if (input.resolution) payload.resolution = input.resolution;
+  if (input.duration !== undefined) payload.duration = input.duration;
+  if (input.generateAudio !== undefined) {
+    payload.generate_audio = input.generateAudio;
+  }
   if (uploaded.imageUrls.length > 0) {
     payload.reference_image_urls = uploaded.imageUrls;
   }
