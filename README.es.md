@@ -110,13 +110,34 @@ Después, cualquier sesión puede generar medios en lenguaje natural ("hazme una
 
 ## Modelos
 
-Un catálogo unificado y siempre actualizado, que incluye:
+Un catálogo unificado y siempre actualizado, organizado por trabajo:
 
-- **Google Veo 3**: video cinematográfico con audio sincronizado y salida 1080p
-- **Nano Banana 2 / Nano Banana 2 Lite**: generación y edición de imágenes de alta resolución o 1K rápida
-- **Suno V5 / V5.5**: generación de música con voces realistas y control de duración en V5.5
-- **Kling 3.0**, **Wan 2.7**, **MiniMax H3 (Hailuo 03)**, **ByteDance Seedance 2.5**, **OmniHuman 1.5**, **Gemini Omni**, **HappyHorse**, **Runway Aleph**, **Midjourney**: generación, avatares y edición de video
-- **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Ideogram**, **Recraft**, **Topaz**: generación, edición, reencuadre, remoción de fondo y upscaling de imágenes
+### Generación de video
+
+| Modelo | Mejor para | Herramienta |
+| --- | --- | --- |
+| **ByteDance Seedance 2.5** | Referencias multimodales, control de primer o último fotograma y audio nativo | `bytedance_seedance_video` |
+| **Kling 3.0** | Videos multi-toma y audio nativo | `kling_video` |
+| **Google Veo 3 / 3.1** | Generación cinematográfica con audio sincronizado y salida 1080p | `veo3_generate_video` |
+| **Gemini Omni** | Videos con personajes y voces reutilizables | `gemini_omni` |
+| **MiniMax H3 (Hailuo 03)** | Texto, primer o último fotograma y referencias multimodales a video | `hailuo_video` |
+| **Wan 2.7** y **HappyHorse** | Generación rápida, referencias y edición de video | `wan_video`, `happyhorse_video` |
+
+### Edición de video y avatares
+
+- **Runway Aleph**: transformación y edición de video a video
+- **Midjourney** y **Grok Imagine**: imagen a video y generación estilizada
+- **Wan Animate**: animación y reemplazo de personajes
+- **OmniHuman 1.5**, **Kling Avatar** e **InfiniTalk**: avatares hablantes y sincronización labial
+
+### Generación y edición de imágenes
+
+- **Nano Banana 2 / Lite**, **GPT Image 2**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Flux Kontext / Flux 2**, **Qwen** y **Z-Image**: generación y edición de imágenes
+- **Ideogram**, **Recraft** y **Topaz**: reencuadre, remoción de fondo y upscaling
+
+### Audio
+
+- **Suno V5 / V5.5**: generación de música con voces realistas y control de duración
 - **ElevenLabs**: texto a voz y efectos de sonido
 
 Cada herramienta tiene **detección inteligente de modo**: una sola herramienta hace generar / editar / upscale según los parámetros que pasas.

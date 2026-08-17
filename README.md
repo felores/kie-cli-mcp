@@ -111,13 +111,34 @@ Then any session can generate media in plain language ("make me an image of…",
 
 ## Models
 
-A unified, always-current catalog including:
+A unified, always-current catalog organized by job:
 
-- **Google Veo 3**: cinematic video with synchronized audio and 1080p output
-- **Nano Banana 2 / Nano Banana 2 Lite**: high-resolution or fast 1K image generation and editing
-- **Suno V5 / V5.5**: music generation with realistic vocals and V5.5 duration control
-- **Kling 3.0**, **Wan 2.7**, **MiniMax H3 (Hailuo 03)**, **ByteDance Seedance 2.5**, **OmniHuman 1.5**, **Gemini Omni**, **HappyHorse**, **Runway Aleph**, **Midjourney**: video generation, avatars, and editing
-- **GPT Image 2**, **Flux Kontext / Flux 2**, **Qwen**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Ideogram**, **Recraft**, **Topaz**: image generation, editing, reframing, background removal, upscaling
+### Video generation
+
+| Model | Best for | Tool |
+| --- | --- | --- |
+| **ByteDance Seedance 2.5** | Multimodal references, first/last-frame control, and native audio | `bytedance_seedance_video` |
+| **Kling 3.0** | Multi-shot videos and native audio | `kling_video` |
+| **Google Veo 3 / 3.1** | Cinematic generation with synchronized audio and 1080p output | `veo3_generate_video` |
+| **Gemini Omni** | Videos with reusable characters and voices | `gemini_omni` |
+| **MiniMax H3 (Hailuo 03)** | Text, first/last-frame, and multimodal reference-to-video | `hailuo_video` |
+| **Wan 2.7** and **HappyHorse** | Fast generation, references, and video editing workflows | `wan_video`, `happyhorse_video` |
+
+### Video editing and avatars
+
+- **Runway Aleph**: video-to-video transformation and editing
+- **Midjourney** and **Grok Imagine**: image-to-video and stylized generation
+- **Wan Animate**: character animation and replacement
+- **OmniHuman 1.5**, **Kling Avatar**, and **InfiniTalk**: talking avatars and lip sync
+
+### Image generation and editing
+
+- **Nano Banana 2 / Lite**, **GPT Image 2**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Flux Kontext / Flux 2**, **Qwen**, and **Z-Image**: generation and image editing
+- **Ideogram**, **Recraft**, and **Topaz**: reframing, background removal, and upscaling
+
+### Audio
+
+- **Suno V5 / V5.5**: music generation with realistic vocals and duration control
 - **ElevenLabs**: text-to-speech and sound effects
 
 Each tool features **smart mode detection**: one tool handles generate / edit / upscale based on the parameters you pass.
