@@ -34,6 +34,17 @@ The MCP server and the CLI are generated from the same tool registry, so both ex
 
 The MCP server runs locally over **stdio** by default, and can also run as a **remote HTTP service** (Streamable HTTP) so one shared instance serves many clients over the network. It ships with a **Dockerfile and a Coolify compose file** for one-step self-hosting ([deploy guide](docs/DEPLOY_HTTP.md)). See the **Remote / HTTP transport** section below.
 
+## Safe media workflow
+
+Version 4 makes cost control a server-side workflow instead of an agent instruction:
+
+| Surface | Prepare | Human approval | Submit |
+| --- | --- | --- | --- |
+| MCP | `prepare_media_generation` | Host `elicitation.form` confirmation | `submit_media_generation` |
+| CLI | `prepare_media_generation` | `--approve <plan-id>` | `submit_media_generation` |
+
+Preparation validates one to six requests, resolves model settings and policy defaults, records pricing as `exact` only for verified formulas and `unknown` otherwise, and creates no provider task. A plan is persistent, expires after 15 minutes by default, is bound to its MCP server session, and can be submitted only once. See [Media planning and approval](#media-planning-and-approval) for the complete flow.
+
 ## 🚀 Quick Start
 
 Add Kie.ai to your MCP client. Pick how many tools you want loaded:
@@ -138,7 +149,7 @@ For MCP clients that advertise and handle the `elicitation.form` capability, pre
 
 The CLI has no MCP host. It requires an explicit `--approve <plan-id>` value matching `--planId`; this atomically changes a prepared plan to approved before submission.
 
-Pricing refresh is read-only by default: `npm run pricing:refresh` reports the tracked source evidence freshness and does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is an explicit metadata-only boundary. It is an intentional no-op without eligible validated formula proposals; with `--proposals <file>`, it can record only source URL, fingerprint, verification date, scope, and test evidence in the rate-card evidence manifest. It never edits formulas or derives USD conversions automatically.
+Pricing refresh is read-only by default: `npm run pricing:refresh` reports the tracked source evidence freshness and does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is an explicit metadata-only boundary. It is an intentional no-op without eligible validated formula proposals; with `--proposals <file>`, it can record the proposed deterministic credits formula plus its source URL, fingerprint, verification date, scope, and test evidence in the rate-card evidence manifest. It never edits executable formulas or derives USD conversions automatically.
 
 ```bash
 kie-cli submit_media_generation --planId <prepared-plan-id> --approve <prepared-plan-id> --json
@@ -233,18 +244,27 @@ Do not call paid media tools directly from MCP. `KIE_AI_ALLOW_DIRECT_GENERATION=
 ### CLI
 
 ```bash
-# Generate an image, then wait for the result in one call (no manual polling)
-kie-cli nano_banana_image --prompt "a red panda coding at night, neon" --resolution 2K --json
+# 1. Prepare one or more paid requests. This creates no provider task.
+kie-cli prepare_media_generation \
+  --items '[{"tool":"nano_banana_image","args":{"prompt":"a red panda coding at night, neon","resolution":"2K"}}]' \
+  --json
+
+# 2. Review the returned plan, then explicitly approve and submit it.
+kie-cli submit_media_generation \
+  --planId <prepared-plan-id> \
+  --approve <prepared-plan-id> \
+  --json
+
+# 3. Wait for a returned task ID in one call.
 kie-cli wait_for_task --task_id <id> --json
 
-# Music, with custom lyrics off
+# Other supported jobs use the same prepare -> approve -> submit flow.
+# The raw generation commands below remain lower-level compatibility APIs.
 kie-cli suno_generate_music --prompt "Upbeat electronic, energetic" --customMode --model V5 --title "Energy Boost"
-
-# Speech
 kie-cli elevenlabs_tts --text "Welcome to the future of content creation!" --voice Rachel --model turbo
 ```
 
-Generation is asynchronous: tools return a `task_id`. Wait for it in a single call with `wait_for_task` (it polls Kie for you and returns the final URLs when ready), or check once with `get_task_status` and browse recent work with `list_tasks`. Add `--json` to the CLI for machine-readable output.
+Use `prepare_media_generation` for any paid CLI job when you need approval, quotes, defaults, batch control, or replay protection. The raw commands remain available for scripts that deliberately own their own safety boundary. Generation is asynchronous: tools return a `task_id`. Wait for it in a single call with `wait_for_task` (it polls Kie for you and returns the final URLs when ready), or check once with `get_task_status` and browse recent work with `list_tasks`. Add `--json` to the CLI for machine-readable output.
 
 In an MCP client, `wait_for_task` keeps the tool call open and streams `notifications/progress` until the result is ready, so the model gets the URLs without looping. For long jobs (video), enable `resetTimeoutOnProgress` with a generous `maxTotalTimeout` in your client so the call is not cut off at the default timeout.
 

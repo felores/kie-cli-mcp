@@ -16,8 +16,8 @@ import {
 import { requestMcpPlanApproval } from "./plan-approval.js";
 import { isMcpToolCallable } from "./tool-access.js";
 import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
 
 import {
   KieAiClient,
@@ -87,7 +87,7 @@ export class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "4.0.0";
+  static readonly VERSION = "4.0.1";
 
   constructor() {
     // Initialize client with config from environment
@@ -1214,7 +1214,19 @@ export async function startMcpServer(): Promise<void> {
   }
 }
 
-const entrypoint = process.argv[1];
-if (entrypoint && resolve(entrypoint) === fileURLToPath(import.meta.url)) {
+export function isMcpEntrypoint(
+  entrypoint: string | undefined,
+  modulePath: string,
+): boolean {
+  if (!entrypoint) return false;
+
+  try {
+    return realpathSync(entrypoint) === realpathSync(modulePath);
+  } catch {
+    return false;
+  }
+}
+
+if (isMcpEntrypoint(process.argv[1], fileURLToPath(import.meta.url))) {
   startMcpServer().catch(console.error);
 }
