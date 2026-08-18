@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { KieAiClient } from "../kie-ai-client.js";
 import type { TaskDatabase } from "../database.js";
+import type { PreparedGenerationPlan } from "../generation-plan.js";
 
 /**
  * Transport-agnostic result of running a tool. It is the MCP CallTool content
@@ -15,6 +16,11 @@ export interface ToolResult {
   [key: string]: unknown;
 }
 
+export interface PlanApprovalDecision {
+  approved: boolean;
+  reason: string;
+}
+
 /**
  * Everything a tool's `run` needs at execution time. Built once per process by
  * each adapter (MCP server or CLI) and passed into every tool. This is the seam
@@ -23,6 +29,8 @@ export interface ToolResult {
 export interface ToolContext {
   client: KieAiClient;
   db: TaskDatabase;
+  /** Opaque adapter-owned identity that binds a media plan to its caller. */
+  approvalContext: string;
   /** Resolves the callback URL using env fallbacks (mirrors the MCP behaviour). */
   getCallbackUrl(url?: string): string;
   /** Builds the structured error envelope with per-parameter guidance. */
@@ -31,6 +39,12 @@ export interface ToolContext {
     error: unknown,
     paramDescriptions: Record<string, string>,
   ): ToolResult;
+  /** Resolves a tool available to this adapter for approval-bound plan execution. */
+  getTool(name: string): ToolDef | undefined;
+  /** Requests transport-specific approval for a persisted generation plan. */
+  requestPlanApproval?(
+    plan: PreparedGenerationPlan,
+  ): Promise<PlanApprovalDecision>;
   /**
    * Optional progress sink for long-running tools. The MCP adapter wires this to
    * `notifications/progress` when the client opted in with a `progressToken`,

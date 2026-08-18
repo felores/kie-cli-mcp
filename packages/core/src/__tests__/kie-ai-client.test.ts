@@ -134,6 +134,7 @@ describe("KieAiClient MiniMax H3 routing", () => {
       referenceAudioUrls: ["https://example.com/voice.mp3"],
       duration: 8,
       aspectRatio: "adaptive",
+      resolution: "768p",
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
       model: "minimax-h3/reference-to-video",
@@ -144,6 +145,7 @@ describe("KieAiClient MiniMax H3 routing", () => {
         reference_video_urls: ["https://example.com/motion.mp4"],
         reference_audio_urls: ["https://example.com/voice.mp3"],
         aspect_ratio: "adaptive",
+        resolution: "768p",
       },
     });
   });

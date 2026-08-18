@@ -1,6 +1,6 @@
 # Kie.ai Endpoints & MCP Tools Mapping
 
-> **Last Updated**: 2026-06-05
+> **Last Updated**: 2026-08-17
 > **Purpose**: Track Kie.ai API endpoints and their MCP/CLI tool implementation status.
 
 ## Overview
@@ -54,6 +54,9 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `list_tasks` | List recent tasks (local cache) with status filter |
 | `get_task_status` | Check status of a generation task (single poll) |
 | `wait_for_task` | Block until a task finishes (polls Kie directly, streams `notifications/progress`); optional callback rendezvous |
+| `list_models` | Search source-backed model catalog metadata by capability or text |
+| `prepare_media_generation` | Persist a resolved, quoted plan, then request host form approval when supported without provider calls |
+| `submit_media_generation` | Submit one approved plan once, with at most four concurrent creates |
 
 ### Image
 | Tool | Kie.ai Models | Status |
@@ -124,7 +127,7 @@ video_url + image_url        -> animation / character replace
 
 Examples: `nano_banana_image` (generate/edit), `wan_video` (T2V/I2V/R2V/video-edit), `kling_video` (text/image-to-video, multi-shot).
 
-To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + client method. Both surfaces and [TOOLS.md](./TOOLS.md) (`npm run docs`) pick it up.
+To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + client method. Add source-backed metadata to `model-catalog.ts`; add a rate-card formula only when every price dimension is officially verified. Both surfaces and [TOOLS.md](./TOOLS.md) (`npm run docs`) pick it up.
 
 ---
 
@@ -144,7 +147,9 @@ To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + 
 
 ## Pricing reference
 
-Kie.ai credits, where 1 credit is about $0.005. Pricing changes often; verify current rates at https://kie.ai/market.
+`packages/core/src/pricing/rate-card.ts` contains only verified credit formulas. Nano Banana 2 Lite is four credits per image, and MiniMax H3 reference-to-video at 768p is 16 credits per second. All other requests are `unknown`; the project has no fixed USD conversion. Run `npm run pricing:audit` for read-only coverage and staleness reporting.
+
+Run `npm run pricing:refresh` for a read-only report of the source freshness recorded in `packages/core/src/pricing/evidence-manifest.json`; it does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is the only mutation boundary. With no proposal file, it reports an explicit no-op. With `--proposals <file>`, it validates every exact-credit proposal has an HTTPS source URL, fingerprint, ISO verification date, route scope, and existing test-file references before recording proposals in that manifest only. It never changes rate-card TypeScript or creates a USD conversion automatically.
 
 ---
 

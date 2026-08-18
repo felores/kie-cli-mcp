@@ -9,6 +9,7 @@ The Kie.ai MCP Server includes a built-in SQLite database for persistent task tr
 - **⚡ Smart Caching**: Local database reduces API calls for status checks
 - **🔍 Full Audit Trail**: Complete lifecycle tracking for every task
 - **🎯 Intelligent Routing**: Database provides api_type for correct endpoint selection
+- **Approval Plans**: Prepared media plans survive disconnects, expire, and submit once
 
 ## Database Schema
 
@@ -21,7 +22,20 @@ CREATE TABLE tasks (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   result_url TEXT,
-  error_message TEXT
+  error_message TEXT,
+  credits_consumed REAL
+);
+
+CREATE TABLE generation_plans (
+  plan_id TEXT PRIMARY KEY,
+  status TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  plan_json TEXT NOT NULL,
+  request_hash TEXT NOT NULL,
+  approval_context TEXT NOT NULL,
+  submitted_at TEXT,
+  task_results_json TEXT
 );
 
 -- Performance indexes
@@ -41,6 +55,9 @@ CREATE INDEX idx_status ON tasks(status);
 | `updated_at` | TIMESTAMP | When the task was last updated |
 | `result_url` | TEXT | URL to the generated result (when completed) |
 | `error_message` | TEXT | Error details (when failed) |
+| `credits_consumed` | REAL | Provider-reported actual usage, when supplied |
+
+Prepared plans store the reviewed request payload, its SHA-256 hash, and an opaque adapter-owned approval context. Approval and submission atomically require the matching context, hash, state, and unexpired plan. This prevents one MCP HTTP session from approving or submitting another session's plan. Existing databases receive the nullable `approval_context` column by migration; legacy plans without it cannot pass the new transition predicates.
 
 ## Task Lifecycle
 

@@ -58,6 +58,7 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
                   referenceAudioUrls: request.referenceAudioUrls,
                   duration: request.duration,
                   aspectRatio: request.aspectRatio,
+                  resolution: request.resolution,
                   callBackUrl: request.callBackUrl,
                 },
                 next_steps: [
@@ -78,6 +79,7 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
           duration: "Required: integer video duration from 4 to 15 seconds",
           aspectRatio:
             "Text-to-video: required output ratio (21:9, 16:9, 4:3, 1:1, 3:4, or 9:16). Reference-to-video also accepts adaptive.",
+          resolution: "Reference-to-video only: 768p",
           imageUrl: "Image-to-video: first-frame image URL",
           endImageUrl:
             "Image-to-video: optional last-frame image URL (requires imageUrl)",

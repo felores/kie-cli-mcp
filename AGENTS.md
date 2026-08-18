@@ -81,7 +81,8 @@ Adding a model is one tool file plus one client method. The MCP server and CLI d
 4. Save endpoint documentation in `docs/kie/{provider}_{model}.md`.
 5. Run `npm run add-tool -- <tool_name> [image|video|audio|utility]`.
 6. Define the Zod schema in `packages/core/src/types.ts`, add the client method, and implement the tool in `packages/core/src/tools/<tool_name>.ts`.
-7. Update `EXPECTED_TOOL_NAMES` in `packages/core/src/__tests__/registry.test.ts`, then run `npm run build && npm test`.
+7. Add a source-backed entry to `packages/core/src/model-catalog.ts`. Add a rate-card formula only when every request dimension has official evidence, a source URL, fingerprint, verification date, and tests. Otherwise the price state stays `unknown`.
+8. Update `EXPECTED_TOOL_NAMES` in `packages/core/src/__tests__/registry.test.ts`, then run `npm run build && npm test && npm run docs`.
 
 ### Key Files
 | What | Where |

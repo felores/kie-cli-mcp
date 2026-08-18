@@ -1,6 +1,7 @@
 import { KieAiClient } from "./kie-ai-client.js";
 import { TaskDatabase } from "./database.js";
 import { formatToolError } from "./tools/format-error.js";
+import { getTool } from "./tools/index.js";
 import type { ToolContext } from "./tools/types.js";
 import type { KieAiConfig } from "./types.js";
 
@@ -21,7 +22,7 @@ export function configFromEnv(): KieAiConfig {
  * any other adapter) so client, database and helpers are wired identically to
  * the MCP server. Throws if KIE_AI_API_KEY is missing.
  */
-export function createToolContext(): ToolContext {
+export function createToolContext(approvalContext = "cli"): ToolContext {
   const config = configFromEnv();
   if (!config.apiKey) {
     throw new Error("KIE_AI_API_KEY environment variable is required");
@@ -32,8 +33,10 @@ export function createToolContext(): ToolContext {
   return {
     client,
     db,
+    approvalContext,
     getCallbackUrl: (url) =>
       url || process.env.KIE_AI_CALLBACK_URL || config.callbackUrlFallback,
     formatError: formatToolError,
+    getTool,
   };
 }

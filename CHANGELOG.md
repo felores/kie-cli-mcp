@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-08-17
+
+### Breaking Changes
+- The MCP server no longer lists or accepts direct generation tools by default.
+  Use `prepare_media_generation` followed by `submit_media_generation` so a
+  persisted plan is reviewed before provider tasks are created. Set
+  `KIE_AI_ALLOW_DIRECT_GENERATION=true` only for the explicit compatibility path.
+
+### Added
+- **Planned media generation workflow**: prepare one to six validated requests,
+  review the resolved settings and known prices, record approval, then submit the
+  approved plan. MCP hosts approve through elicitation; `@felores/kie-cli` 0.4.0
+  requires an explicit matching `--approve <plan-id>` value.
+- **Pricing audit and refresh controls**: source-backed formula coverage can be
+  audited, and refresh accepts only reviewed exact-credit proposals with valid
+  calendar verification dates. Refresh remains read-only unless `--apply` is
+  supplied.
+
+### Fixed
+- Remote HTTP transport now refuses non-loopback bindings unless both
+  `MCP_ALLOWED_HOSTS` and `KIE_MCP_HTTP_TOKEN` are configured.
+- Clients advertising legacy `{ elicitation: {} }` capabilities are treated as
+  form-capable, while clients without elicitation keep plans unapproved.
+
 ## [3.6.1] - 2026-08-16
 
 ### Changed

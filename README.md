@@ -96,18 +96,55 @@ Same idea, different env vars (inside the `env` block, or as shell exports for t
 - **Categories:** `image`, `video`, `audio`, `utility`.
 - **Priority:** `ENABLED_TOOLS` > `TOOL_CATEGORIES` > `DISABLED_TOOLS` > all tools (default).
 - The utility tools (`list_tasks`, `get_task_status`) are always enabled and can't be disabled, they're how you track and poll your generations.
+- MCP hides and rejects direct `image`, `video`, and `audio` tool calls by default. Use `prepare_media_generation`, host approval elicitation, and `submit_media_generation` instead. `KIE_AI_ALLOW_DIRECT_GENERATION=true` is the explicit legacy bypass when you intentionally disable these approval safeguards. Filtering still controls which generation tools can be plan targets.
 
 ## 🤖 Agent skill (optional)
 
-`skills/kie-ai/` is a Claude Code skill that teaches agents to drive the `kie-cli` command (discover → generate → poll → result), including how to install the CLI if it's missing. Skills load **globally**, so install it into your personal skills dir (a project-local skill only triggers inside this repo):
+`skills/generate-media/` is the canonical agent workflow. It requires a persisted plan, displays resolved settings and verified pricing state, then waits for explicit approval before task submission. `skills/kie-ai/` is a migration pointer only. Skills load **globally**, so install the canonical skill into your personal skills dir:
 
 ```bash
-cp -r skills/kie-ai ~/.claude/skills/kie-ai
+cp -r skills/generate-media ~/.claude/skills/generate-media
 # or symlink to keep it in sync with the repo:
-ln -s "$PWD/skills/kie-ai" ~/.claude/skills/kie-ai
+ln -s "$PWD/skills/generate-media" ~/.claude/skills/generate-media
 ```
 
-Then any session can generate media in plain language ("make me an image of…", "turn this photo into a video").
+Then any session can prepare media in plain language ("make me an image of...", "turn this photo into a video") and request approval before a paid task starts.
+
+## Media planning and approval
+
+Use `list_models` to search source-backed capabilities, then prepare one to six requests in a single persisted plan. Preparing validates target schemas and applies safe defaults, but never calls a Kie generation endpoint.
+
+```json
+{
+  "tool": "prepare_media_generation",
+  "arguments": {
+    "items": [
+      { "tool": "nano_banana_image", "args": { "prompt": "A red panda coding at night" } }
+    ]
+  }
+}
+```
+
+For MCP clients that advertise and handle the `elicitation.form` capability, preparation shows the complete resolved plan and price summary in a host confirmation form. Only an accepted form with `confirm: true` records the plan as approved. Declined, cancelled, unconfirmed, and unsupported elicitations leave the plan prepared and unapproved. Submit only the resulting approved plan ID:
+
+```json
+{
+  "tool": "submit_media_generation",
+  "arguments": {
+    "planId": "<approved-plan-id>"
+  }
+}
+```
+
+The CLI has no MCP host. It requires an explicit `--approve <plan-id>` value matching `--planId`; this atomically changes a prepared plan to approved before submission.
+
+Pricing refresh is read-only by default: `npm run pricing:refresh` reports the tracked source evidence freshness and does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is an explicit metadata-only boundary. It is an intentional no-op without eligible validated formula proposals; with `--proposals <file>`, it can record only source URL, fingerprint, verification date, scope, and test evidence in the rate-card evidence manifest. It never edits formulas or derives USD conversions automatically.
+
+```bash
+kie-cli submit_media_generation --planId <prepared-plan-id> --approve <prepared-plan-id> --json
+```
+
+Plans are persisted in the local SQLite database and move atomically from `prepared` to `approved`, `submitting`, and then `submitted` or `failed`. They expire after 15 minutes by default, cannot be modified, and cannot be submitted twice. The request hash detects accidental plan mutation only. An MCP plan is also bound to the server instance that prepared and approved it, so another HTTP session cannot submit it. A submitted batch creates no more than four provider tasks concurrently. Exact credit quotes exist only for verified request dimensions; all other requests are `unknown`. No USD conversion is assumed.
 
 ## Models
 
@@ -152,24 +189,46 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
 - **Prompts** (slash commands in your client): `/image` and `/video`: guidance for picking and driving the right model.
 - **Resources:**
   - `kie://tools/<name>`: a Markdown reference for each tool (parameters, types, defaults), generated from its schema.
-  - `kie://guides/image`, `kie://guides/video`, `kie://guides/quality`: model comparison and cost/quality guides.
+  - `kie://guides/image-models-comparison`, `kie://guides/video-models-comparison`, `kie://guides/quality-optimization`: model comparison and cost/quality guides.
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
 
 ## Examples
 
-### MCP (tool call)
+### MCP (prepare, approve, submit)
+
+Prepare the paid request first. This does not start generation:
 
 ```json
 {
-  "tool": "nano_banana_image",
+  "tool": "prepare_media_generation",
   "arguments": {
-    "prompt": "A futuristic city at sunset, cyberpunk style",
-    "aspect_ratio": "16:9",
-    "resolution": "2K",
-    "output_format": "png"
+    "items": [
+      {
+        "tool": "nano_banana_image",
+        "args": {
+          "prompt": "A futuristic city at sunset, cyberpunk style",
+          "aspect_ratio": "16:9",
+          "resolution": "2K",
+          "output_format": "png"
+        }
+      }
+    ]
   }
 }
 ```
+
+The MCP host then presents the returned plan, resolved settings, and price summary with `elicitation.form`. Approve that host form with `confirm: true`; the approved response includes a `planId`. Then submit that approved plan:
+
+```json
+{
+  "tool": "submit_media_generation",
+  "arguments": {
+    "planId": "<approved-plan-id>"
+  }
+}
+```
+
+Do not call paid media tools directly from MCP. `KIE_AI_ALLOW_DIRECT_GENERATION=true` is only the explicit legacy bypass.
 
 ### CLI
 
@@ -236,7 +295,7 @@ This is an npm-workspaces monorepo: `packages/core` (private shared registry, bu
 </details>
 
 <details>
-<summary><strong>🌐 Remote / HTTP transport (v3.6.0+)</strong></summary>
+<summary><strong>🌐 Remote / HTTP transport (v4.0.0+)</strong></summary>
 
 The server defaults to **stdio** (one local process per client). It can also run
 as a **remote HTTP service** over **Streamable HTTP** (MCP spec 2025-11-25).
@@ -258,7 +317,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.6.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"4.0.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
@@ -278,7 +337,7 @@ Docker + Coolify deployment and a client-connection walkthrough are in
 
 ## Task management
 
-The server keeps a local SQLite database of the tasks it creates and polls, persistent across restarts, used for status tracking and correct endpoint routing.
+The server keeps a local SQLite database of prepared plans and tasks, persistent across restarts, used for approval safety, status tracking, and correct endpoint routing.
 
 ```json
 { "tool": "list_tasks", "arguments": { "limit": 20, "status": "completed" } }
@@ -287,7 +346,7 @@ The server keeps a local SQLite database of the tasks it creates and polls, pers
 { "tool": "get_task_status", "arguments": { "task_id": "281e5b0...f39b9" } }
 ```
 
-Note: `list_tasks` reflects the MCP's local cache, tasks it has created or polled, not your full Kie.ai account history. See [docs/DATABASE.md](docs/DATABASE.md).
+Note: `list_tasks` reflects the MCP's local cache, tasks it has created or polled, not your full Kie.ai account history. When a provider status response includes `creditsConsumed`, it is returned as actual task usage, separately from a plan quote. See [docs/DATABASE.md](docs/DATABASE.md).
 
 ## Error handling
 

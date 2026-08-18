@@ -5,7 +5,7 @@ name: Release (npm publish with provenance)
 # sidebar with a "verified" badge). The private @felores/kie-ai-core is never
 # published, it is bundled into each package by the prepack step.
 #
-# Trigger: push a version tag (e.g. `git tag v3.3.2 && git push origin v3.3.2`)
+# Trigger: push a version tag (e.g. `git tag v4.0.0 && git push origin v4.0.0`)
 # or run manually from the Actions tab. Each package is published only if its
 # current package.json version isn't already on npm, so re-runs are safe.
 

@@ -16,13 +16,16 @@ import { infinitalkLipSyncTool } from "./infinitalk_lip_sync.js";
 import { klingAvatarTool } from "./kling_avatar.js";
 import { klingVideoTool } from "./kling_video.js";
 import { listTasksTool } from "./list_tasks.js";
+import { listModelsTool } from "./list_models.js";
 import { midjourneyGenerateTool } from "./midjourney_generate.js";
 import { nanoBananaImageTool } from "./nano_banana_image.js";
 import { omniHumanVideoTool } from "./omnihuman_video.js";
 import { qwenImageTool } from "./qwen_image.js";
+import { prepareMediaGenerationTool } from "./prepare_media_generation.js";
 import { recraftRemoveBackgroundTool } from "./recraft_remove_background.js";
 import { runwayAlephVideoTool } from "./runway_aleph_video.js";
 import { sunoGenerateMusicTool } from "./suno_generate_music.js";
+import { submitMediaGenerationTool } from "./submit_media_generation.js";
 import { topazUpscaleImageTool } from "./topaz_upscale_image.js";
 import { veo3GenerateVideoTool } from "./veo3_generate_video.js";
 import { veo3Get1080pVideoTool } from "./veo3_get_1080p_video.js";
@@ -55,14 +58,17 @@ export const TOOL_REGISTRY: ToolDef[] = [
   infinitalkLipSyncTool,
   klingAvatarTool,
   klingVideoTool,
+  listModelsTool,
   listTasksTool,
   midjourneyGenerateTool,
   nanoBananaImageTool,
   omniHumanVideoTool,
   qwenImageTool,
+  prepareMediaGenerationTool,
   recraftRemoveBackgroundTool,
   runwayAlephVideoTool,
   sunoGenerateMusicTool,
+  submitMediaGenerationTool,
   topazUpscaleImageTool,
   veo3GenerateVideoTool,
   veo3Get1080pVideoTool,

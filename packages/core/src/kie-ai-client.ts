@@ -1123,6 +1123,7 @@ export class KieAiClient {
         input.reference_audio_urls = request.referenceAudioUrls;
       }
       if (request.aspectRatio) input.aspect_ratio = request.aspectRatio;
+      if (request.resolution) input.resolution = request.resolution;
     } else {
       model = "minimax-h3/text-to-video";
       input.aspect_ratio = request.aspectRatio;

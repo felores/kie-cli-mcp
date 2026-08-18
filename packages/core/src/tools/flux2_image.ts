@@ -72,8 +72,7 @@ export const flux2ImageTool: ToolDef<typeof Flux2ImageSchema> = {
             "Optional: array of reference image URLs for image-to-image mode (1-8 URLs)",
           aspect_ratio:
             'Optional: aspect ratio (1:1, 4:3, 3:4, 16:9, 9:16, 3:2, 2:3, auto). Default: 1:1. "auto" only valid with input_urls.',
-          resolution:
-            "Optional: output resolution (1K or 2K). Default: 1K. Pro: 1K~$0.025, 2K~$0.035. Flex: 1K~$0.07, 2K~$0.12.",
+          resolution: "Optional: output resolution (1K or 2K). Default: 1K.",
           model_type:
             'Optional: model variant ("pro" for fast results, "flex" for more control). Default: pro.',
           callBackUrl:

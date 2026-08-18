@@ -11,6 +11,30 @@ export interface HttpTransportOptions {
   version: string;
 }
 
+export function validateHttpTransportSecurity({
+  host,
+  token,
+  allowedHosts,
+}: {
+  host: string;
+  token: string;
+  allowedHosts: string[];
+}): void {
+  const isLoopbackHost =
+    host === "127.0.0.1" || host === "localhost" || host === "::1";
+  if (isLoopbackHost) return;
+
+  const missing = [
+    ...(allowedHosts.length === 0 ? ["MCP_ALLOWED_HOSTS"] : []),
+    ...(!token ? ["KIE_MCP_HTTP_TOKEN"] : []),
+  ];
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.join(" and ")} ${missing.length === 1 ? "is" : "are"} required when MCP_HTTP_HOST is non-loopback (got "${host}").`,
+    );
+  }
+}
+
 // Streamable HTTP transport (MCP spec 2025-11-25): a single /mcp endpoint that
 // serves POST (client→server messages), GET (server→client SSE stream), and
 // DELETE (session termination). Stateful: each session gets its own transport +
@@ -24,15 +48,9 @@ export function startHttpServer(opts: HttpTransportOptions): void {
     .map((h) => h.trim())
     .filter(Boolean);
 
-  // Fail-fast: binding beyond loopback without an allowlist would leave DNS-
-  // rebinding protection off, an insecure deployment. Refuse to start instead.
-  const isLoopbackHost =
-    host === "127.0.0.1" || host === "localhost" || host === "::1";
-  if (!isLoopbackHost && allowedHosts.length === 0) {
-    throw new Error(
-      `MCP_ALLOWED_HOSTS is required when MCP_HTTP_HOST is non-loopback (got "${host}").`,
-    );
-  }
+  // Fail fast before listening: remote HTTP requires both host validation and
+  // bearer authentication. Loopback remains usable without remote credentials.
+  validateHttpTransportSecurity({ host, token, allowedHosts });
 
   const app = express();
   app.use(express.json({ limit: "10mb" }));

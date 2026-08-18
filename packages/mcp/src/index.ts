@@ -13,6 +13,11 @@ import {
   GetPromptRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
+import { requestMcpPlanApproval } from "./plan-approval.js";
+import { isMcpToolCallable } from "./tool-access.js";
+import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 
 import {
   KieAiClient,
@@ -28,13 +33,13 @@ import {
 } from "@felores/kie-ai-core";
 import { TaskDatabase } from "@felores/kie-ai-core/database";
 
-class KieAiMcpServer {
+export class KieAiMcpServer {
   private server: Server;
   private client: KieAiClient;
   private db: TaskDatabase;
   private config: KieAiConfig;
   private enabledTools: Set<string>;
-  private toolContext: ToolContext;
+  private toolContext: Omit<ToolContext, "approvalContext">;
 
   // Utility tools are derived from the registry's `category` field, not a
   // hardcoded list, so they are always-on by definition: any tool marked
@@ -82,7 +87,7 @@ class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "3.6.1";
+  static readonly VERSION = "4.0.0";
 
   constructor() {
     // Initialize client with config from environment
@@ -107,15 +112,19 @@ class KieAiMcpServer {
       db: this.db,
       getCallbackUrl: (url) => this.getCallbackUrl(url),
       formatError: formatToolError,
+      // Plan utilities must resolve through the server's enabled-tool boundary,
+      // not the unrestricted registry used to construct the server.
+      getTool: (name) => this.enabledTools.has(name) ? getTool(name) : undefined,
     };
 
     this.server = this.createServer();
   }
 
   // Build a fresh MCP Server with all handlers wired to the shared client/db
-  // context. The stdio path uses one instance; the Streamable HTTP path calls
-  // this per session, since an SDK Server connects to exactly one transport.
+  // context. Each SDK Server gets an opaque approval context: stable for stdio
+  // and distinct for every Streamable HTTP session.
   createServer(): Server {
+    const approvalContext = randomUUID();
     const server = new Server(
       {
         name: "kie-ai-mcp-server",
@@ -131,7 +140,7 @@ class KieAiMcpServer {
         },
       },
     );
-    this.setupHandlers(server);
+    this.setupHandlers(server, { ...this.toolContext, approvalContext });
     return server;
   }
 
@@ -252,10 +261,10 @@ class KieAiMcpServer {
     );
   }
 
-  private setupHandlers(server: Server): void {
+  private setupHandlers(server: Server, toolContext: ToolContext): void {
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = TOOL_REGISTRY.filter((t) =>
-        this.enabledTools.has(t.name),
+        isMcpToolCallable(t, this.enabledTools),
       ).map((t) => ({
         name: t.name,
         description: t.description,
@@ -268,6 +277,11 @@ class KieAiMcpServer {
       try {
         const { name, arguments: args } = request.params;
 
+        const tool = getTool(name);
+        if (!tool) {
+          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+        }
+
         if (!this.enabledTools.has(name)) {
           throw new McpError(
             ErrorCode.InvalidRequest,
@@ -276,9 +290,12 @@ class KieAiMcpServer {
           );
         }
 
-        const tool = getTool(name);
-        if (!tool) {
-          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+        if (!isMcpToolCallable(tool, this.enabledTools)) {
+          throw new McpError(
+            ErrorCode.InvalidRequest,
+            `Tool '${name}' requires prepare_media_generation, host approval, and submit_media_generation. ` +
+              "Set KIE_AI_ALLOW_DIRECT_GENERATION=true only to explicitly bypass approval safeguards.",
+          );
         }
 
         // When the client opts into progress (a progressToken in the request
@@ -289,11 +306,15 @@ class KieAiMcpServer {
         const progressToken = (
           request.params as { _meta?: { progressToken?: string | number } }
         )._meta?.progressToken;
+        const requestContext: ToolContext = {
+          ...toolContext,
+          requestPlanApproval: (plan) => requestMcpPlanApproval(server, plan),
+        };
         const ctx: ToolContext =
           progressToken === undefined
-            ? this.toolContext
+            ? requestContext
             : {
-                ...this.toolContext,
+                ...requestContext,
                 onProgress: async (update) => {
                   try {
                     await extra.sendNotification({
@@ -322,7 +343,7 @@ class KieAiMcpServer {
     // Resource Handlers
     server.setRequestHandler(ListResourcesRequestSchema, async () => {
       const toolResources = TOOL_REGISTRY.filter((t) =>
-        this.enabledTools.has(t.name),
+        isMcpToolCallable(t, this.enabledTools),
       ).map((t) => ({
         uri: `kie://tools/${t.name}`,
         name: t.name,
@@ -381,6 +402,12 @@ class KieAiMcpServer {
       if (toolMatch) {
         const tool = getTool(toolMatch[1]);
         if (!tool) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            `Resource not found: ${uri}`,
+          );
+        }
+        if (!isMcpToolCallable(tool, this.enabledTools)) {
           throw new McpError(
             ErrorCode.InvalidParams,
             `Resource not found: ${uri}`,
@@ -1174,13 +1201,20 @@ These guidelines ensure optimal balance between quality requirements and cost ma
   }
 }
 
-// Start the server. Default transport is stdio; opt into Streamable HTTP with
-// MCP_TRANSPORT=http or the --http flag.
-const useHttp =
-  process.env.MCP_TRANSPORT === "http" || process.argv.includes("--http");
-const server = new KieAiMcpServer();
-if (useHttp) {
-  server.runHttp();
-} else {
-  server.run().catch(console.error);
+export async function startMcpServer(): Promise<void> {
+  // Default transport is stdio; opt into Streamable HTTP with MCP_TRANSPORT=http
+  // or the --http flag.
+  const useHttp =
+    process.env.MCP_TRANSPORT === "http" || process.argv.includes("--http");
+  const server = new KieAiMcpServer();
+  if (useHttp) {
+    server.runHttp();
+  } else {
+    await server.run();
+  }
+}
+
+const entrypoint = process.argv[1];
+if (entrypoint && resolve(entrypoint) === fileURLToPath(import.meta.url)) {
+  startMcpServer().catch(console.error);
 }

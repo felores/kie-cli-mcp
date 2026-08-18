@@ -9,7 +9,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 - **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [z_image](#z_image)
 - **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [gemini_omni](#gemini_omni), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [omnihuman_video](#omnihuman_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
 - **Audio:** [elevenlabs_tts](#elevenlabs_tts), [elevenlabs_ttsfx](#elevenlabs_ttsfx), [suno_generate_music](#suno_generate_music)
-- **Utility:** [get_task_status](#get_task_status), [list_tasks](#list_tasks), [wait_for_task](#wait_for_task)
+- **Utility:** [get_task_status](#get_task_status), [list_models](#list_models), [list_tasks](#list_tasks), [prepare_media_generation](#prepare_media_generation), [submit_media_generation](#submit_media_generation), [wait_for_task](#wait_for_task)
 
 ---
 
@@ -67,7 +67,7 @@ Generate and edit images using Black Forest Labs' Flux 2 models (Pro/Flex) with 
 | `prompt` | string | yes | Text prompt describing the desired image (3-5000 characters) |
 | `input_urls` | array | no | Reference images for image-to-image mode (1-8 URLs). Omit for text-to-image mode. |
 | `aspect_ratio` | `1:1` / `4:3` / `3:4` / `16:9` / `9:16` / `3:2` / `2:3` / `auto` | no | Aspect ratio for the generated image. 'auto' only valid with input_urls. (default: `"1:1"`) |
-| `resolution` | `1K` / `2K` | no | Output resolution. Pro: 1K (~$0.025), 2K (~$0.035). Flex: 1K (~$0.07), 2K (~$0.12). (default: `"1K"`) |
+| `resolution` | `1K` / `2K` | no | Output resolution. (default: `"1K"`) |
 | `model_type` | `pro` / `flex` | no | Model variant: 'pro' for fast reliable results, 'flex' for more control and fine-tuning. (default: `"pro"`) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
@@ -201,7 +201,7 @@ Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution wi
 
 ### z_image
 
-Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), strong semantic understanding. Pricing: ~$0.004/image
+Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), and strong semantic understanding.
 
 #### Parameters
 
@@ -262,7 +262,7 @@ Create Gemini Omni videos or reusable Omni characters and voices from multimodal
 
 ### grok_imagine
 
-Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video. Pricing: ~$0.10 per 6-second video
+Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.
 
 #### Parameters
 
@@ -293,6 +293,7 @@ Generate videos using MiniMax H3 (Hailuo 03) with text-to-video, image-to-video,
 | `referenceAudioUrls` | array | no | Reference audio URLs for reference-to-video mode (up to 3 audio files). |
 | `duration` | integer | yes | Video duration in seconds (4-15). |
 | `aspectRatio` | `adaptive` / `21:9` / `16:9` / `4:3` / `1:1` / `3:4` / `9:16` | no | Output aspect ratio. Required for text-to-video; reference-to-video also supports adaptive. |
+| `resolution` | `768p` | no | Reference-to-video output resolution. 768p has a verified rate-card formula. |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### happyhorse_video
@@ -318,7 +319,7 @@ Generate videos using Alibaba HappyHorse 1.0 (text-to-video, image-to-video, ref
 
 ### infinitalk_lip_sync
 
-Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image + audio into natural talking avatar with synchronized lips, facial expressions, and head movements. Pricing: ~$0.015/s (480p), ~$0.06/s (720p), max 15s
+Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image and audio into a natural talking avatar with synchronized lips, facial expressions, and head movements.
 
 #### Parameters
 
@@ -333,7 +334,7 @@ Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portr
 
 ### kling_avatar
 
-Generate lifelike talking avatar videos using Kuaishou Kling AI. Transforms portrait photo + audio into realistic avatar with accurate lip-sync, emotions, and identity preservation. Pricing: ~$0.04/s (720P standard), ~$0.08/s (1080P pro), max 15s
+Generate lifelike talking avatar videos using Kuaishou Kling AI. Transforms portrait photo and audio into a realistic avatar with accurate lip-sync, emotions, and identity preservation.
 
 #### Parameters
 
@@ -438,7 +439,7 @@ Animate static images or replace characters in videos using Alibaba's Wan 2.2 An
 | `video_url` | string | yes | URL of the reference video (MP4, QUICKTIME, X-MATROSKA, max 10MB, max 30 seconds) |
 | `image_url` | string | yes | URL of the character image (JPEG, PNG, WEBP, max 10MB). Will be resized and center-cropped to match video aspect ratio. |
 | `mode` | `animate` / `replace` | no | Animation mode: 'animate' transfers motion/expressions from video to image, 'replace' swaps the character in video with the image (default: `"animate"`) |
-| `resolution` | `480p` / `580p` / `720p` | no | Output resolution: 480p (~$0.03/sec), 580p (~$0.0475/sec), 720p (~$0.0625/sec) (default: `"480p"`) |
+| `resolution` | `480p` / `580p` / `720p` | no | Output resolution: 480p, 580p, or 720p (default: `"480p"`) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### wan_video
@@ -545,6 +546,16 @@ Get the status of a generation task with intelligent polling guidance. Returns t
 | --- | --- | --- | --- |
 | `task_id` | string | yes | Task ID to check status for |
 
+### list_models
+
+List source-backed catalog models. Filter by words from capabilities, model names, or descriptions.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `filter` | string | no | Optional text or capability filter, for example: lip sync |
+
 ### list_tasks
 
 List recent tasks with their status
@@ -555,6 +566,29 @@ List recent tasks with their status
 | --- | --- | --- | --- |
 | `limit` | integer | no | Maximum number of tasks to return (default: `20`) |
 | `status` | `pending` / `processing` / `completed` / `failed` | no | Filter by status |
+
+### prepare_media_generation
+
+Prepare one to six validated media generations, resolve safe defaults and pricing, persist a caller-context-bound plan, then request host approval when the transport supports it without calling a provider.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `items` | array | yes | One to six independent generation requests |
+| `defaultProfile` | `safe` | no | Optional explicit safe default policy. The current catalog policy is safe. |
+| `maxConcurrency` | integer | no | Maximum concurrent task creates for this plan (1-4, default 4) |
+| `expiresInSeconds` | integer | no | Plan expiry in seconds (60-3600, default 900) |
+
+### submit_media_generation
+
+Submit a single unexpired, unchanged plan approved in this caller context exactly once. The persisted approval state is the authorization boundary; the plan hash detects accidental mutation only. The stored plan controls a maximum of four concurrent task creates.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `planId` | string | yes | Approved plan ID to submit exactly once |
 
 ### wait_for_task
 

@@ -33,11 +33,15 @@ Add to your MCP client config (e.g. Claude Desktop `claude_desktop_config.json`)
   `KIE_AI_CALLBACK_URL`
 - Tool filtering: `KIE_AI_ENABLED_TOOLS`, `KIE_AI_TOOL_CATEGORIES`,
   `KIE_AI_DISABLED_TOOLS`
+- Direct paid generation compatibility bypass: `KIE_AI_ALLOW_DIRECT_GENERATION=true`
+  bypasses the default prepare, host approval, and submit safeguards. Leave it unset
+  for approval-bound MCP generation.
 
 ## Tools
 
-Generation tools create async tasks; poll them with `get_task_status` and browse
-recent work with `list_tasks`. See the
+By default, MCP exposes utility tools and requires `prepare_media_generation`, host
+approval, then `submit_media_generation` for paid image, video, and audio work.
+Generation tasks can be polled with `get_task_status` and browsed with `list_tasks`. See the
 [repository](https://github.com/felores/kie-cli-mcp) for full tool docs.
 
 ## License

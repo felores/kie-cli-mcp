@@ -4,7 +4,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const infinitalkLipSyncTool: ToolDef<typeof InfiniTalkSchema> = {
   name: "infinitalk_lip_sync",
-  description: "Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image + audio into natural talking avatar with synchronized lips, facial expressions, and head movements. Pricing: ~$0.015/s (480p), ~$0.06/s (720p), max 15s",
+  description: "Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image and audio into a natural talking avatar with synchronized lips, facial expressions, and head movements.",
   category: "video",
   schema: InfiniTalkSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -25,7 +25,6 @@ export const infinitalkLipSyncTool: ToolDef<typeof InfiniTalkSchema> = {
         });
 
         const resolution = request.resolution || "480p";
-        const pricing = resolution === "720p" ? "~$0.06/s" : "~$0.015/s";
 
         return {
           content: [
@@ -44,7 +43,7 @@ export const infinitalkLipSyncTool: ToolDef<typeof InfiniTalkSchema> = {
                     resolution,
                     seed: request.seed,
                   },
-                  pricing: `${pricing} (max 15 seconds)`,
+                  pricing: "unknown: no verified local rate-card formula",
                   next_steps: [
                     `Use get_task_status with task_id: ${response.data.taskId} to check progress`,
                     'Lip-synced video will be available when status is "completed"',

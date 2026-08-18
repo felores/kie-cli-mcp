@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "lastReviewedAt": "2026-08-17",
+  "reviewedSources": [
+    {
+      "url": "https://kie.ai/pricing",
+      "fingerprint": "manual-review-2026-08-17:kie-pricing",
+      "verifiedAt": "2026-08-17",
+      "scope": "Kie.ai public credit pricing page"
+    },
+    {
+      "url": "https://docs.kie.ai/market/google/nano-banana-2-lite",
+      "fingerprint": "manual-review-2026-08-17:nano-banana-2-lite",
+      "verifiedAt": "2026-08-17",
+      "scope": "Nano Banana 2 Lite model capability and request scope"
+    },
+    {
+      "url": "https://docs.kie.ai/market/minimax-h3/reference-to-video",
+      "fingerprint": "manual-review-2026-08-17:minimax-h3-reference-to-video",
+      "verifiedAt": "2026-08-17",
+      "scope": "MiniMax H3 reference-to-video capability and request scope"
+    }
+  ],
+  "existingFormulaEvidence": [
+    {
+      "scope": "nano_banana_image:text-to-image:model=nano-banana-2-lite:outputCount=1",
+      "formula": "4 credits per image",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-08-17:nano-banana-2-lite:4-per-image",
+      "verifiedAt": "2026-08-17",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
+    {
+      "scope": "hailuo_video:reference-to-video:resolution=768p",
+      "formula": "16 credits per second",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-08-17:minimax-h3-reference-768p:16-per-second",
+      "verifiedAt": "2026-08-17",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    }
+  ],
+  "proposedFormulaUpdates": []
+}

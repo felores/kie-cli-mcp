@@ -1898,6 +1898,10 @@ export const HailuoVideoSchema = z
       .describe(
         "Output aspect ratio. Required for text-to-video; reference-to-video also supports adaptive.",
       ),
+    resolution: z
+      .enum(["768p"])
+      .optional()
+      .describe("Reference-to-video output resolution. 768p has a verified rate-card formula."),
     callBackUrl: z
       .string()
       .url()
@@ -1936,6 +1940,14 @@ export const HailuoVideoSchema = z
         code: z.ZodIssueCode.custom,
         path: ["aspectRatio"],
         message: "aspectRatio is not supported for image-to-video mode.",
+      });
+    }
+
+    if (data.resolution && !hasReferenceInputs) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["resolution"],
+        message: "resolution is currently supported only for reference-to-video mode.",
       });
     }
 
@@ -1983,9 +1995,7 @@ export const Flux2ImageSchema = z
     resolution: z
       .enum(["1K", "2K"])
       .default("1K")
-      .describe(
-        "Output resolution. Pro: 1K (~$0.025), 2K (~$0.035). Flex: 1K (~$0.07), 2K (~$0.12).",
-      ),
+      .describe("Output resolution."),
     model_type: z
       .enum(["pro", "flex"])
       .default("pro")
@@ -2042,9 +2052,7 @@ export const WanAnimateSchema = z.object({
     .enum(["480p", "580p", "720p"])
     .default("480p")
     .optional()
-    .describe(
-      "Output resolution: 480p (~$0.03/sec), 580p (~$0.0475/sec), 720p (~$0.0625/sec)",
-    ),
+      .describe("Output resolution: 480p, 580p, or 720p"),
   callBackUrl: z
     .string()
     .url()
@@ -2109,6 +2117,7 @@ export interface TaskRecord {
   updated_at: string;
   result_url?: string;
   error_message?: string;
+  credits_consumed?: number;
 }
 
 // Utility tools (task management). Schemas live here so the MCP inputSchema and
@@ -2131,6 +2140,52 @@ export const ListTasksSchema = z.object({
     .describe("Filter by status"),
 });
 export type ListTasksRequest = z.infer<typeof ListTasksSchema>;
+
+export const ListModelsSchema = z.object({
+  filter: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Optional text or capability filter, for example: lip sync"),
+});
+export type ListModelsRequest = z.infer<typeof ListModelsSchema>;
+
+export const PrepareMediaGenerationSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        tool: z.string().min(1).describe("Registered generation tool name"),
+        args: z.record(z.unknown()).describe("Arguments for that tool"),
+      }),
+    )
+    .min(1)
+    .max(6)
+    .describe("One to six independent generation requests"),
+  defaultProfile: z
+    .enum(["safe"])
+    .optional()
+    .describe("Optional explicit safe default policy. The current catalog policy is safe."),
+  maxConcurrency: z
+    .number()
+    .int()
+    .min(1)
+    .max(4)
+    .optional()
+    .describe("Maximum concurrent task creates for this plan (1-4, default 4)"),
+  expiresInSeconds: z
+    .number()
+    .int()
+    .min(60)
+    .max(3600)
+    .optional()
+    .describe("Plan expiry in seconds (60-3600, default 900)"),
+});
+export type PrepareMediaGenerationRequest = z.infer<typeof PrepareMediaGenerationSchema>;
+
+export const SubmitMediaGenerationSchema = z.object({
+  planId: z.string().uuid().describe("Approved plan ID to submit exactly once"),
+});
+export type SubmitMediaGenerationRequest = z.infer<typeof SubmitMediaGenerationSchema>;
 
 export const WaitForTaskSchema = z.object({
   task_id: z

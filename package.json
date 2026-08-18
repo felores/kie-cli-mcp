@@ -13,10 +13,13 @@
   "scripts": {
     "build": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-openai-server && npm run build -w @felores/kie-ai-mcp-server && npm run build -w @felores/kie-cli",
     "bundle": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-openai-server && npm run bundle -w @felores/kie-ai-mcp-server && npm run bundle -w @felores/kie-cli",
-    "test": "npm run test -w @felores/kie-ai-core && npm run test -w @felores/kie-ai-openai-server",
+    "test": "npm run test -w @felores/kie-ai-core && npm run test -w @felores/kie-ai-openai-server && npm run test -w @felores/kie-ai-mcp-server && npm run test -w @felores/kie-cli && npm run pricing:refresh:test",
     "typecheck": "npm run typecheck -w @felores/kie-ai-core && npm run typecheck -w @felores/kie-ai-openai-server && npm run typecheck -w @felores/kie-ai-mcp-server && npm run typecheck -w @felores/kie-cli",
     "add-tool": "node scripts/add-tool.mjs",
-    "docs": "npm run build -w @felores/kie-ai-core && node scripts/gen-docs.mjs"
+    "docs": "npm run build -w @felores/kie-ai-core && node scripts/gen-docs.mjs",
+    "pricing:audit": "npm run build -w @felores/kie-ai-core && node scripts/audit-pricing.mjs",
+    "pricing:refresh": "node scripts/refresh-pricing.mjs",
+    "pricing:refresh:test": "node --test scripts/__tests__/refresh-pricing.test.mjs"
   },
   "author": "felores",
   "license": "MIT",

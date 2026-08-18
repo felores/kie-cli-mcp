@@ -1,6 +1,6 @@
 {
   "name": "@felores/kie-cli",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Standalone CLI for Kie.ai APIs: generate images, video, music and speech from the terminal. Same models as the Kie.ai MCP server, no MCP client required.",
   "main": "dist/index.js",
   "bin": {
@@ -11,6 +11,7 @@
     "build": "tsc -b",
     "bundle": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "dev": "tsx src/index.ts",
     "prepack": "npm run build -w @felores/kie-ai-core && npm run bundle"
   },
@@ -46,9 +47,12 @@
   },
   "devDependencies": {
     "@felores/kie-ai-core": "*",
+    "@types/jest": "^29.5.8",
     "@types/node": "^20.10.0",
     "@types/yargs": "^17.0.33",
     "esbuild": "^0.24.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
     "tsx": "^4.6.0",
     "typescript": "^5.3.0"
   },

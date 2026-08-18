@@ -11,6 +11,7 @@ import {
   type ToolDef,
   type ToolContext,
 } from "@felores/kie-ai-core";
+import { approvePlanForSubmission } from "./submission-approval.js";
 
 interface JsonProp {
   type?: string | string[];
@@ -123,10 +124,24 @@ function build() {
         for (const [key, p] of Object.entries(props)) {
           y.option(key, optionConfig(p, required.includes(key)));
         }
+        if (tool.name === "submit_media_generation") {
+          y.option("approve", {
+            type: "string",
+            demandOption: true,
+            describe: "Explicitly approve this prepared plan ID for this submission",
+          });
+        }
         return y;
       },
       async (argv) => {
-        const ctx = createToolContext();
+        // The CLI's stable context keeps --approve usable across separate processes.
+        const ctx = createToolContext("cli");
+        if (tool.name === "submit_media_generation") {
+          await approvePlanForSubmission(ctx.db, argv as unknown as {
+            planId?: unknown;
+            approve?: unknown;
+          });
+        }
         await runTool(tool, props, argv as Record<string, unknown>, ctx);
       },
     );

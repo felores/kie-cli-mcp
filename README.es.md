@@ -95,6 +95,7 @@ Misma idea, distintas variables de entorno (dentro del bloque `env`, o como expo
 - **Categorías:** `image`, `video`, `audio`, `utility`.
 - **Prioridad:** `ENABLED_TOOLS` > `TOOL_CATEGORIES` > `DISABLED_TOOLS` > todas las herramientas (default).
 - Las herramientas de utilidad (`list_tasks`, `get_task_status`) están siempre activas y no se pueden desactivar, son como rastreas y consultas tus generaciones.
+- MCP oculta y rechaza por defecto las llamadas directas a herramientas de `image`, `video` y `audio`. Usa `prepare_media_generation`, la elicitación de aprobación del host y `submit_media_generation`. `KIE_AI_ALLOW_DIRECT_GENERATION=true` es el bypass explícito de legado cuando decides desactivar estas salvaguardas de aprobación. El filtrado todavía controla qué herramientas de generación pueden ser objetivos del plan.
 
 ## 🤖 Agent skill (opcional)
 
@@ -107,6 +108,38 @@ ln -s "$PWD/skills/kie-ai" ~/.claude/skills/kie-ai
 ```
 
 Después, cualquier sesión puede generar medios en lenguaje natural ("hazme una imagen de…", "convierte esta foto en un video").
+
+## Planificación y aprobación de medios
+
+Usa `list_models` para buscar capacidades con fuentes y luego prepara de una a seis solicitudes en un plan persistente. Preparar valida los schemas destino y aplica defaults seguros, pero nunca llama a un endpoint de generación de Kie.
+
+```json
+{
+  "tool": "prepare_media_generation",
+  "arguments": {
+    "items": [
+      { "tool": "nano_banana_image", "args": { "prompt": "Un panda rojo programando de noche" } }
+    ]
+  }
+}
+```
+
+En clientes MCP que anuncian y manejan `elicitation.form`, la preparación muestra el plan resuelto y el resumen de precio en un formulario de confirmación del host. Solo un formulario aceptado con `confirm: true` aprueba el plan. Rechazos, cancelaciones, confirmaciones incompletas o elicitaciones no compatibles dejan el plan preparado y sin aprobar. Envía solo el ID de un plan aprobado:
+
+```json
+{
+  "tool": "submit_media_generation",
+  "arguments": {
+    "planId": "<approved-plan-id>"
+  }
+}
+```
+
+El CLI no tiene host MCP. Requiere un valor explícito `--approve <plan-id>` que coincida con `--planId`; esto cambia de forma atómica un plan preparado a aprobado antes del envío.
+
+```bash
+kie-cli submit_media_generation --planId <prepared-plan-id> --approve <prepared-plan-id> --json
+```
 
 ## Modelos
 
@@ -151,24 +184,46 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - **Prompts** (slash commands en tu cliente): `/image` y `/video`: guía para elegir y manejar el modelo correcto.
 - **Recursos:**
   - `kie://tools/<name>`: una referencia en Markdown por herramienta (parámetros, tipos, defaults), generada desde su schema.
-  - `kie://guides/image`, `kie://guides/video`, `kie://guides/quality`: comparativas de modelos y guías de costo/calidad.
+  - `kie://guides/image-models-comparison`, `kie://guides/video-models-comparison`, `kie://guides/quality-optimization`: comparativas de modelos y guías de costo/calidad.
   - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 
 ## Ejemplos
 
-### MCP (llamada a herramienta)
+### MCP (preparar, aprobar, enviar)
+
+Primero prepara la solicitud pagada. Esto no inicia una generación:
 
 ```json
 {
-  "tool": "nano_banana_image",
+  "tool": "prepare_media_generation",
   "arguments": {
-    "prompt": "A futuristic city at sunset, cyberpunk style",
-    "aspect_ratio": "16:9",
-    "resolution": "2K",
-    "output_format": "png"
+    "items": [
+      {
+        "tool": "nano_banana_image",
+        "args": {
+          "prompt": "Una ciudad futurista al atardecer, estilo ciberpunk",
+          "aspect_ratio": "16:9",
+          "resolution": "2K",
+          "output_format": "png"
+        }
+      }
+    ]
   }
 }
 ```
+
+El host MCP presenta el plan devuelto, los ajustes resueltos y el resumen de precio con `elicitation.form`. Aprueba ese formulario del host con `confirm: true`; la respuesta aprobada incluye un `planId`. Luego envía ese plan aprobado:
+
+```json
+{
+  "tool": "submit_media_generation",
+  "arguments": {
+    "planId": "<approved-plan-id>"
+  }
+}
+```
+
+No llames directamente herramientas de medios pagas desde MCP. `KIE_AI_ALLOW_DIRECT_GENERATION=true` es solo el bypass explícito de legado.
 
 ### CLI
 
@@ -235,7 +290,7 @@ Es un monorepo de npm workspaces: `packages/core` (registro compartido privado, 
 </details>
 
 <details>
-<summary><strong>🌐 Transporte remoto / HTTP (v3.6.0+)</strong></summary>
+<summary><strong>🌐 Transporte remoto / HTTP (v4.0.0+)</strong></summary>
 
 El servidor usa **stdio** por defecto (un proceso local por cliente). También
 puede correr como **servicio HTTP remoto** vía **Streamable HTTP** (spec MCP
@@ -260,7 +315,7 @@ Actívalo con `MCP_TRANSPORT=http` o `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"3.6.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"4.0.0"}
 ```
 
 Un solo endpoint `/mcp` (POST + GET/SSE + DELETE), sesiones con estado vía

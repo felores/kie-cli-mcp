@@ -4,7 +4,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const zImageTool: ToolDef<typeof ZImageSchema> = {
   name: "z_image",
-  description: "Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), strong semantic understanding. Pricing: ~$0.004/image",
+  description: "Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), and strong semantic understanding.",
   category: "image",
   schema: ZImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -39,7 +39,7 @@ export const zImageTool: ToolDef<typeof ZImageSchema> = {
                       (request.prompt.length > 100 ? "..." : ""),
                     aspect_ratio: request.aspect_ratio || "1:1",
                   },
-                  pricing: "~$0.004 per image (0.8 credits)",
+                  pricing: "unknown: no verified local rate-card formula",
                   next_steps: [
                     `Use get_task_status with task_id: ${response.data.taskId} to check progress`,
                     'Generated image will be available when status is "completed"',

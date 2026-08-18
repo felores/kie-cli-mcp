@@ -66,8 +66,7 @@ export const wanAnimateTool: ToolDef<typeof WanAnimateSchema> = {
           image_url:
             "Required: URL of character image (JPEG/PNG/WEBP, max 10MB)",
           mode: 'Optional: "animate" (default) or "replace"',
-          resolution:
-            'Optional: "480p" (default, ~$0.03/sec), "580p" (~$0.0475/sec), or "720p" (~$0.0625/sec)',
+          resolution: 'Optional: "480p" (default), "580p", or "720p"',
           callBackUrl:
             "Optional: callback URL for notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
         });

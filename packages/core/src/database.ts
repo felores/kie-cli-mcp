@@ -1,5 +1,6 @@
 import sqlite3 from "sqlite3";
 import { TaskRecord } from "./types.js";
+import type { PreparedGenerationPlan } from "./generation-plan.js";
 import { dirname, resolve } from "path";
 import { mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
@@ -46,12 +47,42 @@ export class TaskDatabase {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           result_url TEXT,
-          error_message TEXT
+          error_message TEXT,
+          credits_consumed REAL
+        )
+      `);
+
+      this.db.run(`ALTER TABLE tasks ADD COLUMN credits_consumed REAL`, (err) => {
+        // Existing databases already have this column after the first migration.
+        if (err && !err.message.includes("duplicate column name")) {
+          console.error("Failed to add tasks.credits_consumed:", err);
+        }
+      });
+
+      this.db.run(`
+        CREATE TABLE IF NOT EXISTS generation_plans (
+          plan_id TEXT PRIMARY KEY,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          plan_json TEXT NOT NULL,
+          request_hash TEXT NOT NULL,
+          approval_context TEXT NOT NULL,
+          submitted_at TEXT,
+          task_results_json TEXT
         )
       `);
 
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_task_id ON tasks(task_id)`);
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_status ON tasks(status)`);
+      this.db.run(`CREATE INDEX IF NOT EXISTS idx_generation_plans_status ON generation_plans(status)`);
+
+      this.db.run(`ALTER TABLE generation_plans ADD COLUMN approval_context TEXT`, (err) => {
+        // Existing databases already have this column after the first migration.
+        if (err && !err.message.includes("duplicate column name")) {
+          console.error("Failed to add generation_plans.approval_context:", err);
+        }
+      });
     });
   }
 
@@ -60,14 +91,15 @@ export class TaskDatabase {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       this.db.run(
-        `INSERT INTO tasks (task_id, api_type, status, result_url, error_message) 
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO tasks (task_id, api_type, status, result_url, error_message, credits_consumed)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           taskData.task_id,
           taskData.api_type,
           taskData.status,
           taskData.result_url || null,
           taskData.error_message || null,
+          taskData.credits_consumed ?? null,
         ],
         function (err) {
           if (err) reject(err);
@@ -112,6 +144,11 @@ export class TaskDatabase {
       values.push(updates.error_message);
     }
 
+    if (updates.credits_consumed !== undefined) {
+      updateFields.push("credits_consumed = ?");
+      values.push(updates.credits_consumed);
+    }
+
     updateFields.push("updated_at = CURRENT_TIMESTAMP");
     values.push(taskId);
 
@@ -154,6 +191,105 @@ export class TaskDatabase {
           if (err) reject(err);
           else resolve(rows as TaskRecord[]);
         },
+      );
+    });
+  }
+
+  async createGenerationPlan(
+    plan: PreparedGenerationPlan,
+    approvalContext: string,
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `INSERT INTO generation_plans (plan_id, status, created_at, expires_at, plan_json, request_hash, approval_context)
+         VALUES (?, 'prepared', ?, ?, ?, ?, ?)`,
+        [plan.id, plan.createdAt, plan.expiresAt, JSON.stringify(plan), plan.requestHash, approvalContext],
+        (err) => (err ? reject(err) : resolve()),
+      );
+    });
+  }
+
+  async getGenerationPlan(planId: string): Promise<{ plan: PreparedGenerationPlan; status: string; requestHash: string; results?: unknown } | null> {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT status, plan_json, request_hash, task_results_json FROM generation_plans WHERE plan_id = ?`,
+        [planId],
+        (err, row) => {
+          if (err) return reject(err);
+          if (!row) return resolve(null);
+          const stored = row as { status: string; plan_json: string; request_hash: string; task_results_json: string | null };
+          try {
+            resolve({
+              plan: JSON.parse(stored.plan_json) as PreparedGenerationPlan,
+              status: stored.status,
+              requestHash: stored.request_hash,
+              ...(stored.task_results_json ? { results: JSON.parse(stored.task_results_json) as unknown } : {}),
+            });
+          } catch (parseError) {
+            reject(parseError);
+          }
+        },
+      );
+    });
+  }
+
+  /** Atomically records approval for an unchanged, unexpired prepared plan. */
+  async approveGenerationPlan(
+    planId: string,
+    requestHash: string,
+    approvalContext: string,
+  ): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE generation_plans
+         SET status = 'approved'
+          WHERE plan_id = ? AND request_hash = ? AND approval_context = ? AND status = 'prepared' AND expires_at > ?`,
+         [planId, requestHash, approvalContext, new Date().toISOString()],
+        function (err) {
+          if (err) reject(err);
+          else resolve(this.changes === 1);
+        },
+      );
+    });
+  }
+
+  /** Atomically consumes an approved plan before any provider call can start. */
+  async claimGenerationPlan(
+    planId: string,
+    requestHash: string,
+    approvalContext: string,
+  ): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE generation_plans
+         SET status = 'submitting', submitted_at = CURRENT_TIMESTAMP
+          WHERE plan_id = ? AND request_hash = ? AND approval_context = ? AND status = 'approved' AND expires_at > ?`,
+         [planId, requestHash, approvalContext, new Date().toISOString()],
+        function (err) {
+          if (err) reject(err);
+          else resolve(this.changes === 1);
+        },
+      );
+    });
+  }
+
+  async finishGenerationPlan(planId: string, results: unknown): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE generation_plans SET status = 'submitted', task_results_json = ? WHERE plan_id = ? AND status = 'submitting'`,
+        [JSON.stringify(results), planId],
+        (err) => (err ? reject(err) : resolve()),
+      );
+    });
+  }
+
+  /** A claimed plan is terminal after any provider result to prevent duplicate paid creates. */
+  async failGenerationPlan(planId: string, results: unknown): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        `UPDATE generation_plans SET status = 'failed', task_results_json = ? WHERE plan_id = ? AND status = 'submitting'`,
+        [JSON.stringify(results), planId],
+        (err) => (err ? reject(err) : resolve()),
       );
     });
   }

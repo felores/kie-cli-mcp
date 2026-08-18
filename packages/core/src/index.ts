@@ -10,3 +10,7 @@ export * from "./tools/format-error.js";
 export * from "./json-schema.js";
 export * from "./context.js";
 export * from "./docs.js";
+export * from "./generation-plan.js";
+export * from "./model-catalog.js";
+export * from "./pricing/rate-card.js";
+export * from "./pricing/audit.js";

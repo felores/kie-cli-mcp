@@ -32,6 +32,12 @@ export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
             "pending";
           let resultUrl = undefined;
           let errorMessage = undefined;
+          const creditsConsumed =
+            typeof apiData.creditsConsumed === "number"
+              ? apiData.creditsConsumed
+              : typeof apiData.credits_consumed === "number"
+                ? apiData.credits_consumed
+                : undefined;
 
           if (localTask?.api_type === "suno") {
             // Suno-specific status mapping
@@ -216,6 +222,7 @@ export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
             status,
             result_url: resultUrl,
             error_message: errorMessage,
+            credits_consumed: creditsConsumed,
           });
         }
       } catch (error) {
@@ -323,6 +330,10 @@ export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
         // Add self-documenting polling strategy
         polling_strategy: getPollingStrategy(localTask?.api_type),
       };
+
+      if (typeof updatedTask?.credits_consumed === "number") {
+        responseData.creditsConsumed = updatedTask.credits_consumed;
+      }
 
       // Add Suno-specific information if applicable
       if (localTask?.api_type === "suno" && apiResponse?.data) {

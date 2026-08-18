@@ -4,7 +4,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 
 export const grokImagineTool: ToolDef<typeof GrokImagineSchema> = {
   name: "grok_imagine",
-  description: "Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video. Pricing: ~$0.10 per 6-second video",
+  description: "Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.",
   category: "video",
   schema: GrokImagineSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -57,10 +57,7 @@ export const grokImagineTool: ToolDef<typeof GrokImagineSchema> = {
                     aspect_ratio: request.aspect_ratio || "1:1",
                     style_mode: request.mode || "normal",
                   },
-                  pricing:
-                    detectedMode === "text-to-image"
-                      ? "~$0.02 per image"
-                      : "~$0.10 per 6-second video",
+                  pricing: "unknown: no verified local rate-card formula",
                   next_steps: [
                     `Use get_task_status with task_id: ${response.data.taskId} to check progress`,
                     'Generated content will be available when status is "completed"',
