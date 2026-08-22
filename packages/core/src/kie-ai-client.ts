@@ -524,6 +524,7 @@ export class KieAiClient {
     };
 
     for (const key of [
+      "extension_task_id",
       "first_frame_url",
       "last_frame_url",
       "reference_image_urls",

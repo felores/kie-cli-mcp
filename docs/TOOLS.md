@@ -215,13 +215,14 @@ Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo 
 
 ### bytedance_seedance_video
 
-Generate videos with ByteDance Seedance 2.5 using text, first/last frames, or multimodal image/video/audio references.
+Generate videos with ByteDance Seedance 2.5 using text, experimental semantic task continuation, first/last frames, or multimodal image/video/audio references.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `prompt` | string | yes | Text prompt for video generation |
+| `extension_task_id` | string | no | Experimental: previous Seedance task ID used as semantic continuation context; does not guarantee frame-to-frame continuity |
 | `first_frame_url` | string | no | URL of the first-frame image for image-to-video |
 | `last_frame_url` | string | no | URL of the last-frame image; requires first_frame_url |
 | `reference_image_urls` | array | no | Reference image URLs for multimodal reference-to-video |

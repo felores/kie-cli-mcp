@@ -165,7 +165,7 @@ A unified, always-current catalog organized by job:
 
 | Model | Best for | Tool |
 | --- | --- | --- |
-| **ByteDance Seedance 2.5** | Multimodal references, first/last-frame control, and native audio | `bytedance_seedance_video` |
+| **ByteDance Seedance 2.5** | Multimodal references, experimental semantic task continuation, first/last-frame control, and native audio | `bytedance_seedance_video` |
 | **Kling 3.0** | Multi-shot videos and native audio | `kling_video` |
 | **Google Veo 3 / 3.1** | Cinematic generation with synchronized audio and 1080p output | `veo3_generate_video` |
 | **Gemini Omni** | Videos with reusable characters and voices | `gemini_omni` |

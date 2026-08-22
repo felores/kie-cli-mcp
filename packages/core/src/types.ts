@@ -455,6 +455,13 @@ export const ByteDanceSeedanceVideoSchema = z
       .string()
       .min(1)
       .describe("Text prompt for video generation"),
+    extension_task_id: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Experimental: previous Seedance task ID used as semantic continuation context; does not guarantee frame-to-frame continuity",
+      ),
     first_frame_url: z
       .string()
       .url()

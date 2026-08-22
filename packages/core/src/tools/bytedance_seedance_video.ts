@@ -5,7 +5,7 @@ import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSchema> = {
   name: "bytedance_seedance_video",
   description:
-    "Generate videos with ByteDance Seedance 2.5 using text, first/last frames, or multimodal image/video/audio references.",
+    "Generate videos with ByteDance Seedance 2.5 using text, experimental semantic task continuation, first/last frames, or multimodal image/video/audio references.",
   category: "video",
   schema: ByteDanceSeedanceVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -40,6 +40,9 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
                     prompt:
                       request.prompt.substring(0, 100) +
                       (request.prompt.length > 100 ? "..." : ""),
+                    ...(request.extension_task_id && {
+                      extension_task_id: request.extension_task_id,
+                    }),
                     ...(request.first_frame_url && {
                       first_frame_url: request.first_frame_url,
                     }),
@@ -91,6 +94,8 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
         return ctx.formatError("bytedance_seedance_video", error, {
           prompt:
             "Required: text prompt for Seedance 2.5 video generation",
+          extension_task_id:
+            "Optional, experimental: previous Seedance task ID for semantic continuation; use first_frame_url for visual continuity",
           first_frame_url: "Optional: URL of image to use as the first frame",
           last_frame_url:
             "Optional: URL of image to use as the last frame; requires first_frame_url",
@@ -112,6 +117,8 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
 
       return ctx.formatError("bytedance_seedance_video", error, {
         prompt: "Required: text prompt for Seedance 2.5 video generation",
+        extension_task_id:
+          "Optional, experimental: previous Seedance task ID for semantic continuation; use first_frame_url for visual continuity",
         first_frame_url: "Optional: first-frame image URL",
         last_frame_url: "Optional: last-frame image URL (requires first_frame_url)",
         reference_image_urls: "Optional: multimodal reference image URLs",

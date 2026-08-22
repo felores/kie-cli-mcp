@@ -283,6 +283,24 @@ describe("ByteDanceSeedanceVideoSchema (Seedance 2.5)", () => {
     ).toBe(true);
   });
 
+  it("accepts an experimental semantic continuation task ID", () => {
+    const result = ByteDanceSeedanceVideoSchema.safeParse({
+      prompt: "Continue the scene with the same subject",
+      extension_task_id: "previous-seedance-task",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an empty continuation task ID", () => {
+    expect(
+      ByteDanceSeedanceVideoSchema.safeParse({
+        prompt: "Continue the scene",
+        extension_task_id: "",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects mutually exclusive frame and reference inputs", () => {
     expect(
       ByteDanceSeedanceVideoSchema.safeParse({

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.1.0] - 2026-08-22
+
+### Added
+- `bytedance_seedance_video` accepts the optional `extension_task_id` input in
+  both `@felores/kie-ai-mcp-server` 4.1.0 and `@felores/kie-cli` 0.5.0. Kie.ai
+  receives the value inside the Seedance 2.5 `input` object as experimental
+  semantic continuation context.
+- Documentation distinguishes semantic task continuation from visual
+  continuity. Use `first_frame_url` when the next video must begin from an
+  extracted final frame.
+
 ## [4.0.1] - 2026-08-18
 
 ### Fixed

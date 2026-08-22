@@ -204,4 +204,27 @@ describe("KieAiClient Seedance 2.5 routing", () => {
       input: { prompt: "A text-only video" },
     });
   });
+
+  test("sends extension_task_id inside the Seedance input", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ code: 200, data: { taskId: "task-2" } }), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await new KieAiClient(config).generateByteDanceSeedanceVideo({
+      prompt: "Continue the scene with the same subject and setting",
+      extension_task_id: "previous-seedance-task",
+      duration: 5,
+    });
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      model: "bytedance/seedance-2-5",
+      input: {
+        prompt: "Continue the scene with the same subject and setting",
+        extension_task_id: "previous-seedance-task",
+        duration: 5,
+      },
+    });
+  });
 });
