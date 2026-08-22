@@ -2175,6 +2175,97 @@ export const ListTasksSchema = z.object({
 });
 export type ListTasksRequest = z.infer<typeof ListTasksSchema>;
 
+const UploadFileNameSchema = z
+  .string()
+  .min(1)
+  .max(160)
+  .regex(/^[^/\\\u0000-\u001f\u007f]+$/, "file_name must not contain path separators or control characters");
+
+export const UploadFileSchema = z
+  .object({
+    file_base64: z
+      .string()
+      .min(1)
+      .max(14_000_000)
+      .optional()
+      .describe("Base64 media bytes or a data URL (maximum 10 MiB decoded)"),
+    file_path: z
+      .string()
+      .min(1)
+      .max(4096)
+      .optional()
+      .describe(
+        "CLI-only local media path. Requires KIE_CLI_UPLOAD_ROOTS and is unavailable to MCP adapters",
+      ),
+    file_name: UploadFileNameSchema.optional().describe(
+      "Optional output filename including extension",
+    ),
+    content_type: z
+      .string()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe("MIME type for raw Base64; data URLs provide it inline"),
+  })
+  .superRefine((data, ctx) => {
+    const sources = Number(data.file_path !== undefined) + Number(data.file_base64 !== undefined);
+    if (sources !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide exactly one of file_path or file_base64",
+        path: [],
+      });
+    }
+    if (data.file_path && data.content_type) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "content_type is only supported with file_base64",
+        path: ["content_type"],
+      });
+    }
+  });
+
+export type UploadFileRequest = z.infer<typeof UploadFileSchema>;
+
+export const GetUploadUrlSchema = z.object({
+  app_grant: z.string().min(32).max(200).describe("Short-lived widget grant"),
+  filename: UploadFileNameSchema.describe("Original filename shown in download metadata"),
+  content_type: z
+    .enum([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/x-wav",
+      "audio/ogg",
+      "audio/aac",
+      "audio/mp4",
+    ])
+    .describe("Declared media MIME type; bytes are checked after upload"),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(25 * 1024 * 1024)
+    .describe("Exact upload size in bytes, maximum 25 MiB"),
+});
+
+export type GetUploadUrlRequest = z.infer<typeof GetUploadUrlSchema>;
+
+export const FinalizeUploadSchema = z.object({
+  app_grant: z.string().min(32).max(200).describe("Short-lived widget grant"),
+  media_id: z.string().uuid().describe("Opaque media ID returned after browser upload"),
+});
+
+export type FinalizeUploadRequest = z.infer<typeof FinalizeUploadSchema>;
+
+export const UploadWidgetSchema = z.object({});
+export type UploadWidgetRequest = z.infer<typeof UploadWidgetSchema>;
+
 export const ListModelsSchema = z.object({
   filter: z
     .string()

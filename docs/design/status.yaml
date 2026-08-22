@@ -1,0 +1,58 @@
+version: 1
+updated_at: "2026-08-22"
+track: established-system
+phase: implementation
+current_artifact: mcp-upload-widget-verified
+authority: user-requested-pr10-replacement
+
+product_context:
+  status: established-by-plan
+
+styleframes: {}
+
+approval_receipts:
+  - artifact: mcp-upload-widget
+    approver: Felo Restrepo
+    decision: "Authorized a functional, minimal, self-contained production widget without a prior visual phase."
+    date: "2026-08-22"
+
+design_system:
+  status: approved
+  source: existing-system-functional-defaults
+
+prototype:
+  permitted: true
+  isolation_path: .scratchpad/prototypes
+  production_mutation: true
+  current: null
+
+stack:
+  application: MCP Apps HTML resource
+  styling: self-contained CSS
+  interaction: native HTML and minimal browser JavaScript
+
+implementation_authorized: true
+
+verification:
+  status: accepted
+  automated:
+    - typecheck
+    - build
+    - unit-and-integration-tests
+    - package-dry-runs
+    - independent-security-review
+  known_limitations:
+    - no-live-kie-fetch-with-production-credentials
+    - no-real-third-party-mcp-apps-host-browser-run
+
+mutation_policy:
+  allowed_before_implementation:
+    - docs/design/**
+    - docs/style/**
+    - .scratchpad/**
+  blocked_before_implementation: []
+
+next_legal_transition:
+  requires: release-or-deployment-decision
+  from: implementation
+  to: release

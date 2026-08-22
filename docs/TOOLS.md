@@ -9,7 +9,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 - **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [z_image](#z_image)
 - **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [gemini_omni](#gemini_omni), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [omnihuman_video](#omnihuman_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
 - **Audio:** [elevenlabs_tts](#elevenlabs_tts), [elevenlabs_ttsfx](#elevenlabs_ttsfx), [suno_generate_music](#suno_generate_music)
-- **Utility:** [get_task_status](#get_task_status), [list_models](#list_models), [list_tasks](#list_tasks), [prepare_media_generation](#prepare_media_generation), [submit_media_generation](#submit_media_generation), [wait_for_task](#wait_for_task)
+- **Utility:** [finalize_upload](#finalize_upload), [get_task_status](#get_task_status), [get_upload_url](#get_upload_url), [list_models](#list_models), [list_tasks](#list_tasks), [prepare_media_generation](#prepare_media_generation), [submit_media_generation](#submit_media_generation), [upload_file](#upload_file), [upload_widget](#upload_widget), [wait_for_task](#wait_for_task)
 
 ---
 
@@ -537,6 +537,17 @@ Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V
 
 ## Utility tools
 
+### finalize_upload
+
+Finalize staged widget media server-side and upload it to Kie.ai. App-only helper; public capabilities never enter model content.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `app_grant` | string | yes | Short-lived widget grant |
+| `media_id` | string | yes | Opaque media ID returned after browser upload |
+
 ### get_task_status
 
 Get the status of a generation task with intelligent polling guidance. Returns task status, results, and recommended polling strategy (interval, timing, next steps) based on task type (image/video/audio).
@@ -546,6 +557,19 @@ Get the status of a generation task with intelligent polling guidance. Returns t
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `task_id` | string | yes | Task ID to check status for |
+
+### get_upload_url
+
+Create short-lived capability URLs for a browser or HTTP client to upload media to this MCP server. Available only when Streamable HTTP storage is explicitly configured.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `app_grant` | string | yes | Short-lived widget grant |
+| `filename` | string | yes | Original filename shown in download metadata |
+| `content_type` | `image/jpeg` / `image/png` / `image/webp` / `video/mp4` / `video/webm` / `video/quicktime` / `audio/mpeg` / `audio/wav` / `audio/x-wav` / `audio/ogg` / `audio/aac` / `audio/mp4` | yes | Declared media MIME type; bytes are checked after upload |
+| `size` | integer | yes | Exact upload size in bytes, maximum 25 MiB |
 
 ### list_models
 
@@ -590,6 +614,27 @@ Submit a single unexpired, unchanged plan approved in this caller context exactl
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `planId` | string | yes | Approved plan ID to submit exactly once |
+
+### upload_file
+
+Upload validated media directly to Kie.ai from Base64 or a CLI-approved local file path. Arbitrary URL imports are intentionally unsupported to avoid delegated SSRF.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `file_base64` | string | no | Base64 media bytes or a data URL (maximum 10 MiB decoded) |
+| `file_path` | string | no | CLI-only local media path. Requires KIE_CLI_UPLOAD_ROOTS and is unavailable to MCP adapters |
+| `file_name` | string | no | Optional output filename including extension |
+| `content_type` | string | no | MIME type for raw Base64; data URLs provide it inline |
+
+### upload_widget
+
+Open a secure file picker for uploading local media. MCP Apps hosts render the inline widget; other clients receive instructions for upload_file.
+
+#### Parameters
+
+_This tool takes no parameters._
 
 ### wait_for_task
 

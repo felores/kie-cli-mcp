@@ -22,6 +22,10 @@ export KIE_AI_API_KEY="your-key"
 ```
 
 Optional: `KIE_AI_BASE_URL`, `KIE_AI_TIMEOUT`, `KIE_AI_DB_PATH`, `KIE_AI_CALLBACK_URL`.
+`upload_file` accepts validated Base64 or a local path beneath explicitly
+configured `KIE_CLI_UPLOAD_ROOTS`. Temporary HTTP upload
+capabilities and `upload_widget` require the MCP HTTP adapter and return clear
+unsupported-adapter guidance in the CLI.
 
 ## Usage
 

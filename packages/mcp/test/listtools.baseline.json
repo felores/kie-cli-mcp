@@ -1,7 +1,7 @@
 [
   {
     "name": "bytedance_seedance_video",
-    "description": "Generate videos with ByteDance Seedance 2.5 using text, first/last frames, or multimodal image/video/audio references.",
+    "description": "Generate videos with ByteDance Seedance 2.5 using text, experimental semantic task continuation, first/last frames, or multimodal image/video/audio references.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -9,6 +9,11 @@
           "type": "string",
           "minLength": 1,
           "description": "Text prompt for video generation"
+        },
+        "extension_task_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Experimental: previous Seedance task ID used as semantic continuation context; does not guarantee frame-to-frame continuity"
         },
         "first_frame_url": {
           "type": "string",
@@ -68,8 +73,8 @@
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
@@ -80,38 +85,38 @@
   },
   {
     "name": "bytedance_seedream_image",
-    "description": "Generate and edit images using ByteDance Seedream models (supports V4 and V5 Lite with 3K output). V5 Lite offers enhanced detail fidelity, multi-image fusion up to 14 refs, and clear small-text rendering",
+    "description": "Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt for image generation or editing. V4: max 5000 chars, V5 Lite: max 3000 chars (API returns 500 error if exceeded)",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt for image generation or editing. V4: max 5000 chars, V5 Lite: max 3000 chars (API returns 500 error if exceeded)"
         },
         "image_urls": {
           "type": "array",
-          "description": "Array of image URLs for editing mode (optional - if not provided, uses text-to-image). V4: max 10, V4.5: max 14",
           "items": {
             "type": "string",
             "format": "uri"
           },
           "minItems": 1,
-          "maxItems": 14
+          "maxItems": 14,
+          "description": "Array of image URLs for editing mode (optional - if not provided, uses text-to-image). V4: max 10, V4.5: max 14"
         },
         "version": {
           "type": "string",
-          "description": "Seedream version: '4' for V4, '5-lite' for V5 Lite (default) with enhanced features",
           "enum": [
             "4",
-            "5-lite"
+            "5-lite",
+            "5-pro"
           ],
-          "default": "5-lite"
+          "default": "5-lite",
+          "description": "Seedream version: '4' for V4, '5-lite' for V5 Lite (default), or '5-pro' for controlled 1K/2K generation and editing"
         },
         "image_size": {
           "type": "string",
-          "description": "Image aspect ratio (V4 only)",
           "enum": [
             "square",
             "square_hd",
@@ -123,33 +128,32 @@
             "landscape_16_9",
             "landscape_21_9"
           ],
-          "default": "square_hd"
+          "default": "square_hd",
+          "description": "Image aspect ratio (V4 only)"
         },
         "image_resolution": {
           "type": "string",
-          "description": "Image resolution (V4 only)",
           "enum": [
             "1K",
             "2K",
             "4K"
           ],
-          "default": "1K"
+          "default": "1K",
+          "description": "Image resolution (V4 only)"
         },
         "max_images": {
           "type": "integer",
-          "description": "Number of images to generate (V4 only)",
           "minimum": 1,
           "maximum": 6,
-          "default": 1
+          "default": 1,
+          "description": "Number of images to generate (V4 only)"
         },
         "seed": {
-          "type": "integer",
-          "description": "Random seed for reproducible results (V4 only, use -1 for random)",
-          "default": -1
+          "type": "number",
+          "description": "Random seed for reproducible results (V4 only, use -1 for random)"
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Aspect ratio for V5 Lite output (V5 Lite only)",
           "enum": [
             "1:1",
             "4:3",
@@ -160,26 +164,40 @@
             "3:2",
             "21:9"
           ],
-          "default": "1:1"
+          "default": "1:1",
+          "description": "Aspect ratio for V5 Lite output (V5 Lite only)"
         },
         "quality": {
           "type": "string",
-          "description": "Output quality for V5 Lite (V5 Lite only): 'basic' = 2K, 'high' = 3K resolution",
           "enum": [
             "basic",
             "high"
           ],
-          "default": "basic"
+          "default": "basic",
+          "description": "Output quality for V5 Lite (V5 Lite only): 'basic' = 2K, 'high' = 3K resolution"
+        },
+        "output_format": {
+          "type": "string",
+          "enum": [
+            "png",
+            "jpeg"
+          ],
+          "description": "Output format for Seedream 5 Pro: png or jpeg"
+        },
+        "nsfw_checker": {
+          "type": "boolean",
+          "description": "Enable NSFW filtering for Seedream 5 Pro"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -190,22 +208,21 @@
       "properties": {
         "text": {
           "type": "string",
-          "description": "The text to convert to speech (max 5000 characters)",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "The text to convert to speech (max 5000 characters)"
         },
         "model": {
           "type": "string",
-          "description": "TTS model to use - turbo (faster, default) or multilingual (supports context)",
           "enum": [
             "turbo",
             "multilingual"
           ],
-          "default": "turbo"
+          "default": "turbo",
+          "description": "TTS model to use - turbo (faster, default) or multilingual (supports context)"
         },
         "voice": {
           "type": "string",
-          "description": "Voice to use for speech generation",
           "enum": [
             "Rachel",
             "Aria",
@@ -229,72 +246,74 @@
             "Lily",
             "Bill"
           ],
-          "default": "Rachel"
+          "default": "Rachel",
+          "description": "Voice to use for speech generation"
         },
         "stability": {
           "type": "number",
-          "description": "Voice stability (0-1, step 0.01)",
           "minimum": 0,
           "maximum": 1,
           "multipleOf": 0.01,
-          "default": 0.5
+          "default": 0.5,
+          "description": "Voice stability (0-1, step 0.01)"
         },
         "similarity_boost": {
           "type": "number",
-          "description": "Similarity boost (0-1, step 0.01)",
           "minimum": 0,
           "maximum": 1,
           "multipleOf": 0.01,
-          "default": 0.75
+          "default": 0.75,
+          "description": "Similarity boost (0-1, step 0.01)"
         },
         "style": {
           "type": "number",
-          "description": "Style exaggeration (0-1, step 0.01)",
           "minimum": 0,
           "maximum": 1,
           "multipleOf": 0.01,
-          "default": 0
+          "default": 0,
+          "description": "Style exaggeration (0-1, step 0.01)"
         },
         "speed": {
           "type": "number",
-          "description": "Speech speed (0.7-1.2, step 0.01)",
           "minimum": 0.7,
           "maximum": 1.2,
           "multipleOf": 0.01,
-          "default": 1
+          "default": 1,
+          "description": "Speech speed (0.7-1.2, step 0.01)"
         },
         "timestamps": {
           "type": "boolean",
-          "description": "Whether to return timestamps for each word",
-          "default": false
+          "default": false,
+          "description": "Whether to return timestamps for each word"
         },
         "previous_text": {
           "type": "string",
-          "description": "Text that came before current request (multilingual model only, max 5000 characters)",
           "maxLength": 5000,
-          "default": ""
+          "default": "",
+          "description": "Text that came before current request (multilingual model only, max 5000 characters)"
         },
         "next_text": {
           "type": "string",
-          "description": "Text that comes after current request (multilingual model only, max 5000 characters)",
           "maxLength": 5000,
-          "default": ""
+          "default": "",
+          "description": "Text that comes after current request (multilingual model only, max 5000 characters)"
         },
         "language_code": {
           "type": "string",
-          "description": "Language code (ISO 639-1) for language enforcement (turbo model only)",
           "maxLength": 500,
-          "default": ""
+          "default": "",
+          "description": "Language code (ISO 639-1) for language enforcement (turbo model only)"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "text"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -305,33 +324,32 @@
       "properties": {
         "text": {
           "type": "string",
-          "description": "The text describing the sound effect to generate (max 5000 characters)",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "The text describing the sound effect to generate (max 5000 characters)"
         },
         "loop": {
           "type": "boolean",
-          "description": "Whether to create a sound effect that loops smoothly",
-          "default": false
+          "default": false,
+          "description": "Whether to create a sound effect that loops smoothly"
         },
         "duration_seconds": {
           "type": "number",
-          "description": "Duration in seconds (0.5-22). If not specified, optimal duration will be determined from prompt",
           "minimum": 0.5,
           "maximum": 22,
-          "multipleOf": 0.1
+          "multipleOf": 0.1,
+          "description": "Duration in seconds (0.5-22). If not specified, optimal duration will be determined from prompt"
         },
         "prompt_influence": {
           "type": "number",
-          "description": "How closely to follow the prompt (0-1). Higher values mean less variation",
           "minimum": 0,
           "maximum": 1,
           "multipleOf": 0.01,
-          "default": 0.3
+          "default": 0.3,
+          "description": "How closely to follow the prompt (0-1). Higher values mean less variation"
         },
         "output_format": {
           "type": "string",
-          "description": "Output format of the generated audio",
           "enum": [
             "mp3_22050_32",
             "mp3_44100_32",
@@ -353,102 +371,19 @@
             "opus_48000_128",
             "opus_48000_192"
           ],
-          "default": "mp3_44100_128"
+          "default": "mp3_44100_192",
+          "description": "Output format of the generated audio"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "text"
-      ]
-    }
-  },
-  {
-    "name": "flux_kontext_image",
-    "description": "Generate or edit images using Flux Kontext AI models (unified tool for text-to-image generation and image editing)",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "prompt": {
-          "type": "string",
-          "description": "Text prompt describing the desired image or edit (max 5000 characters, English recommended)",
-          "minLength": 1,
-          "maxLength": 5000
-        },
-        "inputImage": {
-          "type": "string",
-          "description": "Input image URL for editing mode (required for image editing, omit for text-to-image generation)",
-          "format": "uri"
-        },
-        "aspectRatio": {
-          "type": "string",
-          "description": "Output image aspect ratio (default: 16:9)",
-          "enum": [
-            "21:9",
-            "16:9",
-            "4:3",
-            "1:1",
-            "3:4",
-            "9:16"
-          ],
-          "default": "16:9"
-        },
-        "outputFormat": {
-          "type": "string",
-          "description": "Output image format",
-          "enum": [
-            "jpeg",
-            "png"
-          ],
-          "default": "jpeg"
-        },
-        "model": {
-          "type": "string",
-          "description": "Model version to use for generation",
-          "enum": [
-            "flux-kontext-pro",
-            "flux-kontext-max"
-          ],
-          "default": "flux-kontext-pro"
-        },
-        "enableTranslation": {
-          "type": "boolean",
-          "description": "Automatically translate non-English prompts to English",
-          "default": true
-        },
-        "promptUpsampling": {
-          "type": "boolean",
-          "description": "Enable prompt enhancement for better results (may increase processing time)",
-          "default": false
-        },
-        "safetyTolerance": {
-          "type": "integer",
-          "description": "Content moderation level (0-6 for generation, 0-2 for editing)",
-          "minimum": 0,
-          "maximum": 6,
-          "default": 2
-        },
-        "uploadCn": {
-          "type": "boolean",
-          "description": "Route uploads via China servers for better performance in Asia",
-          "default": false
-        },
-        "watermark": {
-          "type": "string",
-          "description": "Watermark identifier to add to the generated image"
-        },
-        "callBackUrl": {
-          "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -459,23 +394,22 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired image (3-5000 characters)",
           "minLength": 3,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt describing the desired image (3-5000 characters)"
         },
         "input_urls": {
           "type": "array",
-          "description": "Reference images for image-to-image mode (1-8 URLs). Omit for text-to-image mode.",
           "items": {
             "type": "string",
             "format": "uri"
           },
           "minItems": 1,
-          "maxItems": 8
+          "maxItems": 8,
+          "description": "Reference images for image-to-image mode (1-8 URLs). Omit for text-to-image mode."
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Aspect ratio for the generated image. 'auto' only valid with input_urls.",
           "enum": [
             "1:1",
             "4:3",
@@ -486,35 +420,155 @@
             "2:3",
             "auto"
           ],
-          "default": "1:1"
+          "default": "1:1",
+          "description": "Aspect ratio for the generated image. 'auto' only valid with input_urls."
         },
         "resolution": {
           "type": "string",
-          "description": "Output resolution. Pro: 1K (~$0.025), 2K (~$0.035). Flex: 1K (~$0.07), 2K (~$0.12).",
           "enum": [
             "1K",
             "2K"
           ],
-          "default": "1K"
+          "default": "1K",
+          "description": "Output resolution."
         },
         "model_type": {
           "type": "string",
-          "description": "Model variant: 'pro' for fast reliable results, 'flex' for more control and fine-tuning.",
           "enum": [
             "pro",
             "flex"
           ],
-          "default": "pro"
+          "default": "pro",
+          "description": "Model variant: 'pro' for fast reliable results, 'flex' for more control and fine-tuning."
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "finalize_upload",
+    "description": "Finalize staged widget media server-side and upload it to Kie.ai. App-only helper; public capabilities never enter model content.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "app_grant": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 200,
+          "description": "Short-lived widget grant"
+        },
+        "media_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opaque media ID returned after browser upload"
+        }
+      },
+      "required": [
+        "app_grant",
+        "media_id"
+      ],
+      "additionalProperties": false
+    },
+    "_meta": {
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    }
+  },
+  {
+    "name": "flux_kontext_image",
+    "description": "Generate or edit images using Flux Kontext AI models (unified tool for text-to-image generation and image editing)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Text prompt describing the desired image or edit (max 5000 characters, English recommended)"
+        },
+        "enableTranslation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically translate non-English prompts to English"
+        },
+        "uploadCn": {
+          "type": "boolean",
+          "default": false,
+          "description": "Route uploads via China servers for better performance in Asia"
+        },
+        "inputImage": {
+          "type": "string",
+          "format": "uri",
+          "description": "Input image URL for editing mode (required for image editing, omit for text-to-image generation)"
+        },
+        "aspectRatio": {
+          "type": "string",
+          "enum": [
+            "21:9",
+            "16:9",
+            "4:3",
+            "1:1",
+            "3:4",
+            "9:16"
+          ],
+          "default": "16:9",
+          "description": "Output image aspect ratio (default: 16:9)"
+        },
+        "outputFormat": {
+          "type": "string",
+          "enum": [
+            "jpeg",
+            "png"
+          ],
+          "default": "jpeg",
+          "description": "Output image format"
+        },
+        "promptUpsampling": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable prompt enhancement for better results (may increase processing time)"
+        },
+        "model": {
+          "type": "string",
+          "enum": [
+            "flux-kontext-pro",
+            "flux-kontext-max"
+          ],
+          "default": "flux-kontext-pro",
+          "description": "Model version to use for generation"
+        },
+        "callBackUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
+        },
+        "safetyTolerance": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6,
+          "default": 6,
+          "description": "Content moderation level (0-6 for generation, 0-2 for editing)"
+        },
+        "watermark": {
+          "type": "string",
+          "description": "Watermark identifier to add to the generated image"
+        }
+      },
+      "required": [
+        "prompt"
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -525,12 +579,202 @@
       "properties": {
         "task_id": {
           "type": "string",
+          "minLength": 1,
           "description": "Task ID to check status for"
         }
       },
       "required": [
         "task_id"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_upload_url",
+    "description": "Create short-lived capability URLs for a browser or HTTP client to upload media to this MCP server. Available only when Streamable HTTP storage is explicitly configured.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "app_grant": {
+          "type": "string",
+          "minLength": 32,
+          "maxLength": 200,
+          "description": "Short-lived widget grant"
+        },
+        "filename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^/\\\\\\u0000-\\u001f\\u007f]+$",
+          "description": "Original filename shown in download metadata"
+        },
+        "content_type": {
+          "type": "string",
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "video/mp4",
+            "video/webm",
+            "video/quicktime",
+            "audio/mpeg",
+            "audio/wav",
+            "audio/x-wav",
+            "audio/ogg",
+            "audio/aac",
+            "audio/mp4"
+          ],
+          "description": "Declared media MIME type; bytes are checked after upload"
+        },
+        "size": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 26214400,
+          "description": "Exact upload size in bytes, maximum 25 MiB"
+        }
+      },
+      "required": [
+        "app_grant",
+        "filename",
+        "content_type",
+        "size"
+      ],
+      "additionalProperties": false
+    },
+    "_meta": {
+      "ui": {
+        "visibility": [
+          "app"
+        ]
+      }
+    }
+  },
+  {
+    "name": "gemini_omni",
+    "description": "Create Gemini Omni videos or reusable Omni characters and voices from multimodal inputs.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "type": "string",
+          "enum": [
+            "video",
+            "character",
+            "audio"
+          ],
+          "default": "video"
+        },
+        "prompt": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "image_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "maxItems": 7
+        },
+        "audio_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3
+        },
+        "video_list": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "start": {
+                "type": "number",
+                "minimum": 0
+              },
+              "ends": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "url",
+              "start",
+              "ends"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 1
+        },
+        "character_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3
+        },
+        "duration": {
+          "type": "string",
+          "enum": [
+            "4",
+            "6",
+            "8",
+            "10"
+          ]
+        },
+        "aspect_ratio": {
+          "type": "string",
+          "enum": [
+            "16:9",
+            "9:16"
+          ]
+        },
+        "resolution": {
+          "type": "string",
+          "enum": [
+            "720p",
+            "1080p",
+            "4k"
+          ]
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "character_name": {
+          "type": "string",
+          "maxLength": 210
+        },
+        "descriptions": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "audio_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 210
+        },
+        "voice_description": {
+          "type": "string",
+          "maxLength": 20000
+        },
+        "example_dialogue": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "callBackUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "additionalProperties": false
     }
   },
   {
@@ -541,21 +785,21 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired image (max 20000 characters)",
-          "maxLength": 20000
+          "minLength": 1,
+          "maxLength": 20000,
+          "description": "Text prompt describing the desired image (max 20000 characters)"
         },
         "input_urls": {
           "type": "array",
-          "description": "Array of up to 16 image URLs for image-to-image mode. Omit for text-to-image.",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 16
+          "maxItems": 16,
+          "description": "Array of up to 16 image URLs for image-to-image mode. Omit for text-to-image."
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Image aspect ratio",
           "enum": [
             "auto",
             "1:1",
@@ -564,27 +808,29 @@
             "4:3",
             "3:4"
           ],
-          "default": "auto"
+          "default": "auto",
+          "description": "Image aspect ratio"
         },
         "resolution": {
           "type": "string",
-          "description": "Output resolution",
           "enum": [
             "1K",
             "2K",
             "4K"
           ],
-          "default": "1K"
+          "default": "1K",
+          "description": "Output resolution"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -660,77 +906,92 @@
   },
   {
     "name": "hailuo_video",
-    "description": "Generate videos using Hailuo AI models (unified tool for text-to-video and image-to-video with standard/pro quality). Supports v02 (original) and v2.3 (enhanced motion/expressions, 1080P)",
+    "description": "Generate videos using MiniMax H3 (Hailuo 03) with text-to-video, image-to-video, or multimodal reference-to-video inputs.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired video content (max 1500 characters)",
           "minLength": 1,
-          "maxLength": 1500
+          "description": "Text prompt describing the desired video content"
         },
         "imageUrl": {
           "type": "string",
-          "description": "URL of input image for image-to-video mode (optional - if not provided, uses text-to-video)",
-          "format": "uri"
+          "format": "uri",
+          "description": "First-frame image URL for image-to-video mode. Cannot be combined with reference inputs."
         },
         "endImageUrl": {
           "type": "string",
-          "description": "URL of end frame image for image-to-video (optional - requires imageUrl)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional last-frame image URL for image-to-video mode. Requires imageUrl."
         },
-        "version": {
-          "type": "string",
-          "description": "Hailuo model version: '02' (original) or '2.3' (better motion, expressions, 1080P support)",
-          "enum": [
-            "02",
-            "2.3"
-          ],
-          "default": "02"
+        "referenceImageUrls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1,
+          "maxItems": 9,
+          "description": "Reference image URLs for reference-to-video mode (up to 9 images)."
         },
-        "quality": {
-          "type": "string",
-          "description": "Quality level of video generation (standard for faster, pro for higher quality)",
-          "enum": [
-            "standard",
-            "pro"
-          ],
-          "default": "standard"
+        "referenceVideoUrls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "description": "Reference video URLs for reference-to-video mode (up to 3 videos)."
+        },
+        "referenceAudioUrls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "description": "Reference audio URLs for reference-to-video mode (up to 3 audio files)."
         },
         "duration": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 15,
+          "description": "Video duration in seconds (4-15)."
+        },
+        "aspectRatio": {
           "type": "string",
-          "description": "Duration of video in seconds (standard quality only). Note: 10s not supported with 1080P in v2.3",
           "enum": [
-            "6",
-            "10"
+            "adaptive",
+            "21:9",
+            "16:9",
+            "4:3",
+            "1:1",
+            "3:4",
+            "9:16"
           ],
-          "default": "6"
+          "description": "Output aspect ratio. Required for text-to-video; reference-to-video also supports adaptive."
         },
         "resolution": {
           "type": "string",
-          "description": "Resolution of video (standard quality only). v02: 512P/768P, v2.3: 768P/1080P",
           "enum": [
-            "512P",
-            "768P",
-            "1080P"
+            "768p"
           ],
-          "default": "768P"
-        },
-        "promptOptimizer": {
-          "type": "boolean",
-          "description": "Whether to use the model's prompt optimizer for better results",
-          "default": true
+          "description": "Reference-to-video output resolution. 768p has a verified rate-card formula."
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
-        "prompt"
-      ]
+        "prompt",
+        "duration"
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -741,72 +1002,71 @@
       "properties": {
         "mode": {
           "type": "string",
-          "description": "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted.",
           "enum": [
             "text-to-video",
             "image-to-video",
             "reference-to-video",
             "video-edit"
-          ]
+          ],
+          "description": "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted."
         },
         "prompt": {
           "type": "string",
-          "description": "Text prompt for video generation (max 5000 characters)",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt for video generation (max 5000 characters)"
         },
         "image_urls": {
           "type": "array",
-          "description": "Input image URL for image-to-video mode (max 1)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 1
+          "maxItems": 1,
+          "description": "Input image URL for image-to-video mode (max 1)"
         },
         "reference_image": {
           "type": "array",
-          "description": "Reference images for reference-to-video mode (up to 9)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 9
+          "maxItems": 9,
+          "description": "Reference images for reference-to-video mode (up to 9)"
         },
         "video_url": {
           "type": "string",
-          "description": "Video URL to edit (video-edit mode)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Video URL to edit (video-edit mode)"
         },
         "reference_image_edit": {
           "type": "array",
-          "description": "Reference images for video-edit mode (up to 5)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 5
+          "maxItems": 5,
+          "description": "Reference images for video-edit mode (up to 5)"
         },
         "audio_setting": {
           "type": "string",
-          "description": "Audio handling for video-edit: auto or origin",
           "enum": [
             "auto",
             "origin"
-          ]
+          ],
+          "description": "Audio handling for video-edit: auto or origin"
         },
         "resolution": {
           "type": "string",
-          "description": "Video resolution",
           "enum": [
             "720p",
             "1080p"
           ],
-          "default": "1080p"
+          "default": "1080p",
+          "description": "Video resolution"
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Aspect ratio of the generated video",
           "enum": [
             "16:9",
             "9:16",
@@ -814,29 +1074,32 @@
             "4:3",
             "3:4"
           ],
-          "default": "16:9"
+          "default": "16:9",
+          "description": "Aspect ratio of the generated video"
         },
         "duration": {
           "type": "integer",
-          "description": "Duration in seconds (3-15)",
           "minimum": 3,
           "maximum": 15,
-          "default": 5
+          "default": 5,
+          "description": "Duration in seconds (3-15)"
         },
         "seed": {
           "type": "integer",
-          "description": "Random seed for reproducible results (0-2147483647)",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Random seed for reproducible results (0-2147483647)"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -847,12 +1110,11 @@
       "properties": {
         "image_url": {
           "type": "string",
-          "description": "URL of image to reframe (JPEG, PNG, WEBP, max 10MB)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of image to reframe (JPEG, PNG, WEBP, max 10MB)"
         },
         "image_size": {
           "type": "string",
-          "description": "Output size for the reframed image",
           "enum": [
             "square",
             "square_hd",
@@ -861,148 +1123,154 @@
             "landscape_4_3",
             "landscape_16_9"
           ],
-          "default": "square_hd"
+          "default": "square_hd",
+          "description": "Output size for the reframed image"
         },
         "rendering_speed": {
           "type": "string",
-          "description": "Rendering speed for generation",
           "enum": [
             "TURBO",
             "BALANCED",
             "QUALITY"
           ],
-          "default": "BALANCED"
+          "default": "BALANCED",
+          "description": "Rendering speed for generation"
         },
         "style": {
           "type": "string",
-          "description": "Style type for generation",
           "enum": [
             "AUTO",
             "GENERAL",
             "REALISTIC",
             "DESIGN"
           ],
-          "default": "AUTO"
+          "default": "AUTO",
+          "description": "Style type for generation"
         },
         "num_images": {
           "type": "string",
-          "description": "Number of images to generate",
           "enum": [
             "1",
             "2",
             "3",
             "4"
           ],
-          "default": "1"
+          "default": "1",
+          "description": "Number of images to generate"
         },
         "seed": {
-          "type": "number",
-          "description": "Seed for reproducible results",
-          "default": 0
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647,
+          "default": 0,
+          "description": "Seed for reproducible results"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "image_url"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
     "name": "infinitalk_lip_sync",
-    "description": "Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image + audio into natural talking avatar with synchronized lips, facial expressions, and head movements. Pricing: ~$0.015/s (480p), ~$0.06/s (720p), max 15s",
+    "description": "Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image and audio into a natural talking avatar with synchronized lips, facial expressions, and head movements.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "image_url": {
           "type": "string",
-          "description": "URL of the portrait image to animate (JPEG, PNG, WEBP, max 10MB)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the portrait image to animate (JPEG, PNG, WEBP, max 10MB)"
         },
         "audio_url": {
           "type": "string",
-          "description": "URL of the audio file for lip sync (MPEG, WAV, AAC, MP4, OGG, max 10MB)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the audio file for lip sync (MPEG, WAV, AAC, MP4, OGG, max 10MB)"
         },
         "prompt": {
           "type": "string",
-          "description": "Text prompt to guide video generation (e.g., 'A young woman talking on a podcast')",
           "minLength": 1,
-          "maxLength": 1500
+          "maxLength": 1500,
+          "description": "Text prompt to guide video generation (e.g., 'A young woman talking on a podcast')"
         },
         "resolution": {
           "type": "string",
-          "description": "Video resolution: 480p (faster, cheaper) or 720p (higher quality)",
           "enum": [
             "480p",
             "720p"
           ],
-          "default": "480p"
+          "default": "480p",
+          "description": "Video resolution: 480p (faster, cheaper) or 720p (higher quality)"
         },
         "seed": {
           "type": "integer",
-          "description": "Random seed for reproducibility (10000-1000000)",
           "minimum": 10000,
-          "maximum": 1000000
+          "maximum": 1000000,
+          "description": "Random seed for reproducibility (10000-1000000)"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications"
         }
       },
       "required": [
         "image_url",
         "audio_url",
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
     "name": "kling_avatar",
-    "description": "Generate lifelike talking avatar videos using Kuaishou Kling AI. Transforms portrait photo + audio into realistic avatar with accurate lip-sync, emotions, and identity preservation. Pricing: ~$0.04/s (720P standard), ~$0.08/s (1080P pro), max 15s",
+    "description": "Generate lifelike talking avatar videos using Kuaishou Kling AI. Transforms portrait photo and audio into a realistic avatar with accurate lip-sync, emotions, and identity preservation.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "image_url": {
           "type": "string",
-          "description": "URL of the portrait image for avatar (JPEG, PNG, WEBP, max 10MB)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the portrait image for avatar (JPEG, PNG, WEBP, max 10MB)"
         },
         "audio_url": {
           "type": "string",
-          "description": "URL of the audio file for the avatar to speak (MPEG, WAV, AAC, MP4, OGG, max 10MB)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the audio file for the avatar to speak (MPEG, WAV, AAC, MP4, OGG, max 10MB)"
         },
         "prompt": {
           "type": "string",
-          "description": "Text prompt to guide video generation (emotions, expressions, scene settings)",
           "minLength": 1,
-          "maxLength": 1500
+          "maxLength": 1500,
+          "description": "Text prompt to guide video generation (emotions, expressions, scene settings)"
         },
         "quality": {
           "type": "string",
-          "description": "Video quality: standard (720P, faster) or pro (1080P, higher quality)",
           "enum": [
             "standard",
             "pro"
           ],
-          "default": "standard"
+          "default": "standard",
+          "description": "Video quality: standard (720P, faster) or pro (1080P, higher quality)"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications"
         }
       },
       "required": [
         "image_url",
         "audio_url",
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1013,66 +1281,63 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired video content (max 5000 characters). For audio: use [Character name, voice style] format for dialogue",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt describing the desired video content (max 5000 characters). For audio: use [Character name, voice style] format for dialogue"
         },
         "image_urls": {
           "type": "array",
-          "description": "Up to 2 image URLs: first = start frame, second = end frame (optional - if not provided, uses text-to-video)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 2
+          "maxItems": 2,
+          "description": "Up to 2 image URLs: first = start frame, second = end frame (optional - if not provided, uses text-to-video)"
         },
         "duration": {
           "type": "string",
-          "description": "Duration of video in seconds (3-15)",
-          "default": "5"
+          "default": "5",
+          "description": "Duration of video in seconds (3-15)"
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Aspect ratio of video (text-to-video mode only)",
           "enum": [
             "16:9",
             "9:16",
             "1:1"
           ],
-          "default": "16:9"
+          "default": "16:9",
+          "description": "Aspect ratio of video (text-to-video mode only)"
         },
         "mode": {
           "type": "string",
-          "description": "Quality mode: 'std' for standard (faster, cheaper), 'pro' for professional quality",
           "enum": [
             "std",
             "pro"
           ],
-          "default": "std"
+          "default": "std",
+          "description": "Quality mode: 'std' for standard (faster, cheaper), 'pro' for professional quality"
         },
         "sound": {
           "type": "boolean",
-          "description": "Enable native audio generation including multilingual speech, sound effects, and ambient sound. Pricing: with audio is 2x credits",
-          "default": false
+          "default": false,
+          "description": "Enable native audio generation including multilingual speech, sound effects, and ambient sound. Pricing: with audio is 2x credits"
         },
         "multi_shots": {
           "type": "boolean",
-          "description": "Enable multi-shot mode for cinematic storytelling with multiple scenes (requires multi_prompt)",
-          "default": false
+          "default": false,
+          "description": "Enable multi-shot mode for cinematic storytelling with multiple scenes (requires multi_prompt)"
         },
         "multi_prompt": {
           "type": "array",
-          "description": "Array of shot definitions for multi-shot mode. Each shot has a prompt and duration (1-12s)",
           "items": {
             "type": "object",
             "properties": {
               "prompt": {
-                "type": "string",
-                "description": "Scene description for this shot"
+                "type": "string"
               },
               "duration": {
                 "type": "integer",
-                "description": "Duration of this shot in seconds (1-12)",
                 "minimum": 1,
                 "maximum": 12
               }
@@ -1080,26 +1345,24 @@
             "required": [
               "prompt",
               "duration"
-            ]
-          }
+            ],
+            "additionalProperties": false
+          },
+          "description": "Array of shot definitions for multi-shot mode. Each shot has a prompt and duration (1-12s)"
         },
         "kling_elements": {
           "type": "array",
-          "description": "Character/object elements for consistent identity across shots. Provide name, description, and reference images/videos",
           "items": {
             "type": "object",
             "properties": {
               "name": {
-                "type": "string",
-                "description": "Element name (e.g., character name)"
+                "type": "string"
               },
               "description": {
-                "type": "string",
-                "description": "Element description"
+                "type": "string"
               },
               "element_input_urls": {
                 "type": "array",
-                "description": "Reference image URLs for this element",
                 "items": {
                   "type": "string",
                   "format": "uri"
@@ -1107,7 +1370,6 @@
               },
               "element_input_video_urls": {
                 "type": "array",
-                "description": "Reference video URLs for this element",
                 "items": {
                   "type": "string",
                   "format": "uri"
@@ -1117,18 +1379,36 @@
             "required": [
               "name",
               "description"
-            ]
-          }
+            ],
+            "additionalProperties": false
+          },
+          "description": "Character/object elements for consistent identity across shots. Provide name, description, and reference images/videos"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "list_models",
+    "description": "List source-backed catalog models. Filter by words from capabilities, model names, or descriptions.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional text or capability filter, for example: lip sync"
+        }
+      },
+      "additionalProperties": false
     }
   },
   {
@@ -1139,21 +1419,22 @@
       "properties": {
         "limit": {
           "type": "integer",
-          "description": "Maximum number of tasks to return",
+          "maximum": 100,
           "default": 20,
-          "maximum": 100
+          "description": "Maximum number of tasks to return"
         },
         "status": {
           "type": "string",
-          "description": "Filter by status",
           "enum": [
             "pending",
             "processing",
             "completed",
             "failed"
-          ]
+          ],
+          "description": "Filter by status"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
   {
@@ -1164,13 +1445,26 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired image or video (max 2000 characters)",
           "minLength": 1,
-          "maxLength": 2000
+          "maxLength": 4000,
+          "description": "Text prompt describing the desired image or video (max 2000 characters)"
+        },
+        "fileUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Single image URL for image-to-image or video generation (legacy - use fileUrls instead)"
+        },
+        "fileUrls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "maxItems": 5,
+          "description": "Array of image URLs for image-to-image or video generation (recommended)"
         },
         "taskType": {
           "type": "string",
-          "description": "Task type for generation mode (auto-detected if not provided)",
           "enum": [
             "mj_txt2img",
             "mj_img2img",
@@ -1178,152 +1472,182 @@
             "mj_omni_reference",
             "mj_video",
             "mj_video_hd"
-          ]
-        },
-        "fileUrl": {
-          "type": "string",
-          "description": "Single image URL for image-to-image or video generation (legacy - use fileUrls instead)",
-          "format": "uri"
-        },
-        "fileUrls": {
-          "type": "array",
-          "description": "Array of image URLs for image-to-image or video generation (recommended)",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          },
-          "maxItems": 10
-        },
-        "speed": {
-          "type": "string",
-          "description": "Generation speed (not required for video/omni tasks)",
-          "enum": [
-            "relaxed",
-            "fast",
-            "turbo"
-          ]
+          ],
+          "description": "Task type for generation mode (auto-detected if not provided)"
         },
         "aspectRatio": {
           "type": "string",
-          "description": "Output aspect ratio",
           "enum": [
-            "1:2",
-            "9:16",
-            "2:3",
-            "3:4",
-            "5:6",
-            "6:5",
-            "4:3",
-            "3:2",
             "1:1",
+            "9:16",
             "16:9",
-            "2:1"
+            "4:3",
+            "3:4",
+            "21:9",
+            "2:3",
+            "3:2"
           ],
-          "default": "16:9"
+          "default": "1:1",
+          "description": "Output aspect ratio"
         },
-        "version": {
+        "processMode": {
           "type": "string",
-          "description": "Midjourney model version",
           "enum": [
-            "7",
-            "6.1",
-            "6",
-            "5.2",
-            "5.1",
-            "niji6"
+            "relax",
+            "fast"
           ],
-          "default": "7"
+          "default": "relax"
         },
-        "variety": {
+        "weird": {
           "type": "integer",
-          "description": "Controls diversity of generated results (0-100, increment by 5)",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "raw": {
+          "type": "boolean",
+          "default": false
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "stylize": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "quality": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 1,
+          "multipleOf": 0.1
+        },
+        "chaos": {
+          "type": "integer",
           "minimum": 0,
           "maximum": 100
         },
-        "stylization": {
+        "repeat": {
           "type": "integer",
-          "description": "Artistic style intensity (0-1000, suggested multiple of 50)",
-          "minimum": 0,
-          "maximum": 1000
-        },
-        "weirdness": {
-          "type": "integer",
-          "description": "Creativity and uniqueness level (0-3000, suggested multiple of 100)",
-          "minimum": 0,
-          "maximum": 3000
-        },
-        "ow": {
-          "type": "integer",
-          "description": "Omni intensity parameter for omni reference tasks (1-1000)",
           "minimum": 1,
-          "maximum": 1000
+          "maximum": 40
         },
-        "waterMark": {
-          "type": "string",
-          "description": "Watermark identifier",
-          "maxLength": 100
-        },
-        "enableTranslation": {
-          "type": "boolean",
-          "description": "Auto-translate non-English prompts to English",
-          "default": false
-        },
-        "videoBatchSize": {
-          "type": "string",
-          "description": "Number of videos to generate (video mode only)",
-          "enum": [
-            "1",
-            "2",
-            "4"
-          ],
-          "default": "1"
+        "stop": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 100
         },
         "motion": {
-          "type": "string",
-          "description": "Motion level for video generation (required for video mode)",
-          "enum": [
-            "high",
-            "low"
-          ],
-          "default": "high"
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Motion level for video generation (required for video mode)"
+        },
+        "videoBatchSize": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "Number of videos to generate (video mode only)"
         },
         "high_definition_video": {
           "type": "boolean",
-          "description": "Use high definition video generation instead of standard definition",
-          "default": false
+          "default": false,
+          "description": "Use high definition video generation instead of standard definition"
+        },
+        "ow": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "Omni intensity parameter for omni reference tasks (1-1000)"
+        },
+        "sref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "version": {
+          "type": "string",
+          "description": "Midjourney model version"
+        },
+        "speed": {
+          "type": "string",
+          "enum": [
+            "relax",
+            "fast",
+            "turbo"
+          ],
+          "description": "Generation speed (not required for video/omni tasks)"
+        },
+        "variety": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Controls diversity of generated results (0-100, increment by 5)"
+        },
+        "stylization": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Artistic style intensity (0-1000, suggested multiple of 50)"
+        },
+        "weirdness": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3000,
+          "description": "Creativity and uniqueness level (0-3000, suggested multiple of 100)"
+        },
+        "enableTranslation": {
+          "type": "boolean",
+          "description": "Auto-translate non-English prompts to English"
+        },
+        "waterMark": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Watermark identifier"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
     "name": "nano_banana_image",
-    "description": "Generate and edit images using Google's Gemini 3.1 Flash Image (Nano Banana 2) - unified tool with 4K support, up to 14 reference images, Google Search grounding, and improved text rendering. Pricing: 8 credits/1K, 12/2K, 18/4K",
+    "description": "Generate and edit images using Nano Banana 2 or the faster 1K Nano Banana 2 Lite. Nano Banana 2 supports 4K, 14 references, and Google Search grounding; Lite supports up to 10 references.",
     "inputSchema": {
       "type": "object",
       "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "nano-banana-2",
+            "nano-banana-2-lite"
+          ],
+          "default": "nano-banana-2",
+          "description": "Nano Banana model: nano-banana-2 supports up to 4K and 14 references; nano-banana-2-lite is the faster 1K model with up to 10 references"
+        },
         "prompt": {
           "type": "string",
-          "description": "Text prompt for image generation or editing (max 20000 chars). Nano Banana models support up to 20K characters.",
           "minLength": 1,
-          "maxLength": 20000
+          "maxLength": 5000,
+          "description": "Text prompt for image generation or editing (max 20000 chars). Nano Banana models support up to 20K characters."
         },
         "image_input": {
           "type": "array",
-          "description": "Array of reference image URLs for editing mode (up to 14 images for multi-reference)",
           "items": {
             "type": "string",
             "format": "uri"
           },
           "minItems": 1,
-          "maxItems": 14
+          "maxItems": 14,
+          "description": "Array of reference image URLs for editing mode (up to 14 images for multi-reference)"
         },
         "output_format": {
           "type": "string",
@@ -1331,8 +1655,8 @@
             "png",
             "jpg"
           ],
-          "description": "Output format for generate/edit modes",
-          "default": "png"
+          "default": "png",
+          "description": "Output format for generate/edit modes"
         },
         "aspect_ratio": {
           "type": "string",
@@ -1353,8 +1677,8 @@
             "21:9",
             "auto"
           ],
-          "description": "Aspect ratio for generate/edit modes",
-          "default": "1:1"
+          "default": "1:1",
+          "description": "Aspect ratio for generate/edit modes"
         },
         "resolution": {
           "type": "string",
@@ -1363,16 +1687,77 @@
             "2K",
             "4K"
           ],
-          "description": "Output resolution: 1K (8 credits), 2K (12 credits), 4K (18 credits)",
-          "default": "1K"
+          "default": "1K",
+          "description": "Output resolution: 1K (8 credits), 2K (12 credits), 4K (18 credits)"
         },
         "google_search": {
           "type": "boolean",
-          "description": "Enable Google Search grounding for factual image generation",
-          "default": false
+          "default": false,
+          "description": "Enable Google Search grounding for factual image generation"
+        },
+        "callBackUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional URL for task completion notifications (uses KIE_AI_CALLBACK_URL if not provided)"
         }
       },
-      "required": []
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "omnihuman_video",
+    "description": "Animate a portrait, pet, or character from an image and audio using ByteDance OmniHuman 1.5.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "image_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Portrait image URL to animate"
+        },
+        "audio_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Audio URL that drives the animation"
+        },
+        "mask_url": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "maxItems": 5
+        },
+        "prompt": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "output_resolution": {
+          "type": "string",
+          "enum": [
+            "720",
+            "1080"
+          ],
+          "default": "1080"
+        },
+        "pe_fast_mode": {
+          "type": "boolean",
+          "default": false
+        },
+        "seed": {
+          "type": "integer",
+          "default": -1
+        },
+        "callBackUrl": {
+          "type": "string",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "image_url",
+        "audio_url"
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1383,17 +1768,16 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt for image generation or editing",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Text prompt for image generation or editing"
         },
         "image_url": {
           "type": "string",
-          "description": "URL of image to edit (optional - if not provided, uses text-to-image)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of image to edit (optional - if not provided, uses text-to-image)"
         },
         "image_size": {
           "type": "string",
-          "description": "Image size",
           "enum": [
             "square",
             "square_hd",
@@ -1402,80 +1786,138 @@
             "landscape_4_3",
             "landscape_16_9"
           ],
-          "default": "square_hd"
+          "default": "square_hd",
+          "description": "Image size"
         },
         "num_inference_steps": {
           "type": "integer",
-          "description": "Number of inference steps (2-250 for text-to-image, 2-49 for edit)",
           "minimum": 2,
           "maximum": 250,
-          "default": 30
-        },
-        "guidance_scale": {
-          "type": "number",
-          "description": "CFG scale (0-20, default: 2.5 for text-to-image, 4 for edit)",
-          "minimum": 0,
-          "maximum": 20,
-          "default": 2.5
-        },
-        "enable_safety_checker": {
-          "type": "boolean",
-          "description": "Enable safety checker",
-          "default": true
-        },
-        "output_format": {
-          "type": "string",
-          "description": "Output format",
-          "enum": [
-            "png",
-            "jpeg"
-          ],
-          "default": "png"
-        },
-        "negative_prompt": {
-          "type": "string",
-          "description": "Negative prompt (max 500 characters)",
-          "maxLength": 500,
-          "default": " "
-        },
-        "acceleration": {
-          "type": "string",
-          "description": "Acceleration level",
-          "enum": [
-            "none",
-            "regular",
-            "high"
-          ],
-          "default": "none"
-        },
-        "num_images": {
-          "type": "string",
-          "description": "Number of images (1-4, edit mode only)",
-          "enum": [
-            "1",
-            "2",
-            "3",
-            "4"
-          ]
-        },
-        "sync_mode": {
-          "type": "boolean",
-          "description": "Sync mode (edit mode only)",
-          "default": false
+          "description": "Number of inference steps (2-250 for text-to-image, 2-49 for edit)"
         },
         "seed": {
           "type": "number",
           "description": "Random seed for reproducible results"
         },
+        "guidance_scale": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "CFG scale (0-20, default: 2.5 for text-to-image, 4 for edit)"
+        },
+        "enable_safety_checker": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable safety checker"
+        },
+        "output_format": {
+          "type": "string",
+          "enum": [
+            "png",
+            "jpeg"
+          ],
+          "default": "png",
+          "description": "Output format"
+        },
+        "negative_prompt": {
+          "type": "string",
+          "maxLength": 500,
+          "default": " ",
+          "description": "Negative prompt (max 500 characters)"
+        },
+        "acceleration": {
+          "type": "string",
+          "enum": [
+            "none",
+            "regular",
+            "high"
+          ],
+          "default": "none",
+          "description": "Acceleration level"
+        },
+        "num_images": {
+          "type": "string",
+          "enum": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "description": "Number of images (1-4, edit mode only)"
+        },
+        "sync_mode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Sync mode (edit mode only)"
+        },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "prepare_media_generation",
+    "description": "Prepare one to six validated media generations, resolve safe defaults and pricing, persist a caller-context-bound plan, then request host approval when the transport supports it without calling a provider.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "tool": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Registered generation tool name"
+              },
+              "args": {
+                "type": "object",
+                "additionalProperties": {},
+                "description": "Arguments for that tool"
+              }
+            },
+            "required": [
+              "tool",
+              "args"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 6,
+          "description": "One to six independent generation requests"
+        },
+        "defaultProfile": {
+          "type": "string",
+          "enum": [
+            "safe"
+          ],
+          "description": "Optional explicit safe default policy. The current catalog policy is safe."
+        },
+        "maxConcurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "Maximum concurrent task creates for this plan (1-4, default 4)"
+        },
+        "expiresInSeconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "description": "Plan expiry in seconds (60-3600, default 900)"
+        }
+      },
+      "required": [
+        "items"
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1486,18 +1928,19 @@
       "properties": {
         "image": {
           "type": "string",
-          "description": "URL of image to remove background from (PNG, JPG, WEBP, max 5MB, 16MP, 4096px max, 256px min)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of image to remove background from (PNG, JPG, WEBP, max 5MB, 16MP, 4096px max, 256px min)"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "image"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1508,29 +1951,28 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired video transformation (max 1000 characters)",
           "minLength": 1,
-          "maxLength": 1000
+          "maxLength": 1000,
+          "description": "Text prompt describing the desired video transformation (max 1000 characters)"
         },
         "videoUrl": {
           "type": "string",
-          "description": "URL of the input video to transform",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the input video to transform"
         },
         "waterMark": {
           "type": "string",
-          "description": "Watermark text to add to the video",
           "maxLength": 100,
-          "default": ""
+          "default": "",
+          "description": "Watermark text to add to the video"
         },
         "uploadCn": {
           "type": "boolean",
-          "description": "Whether to upload to China servers",
-          "default": false
+          "default": false,
+          "description": "Whether to upload to China servers"
         },
         "aspectRatio": {
           "type": "string",
-          "description": "Aspect ratio of the output video",
           "enum": [
             "16:9",
             "9:16",
@@ -1539,42 +1981,44 @@
             "1:1",
             "21:9"
           ],
-          "default": "16:9"
+          "default": "16:9",
+          "description": "Aspect ratio of the output video"
         },
         "seed": {
           "type": "integer",
-          "description": "Random seed for reproducible results (1-999999)",
           "minimum": 1,
-          "maximum": 999999
+          "maximum": 999999,
+          "description": "Random seed for reproducible results (1-999999)"
         },
         "referenceImage": {
           "type": "string",
-          "description": "URL of reference image for style guidance",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of reference image for style guidance"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt",
         "videoUrl"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
     "name": "suno_generate_music",
-    "description": "Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5)",
+    "description": "Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V5_5 supports requested duration.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Description of the desired audio content. In custom mode: used as exact lyrics (max 5000 chars for V4_5+, V5; 3000 for V3_5, V4). In non-custom mode: core idea for auto-generated lyrics (max 500 chars)",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Description of the desired audio content. In custom mode: used as exact lyrics (max 5000 chars for V4_5+, V5; 3000 for V3_5, V4). In non-custom mode: core idea for auto-generated lyrics (max 500 chars)"
         },
         "customMode": {
           "type": "boolean",
@@ -1586,70 +2030,96 @@
         },
         "model": {
           "type": "string",
-          "description": "AI model version for generation",
           "enum": [
             "V3_5",
             "V4",
             "V4_5",
             "V4_5PLUS",
-            "V5"
-          ]
+            "V5",
+            "V5_5"
+          ],
+          "default": "V5",
+          "description": "AI model version for generation"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "URL to receive task completion updates (optional, will use KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL to receive task completion updates (optional, will use KIE_AI_CALLBACK_URL env var if not provided)"
         },
         "style": {
           "type": "string",
-          "description": "Music style/genre (required in custom mode, max 1000 chars for V4_5+, V5; 200 for V3_5, V4)",
-          "maxLength": 1000
+          "maxLength": 1000,
+          "description": "Music style/genre (required in custom mode, max 1000 chars for V4_5+, V5; 200 for V3_5, V4)"
         },
         "title": {
           "type": "string",
-          "description": "Track title (required in custom mode, max 80 chars)",
-          "maxLength": 80
+          "maxLength": 80,
+          "description": "Track title (required in custom mode, max 80 chars)"
+        },
+        "duration": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Requested track duration in seconds (available only with V5_5)"
         },
         "negativeTags": {
           "type": "string",
-          "description": "Music styles to exclude (optional, max 200 chars)",
-          "maxLength": 200
+          "maxLength": 200,
+          "description": "Music styles to exclude (optional, max 200 chars)"
         },
         "vocalGender": {
           "type": "string",
-          "description": "Vocal gender preference (optional, only effective in custom mode)",
           "enum": [
             "m",
             "f"
-          ]
+          ],
+          "description": "Vocal gender preference (optional, only effective in custom mode)"
         },
         "styleWeight": {
           "type": "number",
-          "description": "Strength of style adherence (optional, range 0-1, up to 2 decimal places)",
           "minimum": 0,
           "maximum": 1,
-          "multipleOf": 0.01
+          "multipleOf": 0.01,
+          "description": "Strength of style adherence (optional, range 0-1, up to 2 decimal places)"
         },
         "weirdnessConstraint": {
           "type": "number",
-          "description": "Controls experimental/creative deviation (optional, range 0-1, up to 2 decimal places)",
           "minimum": 0,
           "maximum": 1,
-          "multipleOf": 0.01
+          "multipleOf": 0.01,
+          "description": "Controls experimental/creative deviation (optional, range 0-1, up to 2 decimal places)"
         },
         "audioWeight": {
           "type": "number",
-          "description": "Balance weight for audio features (optional, range 0-1, up to 2 decimal places)",
           "minimum": 0,
           "maximum": 1,
-          "multipleOf": 0.01
+          "multipleOf": 0.01,
+          "description": "Balance weight for audio features (optional, range 0-1, up to 2 decimal places)"
         }
       },
       "required": [
         "prompt",
         "customMode",
         "instrumental"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "submit_media_generation",
+    "description": "Submit a single unexpired, unchanged plan approved in this caller context exactly once. The persisted approval state is the authorization boundary; the plan hash detects accidental mutation only. The stored plan controls a maximum of four concurrent task creates.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "planId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Approved plan ID to submit exactly once"
+        }
+      },
+      "required": [
+        "planId"
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1660,29 +2130,83 @@
       "properties": {
         "image_url": {
           "type": "string",
-          "description": "URL of image to upscale (JPEG, PNG, WEBP, max 10MB)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of image to upscale (JPEG, PNG, WEBP, max 10MB)"
         },
         "upscale_factor": {
           "type": "string",
-          "description": "Upscale factor: 1x (enhance only), 2x (default), 4x, or 8x. Max output dimension is 20,000px.",
           "enum": [
             "1",
             "2",
             "4",
             "8"
           ],
-          "default": "2"
+          "default": "2",
+          "description": "Upscale factor: 1x (enhance only), 2x (default), 4x, or 8x. Max output dimension is 20,000px."
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "image_url"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "upload_file",
+    "description": "Upload validated media directly to Kie.ai from Base64 or a CLI-approved local file path. Arbitrary URL imports are intentionally unsupported to avoid delegated SSRF.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "file_base64": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 14000000,
+          "description": "Base64 media bytes or a data URL (maximum 10 MiB decoded)"
+        },
+        "file_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "CLI-only local media path. Requires KIE_CLI_UPLOAD_ROOTS and is unavailable to MCP adapters"
+        },
+        "file_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^/\\\\\\u0000-\\u001f\\u007f]+$",
+          "description": "Optional output filename including extension"
+        },
+        "content_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "MIME type for raw Base64; data URLs provide it inline"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "upload_widget",
+    "description": "Open a secure file picker for uploading local media. MCP Apps hosts render the inline widget; other clients receive instructions for upload_file.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "_meta": {
+      "ui": {
+        "resourceUri": "ui://kie/upload.html",
+        "visibility": [
+          "model"
+        ]
+      },
+      "ui/resourceUri": "ui://kie/upload.html"
     }
   },
   {
@@ -1693,19 +2217,19 @@
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing desired video content",
           "minLength": 1,
-          "maxLength": 2000
+          "maxLength": 2000,
+          "description": "Text prompt describing desired video content"
         },
         "imageUrls": {
           "type": "array",
-          "description": "Image URLs for image-to-video generation: 1 image (video unfolds around it) or 2 images (first=start frame, second=end frame)",
           "items": {
             "type": "string",
             "format": "uri"
           },
+          "minItems": 1,
           "maxItems": 2,
-          "minItems": 1
+          "description": "Image URLs for image-to-video generation: 1 image (video unfolds around it) or 2 images (first=start frame, second=end frame)"
         },
         "model": {
           "type": "string",
@@ -1713,13 +2237,13 @@
             "veo3",
             "veo3_fast"
           ],
-          "description": "Model type: veo3 (quality) or veo3_fast (cost-efficient)",
-          "default": "veo3"
+          "default": "veo3",
+          "description": "Model type: veo3 (quality) or veo3_fast (cost-efficient)"
         },
         "watermark": {
           "type": "string",
-          "description": "Watermark text to add to video",
-          "maxLength": 100
+          "maxLength": 100,
+          "description": "Watermark text to add to video"
         },
         "aspectRatio": {
           "type": "string",
@@ -1728,14 +2252,14 @@
             "9:16",
             "Auto"
           ],
-          "description": "Video aspect ratio (16:9 supports 1080P)",
-          "default": "16:9"
+          "default": "16:9",
+          "description": "Video aspect ratio (16:9 supports 1080P)"
         },
         "seeds": {
           "type": "integer",
-          "description": "Random seed for consistent results",
           "minimum": 10000,
-          "maximum": 99999
+          "maximum": 99999,
+          "description": "Random seed for consistent results"
         },
         "callBackUrl": {
           "type": "string",
@@ -1744,18 +2268,19 @@
         },
         "enableFallback": {
           "type": "boolean",
-          "description": "Enable fallback mechanism for content policy failures (Note: fallback videos cannot use 1080P endpoint)",
-          "default": false
+          "default": false,
+          "description": "Enable fallback mechanism for content policy failures (Note: fallback videos cannot use 1080P endpoint)"
         },
         "enableTranslation": {
           "type": "boolean",
-          "description": "Auto-translate prompts to English for better results",
-          "default": true
+          "default": true,
+          "description": "Auto-translate prompts to English for better results"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1766,17 +2291,56 @@
       "properties": {
         "task_id": {
           "type": "string",
+          "minLength": 1,
           "description": "Veo3 task ID to get 1080p video for"
         },
         "index": {
           "type": "integer",
-          "description": "Video index (optional, for multiple video results)",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Video index (optional, for multiple video results)"
         }
       },
       "required": [
         "task_id"
-      ]
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "wait_for_task",
+    "description": "Wait for a generation task to complete in a single call, so you don't have to poll get_task_status repeatedly. Pass the task_id returned by any generation tool: it blocks until the result is ready (or the timeout) and returns the final URLs, streaming progress meanwhile. By default it polls the Kie API directly (no setup); if a callback rendezvous is configured (KIE_AI_RESULT_URL, rendezvous_url, or a KIE_AI_CALLBACK_URL ending in /kie/callback) it waits on that instead. Tip for long jobs: clients should enable resetTimeoutOnProgress with a generous maxTotalTimeout.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Task ID returned by a generation tool to wait for"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 600,
+          "default": 180,
+          "description": "Max seconds to wait before giving up"
+        },
+        "interval_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "default": 5,
+          "description": "Seconds between status checks while waiting"
+        },
+        "rendezvous_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional callback rendezvous result base URL (e.g. https://felo-workers.felo.workers.dev/kie/result). Omit to poll the Kie API directly (the default). When set, or when KIE_AI_RESULT_URL / a KIE_AI_CALLBACK_URL ending in /kie/callback is configured, it waits on the rendezvous instead"
+        }
+      },
+      "required": [
+        "task_id"
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1787,43 +2351,44 @@
       "properties": {
         "video_url": {
           "type": "string",
-          "description": "URL of the reference video (MP4, QUICKTIME, X-MATROSKA, max 10MB, max 30 seconds)",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the reference video (MP4, QUICKTIME, X-MATROSKA, max 10MB, max 30 seconds)"
         },
         "image_url": {
           "type": "string",
-          "description": "URL of the character image (JPEG, PNG, WEBP, max 10MB). Will be resized and center-cropped to match video aspect ratio.",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of the character image (JPEG, PNG, WEBP, max 10MB). Will be resized and center-cropped to match video aspect ratio."
         },
         "mode": {
           "type": "string",
-          "description": "Animation mode: 'animate' transfers motion/expressions from video to image, 'replace' swaps the character in video with the image",
           "enum": [
             "animate",
             "replace"
           ],
-          "default": "animate"
+          "default": "animate",
+          "description": "Animation mode: 'animate' transfers motion/expressions from video to image, 'replace' swaps the character in video with the image"
         },
         "resolution": {
           "type": "string",
-          "description": "Output resolution: 480p (~$0.03/sec), 580p (~$0.0475/sec), 720p (~$0.0625/sec)",
           "enum": [
             "480p",
             "580p",
             "720p"
           ],
-          "default": "480p"
+          "default": "480p",
+          "description": "Output resolution: 480p, 580p, or 720p"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "video_url",
         "image_url"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
@@ -1834,108 +2399,107 @@
       "properties": {
         "mode": {
           "type": "string",
-          "description": "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted.",
           "enum": [
             "text-to-video",
             "image-to-video",
             "reference-to-video",
             "video-edit"
-          ]
+          ],
+          "description": "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted."
         },
         "prompt": {
           "type": "string",
-          "description": "Text prompt for video generation (max 5000 characters)",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt for video generation (max 5000 characters)"
         },
         "negative_prompt": {
           "type": "string",
-          "description": "Negative prompt to describe content to avoid (max 500 characters)",
-          "maxLength": 500
+          "maxLength": 500,
+          "description": "Negative prompt to describe content to avoid (max 500 characters)"
         },
         "audio_url": {
           "type": "string",
-          "description": "Audio URL for text-to-video with audio (T2V mode only)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Audio URL for text-to-video with audio (T2V mode only)"
         },
         "first_frame_url": {
           "type": "string",
-          "description": "URL of first frame image for image-to-video mode",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of first frame image for image-to-video mode"
         },
         "last_frame_url": {
           "type": "string",
-          "description": "URL of last frame image for image-to-video mode",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of last frame image for image-to-video mode"
         },
         "first_clip_url": {
           "type": "string",
-          "description": "URL of first video clip for image-to-video mode",
-          "format": "uri"
+          "format": "uri",
+          "description": "URL of first video clip for image-to-video mode"
         },
         "driving_audio_url": {
           "type": "string",
-          "description": "Audio URL to drive facial expressions (I2V mode)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Audio URL to drive facial expressions (I2V mode)"
         },
         "reference_image": {
           "type": "array",
-          "description": "Reference images for reference-to-video mode (up to 5)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 5
+          "maxItems": 5,
+          "description": "Reference images for reference-to-video mode (up to 5)"
         },
         "reference_video": {
           "type": "array",
-          "description": "Reference videos for reference-to-video mode (up to 5)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 5
+          "maxItems": 5,
+          "description": "Reference videos for reference-to-video mode (up to 5)"
         },
         "reference_voice": {
           "type": "string",
-          "description": "Voice reference URL for R2V mode",
-          "format": "uri"
+          "format": "uri",
+          "description": "Voice reference URL for R2V mode"
         },
         "first_frame": {
           "type": "string",
-          "description": "First frame image URL for R2V mode",
-          "format": "uri"
+          "format": "uri",
+          "description": "First frame image URL for R2V mode"
         },
         "video_url_edit": {
           "type": "string",
-          "description": "Video URL to edit (video-edit mode)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Video URL to edit (video-edit mode)"
         },
         "reference_image_edit": {
           "type": "string",
-          "description": "Reference image URL for video-edit mode",
-          "format": "uri"
+          "format": "uri",
+          "description": "Reference image URL for video-edit mode"
         },
         "audio_setting": {
           "type": "string",
-          "description": "Audio handling for video-edit: auto or origin",
           "enum": [
             "auto",
             "origin"
-          ]
+          ],
+          "description": "Audio handling for video-edit: auto or origin"
         },
         "resolution": {
           "type": "string",
-          "description": "Video resolution",
           "enum": [
             "720p",
             "1080p"
           ],
-          "default": "1080p"
+          "default": "1080p",
+          "description": "Video resolution"
         },
         "ratio": {
           "type": "string",
-          "description": "Aspect ratio of the generated video",
           "enum": [
             "16:9",
             "9:16",
@@ -1943,61 +2507,63 @@
             "4:3",
             "3:4"
           ],
-          "default": "16:9"
+          "default": "16:9",
+          "description": "Aspect ratio of the generated video"
         },
         "duration": {
           "type": "integer",
-          "description": "Duration in seconds (2-15)",
           "minimum": 2,
           "maximum": 15,
-          "default": 5
+          "default": 5,
+          "description": "Duration in seconds (2-15)"
         },
         "prompt_extend": {
           "type": "boolean",
-          "description": "Enable prompt rewriting using LLM for better results",
-          "default": true
+          "default": true,
+          "description": "Enable prompt rewriting using LLM for better results"
         },
         "watermark": {
           "type": "boolean",
-          "description": "Add watermark to generated video",
-          "default": false
+          "default": false,
+          "description": "Add watermark to generated video"
         },
         "seed": {
           "type": "integer",
-          "description": "Random seed for reproducible results (0-2147483647)",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 2147483647,
+          "description": "Random seed for reproducible results (0-2147483647)"
         },
         "nsfw_checker": {
           "type": "boolean",
-          "description": "Enable NSFW content filter",
-          "default": false
+          "default": false,
+          "description": "Enable NSFW content filter"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   },
   {
     "name": "z_image",
-    "description": "Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), strong semantic understanding. Pricing: ~$0.004/image",
+    "description": "Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), and strong semantic understanding.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired image (max 5000 characters). Supports bilingual prompts.",
           "minLength": 1,
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt describing the desired image (max 5000 characters). Supports bilingual prompts."
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Aspect ratio for the generated image",
           "enum": [
             "1:1",
             "4:3",
@@ -2005,17 +2571,19 @@
             "16:9",
             "9:16"
           ],
-          "default": "1:1"
+          "default": "1:1",
+          "description": "Aspect ratio for the generated image"
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)"
         }
       },
       "required": [
         "prompt"
-      ]
+      ],
+      "additionalProperties": false
     }
   }
 ]

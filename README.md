@@ -34,6 +34,19 @@ The MCP server and the CLI are generated from the same tool registry, so both ex
 
 The MCP server runs locally over **stdio** by default, and can also run as a **remote HTTP service** (Streamable HTTP) so one shared instance serves many clients over the network. It ships with a **Dockerfile and a Coolify compose file** for one-step self-hosting ([deploy guide](docs/DEPLOY_HTTP.md)). See the **Remote / HTTP transport** section below.
 
+## Secure reference uploads
+
+- `upload_file` sends validated Base64 directly to Kie. The CLI can also read a
+  local path only beneath explicit `KIE_CLI_UPLOAD_ROOTS`. Arbitrary URL import
+  is intentionally unavailable.
+- `upload_widget` renders a minimal MCP Apps file picker when the host supports
+  `ui://` resources.
+- Remote operators may enable temporary capability storage with
+  `KIE_MCP_PUBLIC_BASE_URL`. Upload minting stays behind authenticated MCP;
+  one-use upload URLs stay in app metadata. Only an opaque `media_id` reaches
+  model content; the server resolves it to Kie immediately before submission.
+  See [the HTTP deployment guide](docs/DEPLOY_HTTP.md).
+
 ## Safe media workflow
 
 Version 4 makes cost control a server-side workflow instead of an agent instruction:
@@ -106,7 +119,7 @@ Same idea, different env vars (inside the `env` block, or as shell exports for t
 
 - **Categories:** `image`, `video`, `audio`, `utility`.
 - **Priority:** `ENABLED_TOOLS` > `TOOL_CATEGORIES` > `DISABLED_TOOLS` > all tools (default).
-- The utility tools (`list_tasks`, `get_task_status`) are always enabled and can't be disabled, they're how you track and poll your generations.
+- Utility tools, including task tracking and upload helpers, are always enabled and cannot be disabled.
 - MCP hides and rejects direct `image`, `video`, and `audio` tool calls by default. Use `prepare_media_generation`, host approval elicitation, and `submit_media_generation` instead. `KIE_AI_ALLOW_DIRECT_GENERATION=true` is the explicit legacy bypass when you intentionally disable these approval safeguards. Filtering still controls which generation tools can be plan targets.
 
 ## 🤖 Agent skill (optional)
@@ -202,6 +215,7 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
   - `kie://tools/<name>`: a Markdown reference for each tool (parameters, types, defaults), generated from its schema.
   - `kie://guides/image-models-comparison`, `kie://guides/video-models-comparison`, `kie://guides/quality-optimization`: model comparison and cost/quality guides.
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
+  - `ui://kie/upload.html`: sandboxed MCP Apps upload widget.
 
 ## Examples
 
@@ -337,7 +351,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"4.0.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"4.3.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via

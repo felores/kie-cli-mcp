@@ -57,6 +57,10 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `list_models` | Search source-backed model catalog metadata by capability or text |
 | `prepare_media_generation` | Persist a resolved, quoted plan, then request host form approval when supported without provider calls |
 | `submit_media_generation` | Submit one approved plan once, with at most four concurrent creates |
+| `upload_file` | Upload validated Base64 directly or read a CLI local path beneath `KIE_CLI_UPLOAD_ROOTS` |
+| `get_upload_url` | Mint bounded temporary HTTP capability URLs when the remote MCP transport is explicitly configured |
+| `finalize_upload` | App-only server-side resolution of an opaque `media_id` into a temporary Kie URL |
+| `upload_widget` | Open the minimal `ui://kie/upload.html` MCP Apps file picker |
 
 ### Image
 | Tool | Kie.ai Models | Status |
@@ -139,6 +143,9 @@ To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + 
 | Market API (jobs/createTask) | https://docs.kie.ai/market-api/quickstart |
 | Veo 3 API | https://docs.kie.ai/veo3-api/quickstart |
 | Suno API | https://docs.kie.ai/suno-api/quickstart |
+| File Upload Base64 | https://docs.kie.ai/file-upload-api/upload-file-base-64 |
+| File Upload URL | https://docs.kie.ai/file-upload-api/upload-file-url |
+| File Upload Stream | https://docs.kie.ai/file-upload-api/upload-file-stream |
 | Flux Kontext API | https://docs.kie.ai/flux-kontext-api/quickstart |
 | Runway API | https://docs.kie.ai/runway-api/quickstart |
 | File Upload API | https://docs.kie.ai/file-upload-api/quickstart |

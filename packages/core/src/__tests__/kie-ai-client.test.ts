@@ -67,6 +67,107 @@ describe("KieAiClient transport safety", () => {
   });
 });
 
+describe("KieAiClient file upload routing", () => {
+  const uploadConfig = {
+    ...config,
+    fileUploadBaseUrl: "https://uploads.example",
+  };
+
+  test("hands public URLs to Kie instead of fetching them", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 200,
+          msg: "ok",
+          data: { downloadUrl: "https://tempfile.redpandaai.co/result.png" },
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    const response = await new KieAiClient(uploadConfig).uploadFromUrl({
+      fileUrl: "https://public.example/reference.png",
+      uploadPath: "files/user-uploads",
+      fileName: "reference.png",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://uploads.example/api/file-url-upload",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      redirect: "error",
+      headers: {
+        Authorization: "Bearer test-key",
+        "Content-Type": "application/json",
+      },
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      fileUrl: "https://public.example/reference.png",
+      uploadPath: "files/user-uploads",
+      fileName: "reference.png",
+    });
+    expect(response.data?.fileUrl).toBe(
+      "https://tempfile.redpandaai.co/result.png",
+    );
+  });
+
+  test("uses the official Base64 endpoint and rejects redirect following", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 200,
+          data: { downloadUrl: "https://tempfile.redpandaai.co/result.png" },
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    await new KieAiClient(uploadConfig).uploadBase64({
+      base64Data: "data:image/png;base64,iVBORw0KGgo=",
+      uploadPath: "images/user-uploads",
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://uploads.example/api/file-base64-upload",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.redirect).toBe("error");
+  });
+
+  test("rejects unsafe operator upload base URLs before fetch", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch");
+    await expect(
+      new KieAiClient({
+        ...config,
+        fileUploadBaseUrl: "http://attacker.example",
+      }).uploadFromUrl({
+        fileUrl: "https://public.example/reference.png",
+        uploadPath: "files/user-uploads",
+      }),
+    ).rejects.toThrow(/must be HTTPS/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("rejects unsafe upload URLs returned by the provider", async () => {
+    jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 200,
+          data: { downloadUrl: "http://127.0.0.1/internal" },
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+    );
+    await expect(
+      new KieAiClient(uploadConfig).uploadFromUrl({
+        fileUrl: "https://public.example/reference.png",
+        uploadPath: "files/user-uploads",
+      }),
+    ).rejects.toThrow(/Kie upload result URL must be a public/);
+  });
+});
+
 describe("KieAiClient MiniMax H3 routing", () => {
   test("sends text-to-video requests to the exact H3 model and payload", async () => {
     const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(

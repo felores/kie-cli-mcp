@@ -31,6 +31,7 @@ import {
   ImageResponse,
   TaskResponse,
 } from "./types.js";
+import { validatePublicHttpUrl } from "./media-validation.js";
 
 export class KieAiRequestError extends Error {
   constructor(
@@ -47,6 +48,17 @@ export interface KieAiUploadFile {
   bytes: Uint8Array;
   filename: string;
   contentType: string;
+}
+
+export interface KieAiUploadResult {
+  fileName?: string;
+  filePath?: string;
+  downloadUrl?: string;
+  fileUrl?: string;
+  fileSize?: number;
+  mimeType?: string;
+  uploadedAt?: string;
+  [key: string]: unknown;
 }
 
 export interface KieAiDownloadedFile {
@@ -137,6 +149,75 @@ export class KieAiClient {
     return value || this.config.callbackUrlFallback || undefined;
   }
 
+  private fileUploadEndpoint(path: string): string {
+    const rawBase = this.config.fileUploadBaseUrl ?? "https://kieai.redpandaai.co";
+    const parsed = new URL(rawBase);
+    const isLoopback =
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "::1";
+    if (
+      parsed.username ||
+      parsed.password ||
+      parsed.search ||
+      parsed.hash ||
+      (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopback))
+    ) {
+      throw new Error("KIE_AI_FILE_UPLOAD_BASE_URL must be HTTPS without credentials, query, or fragment.");
+    }
+    let pathname = parsed.pathname.replace(/\/+$/, "");
+    if (pathname.endsWith("/api/v1")) pathname = pathname.slice(0, -"/api/v1".length);
+    if (pathname && pathname !== "/") {
+      throw new Error("KIE_AI_FILE_UPLOAD_BASE_URL must not contain an application path.");
+    }
+    parsed.pathname = path;
+    return parsed.toString();
+  }
+
+  private async uploadRequest(
+    endpoint: string,
+    body: BodyInit,
+    contentType?: string,
+  ): Promise<KieAiResponse<KieAiUploadResult>> {
+    const response = await fetch(this.fileUploadEndpoint(endpoint), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiKey}`,
+        ...(contentType ? { "Content-Type": contentType } : {}),
+      },
+      body,
+      redirect: "error",
+      signal: AbortSignal.timeout(this.config.timeout),
+    });
+    let data: KieAiResponse<KieAiUploadResult>;
+    try {
+      data = (await response.json()) as KieAiResponse<KieAiUploadResult>;
+    } catch {
+      throw new KieAiRequestError(
+        `HTTP ${response.status}: The provider returned an invalid upload response.`,
+        response.status,
+      );
+    }
+    if (!response.ok) {
+      throw new KieAiRequestError(
+        `HTTP ${response.status}: ${providerMessage(data, "The provider rejected the file upload.")}`,
+        response.status,
+        data.code,
+      );
+    }
+    if (data.data?.downloadUrl && !data.data.fileUrl) {
+      data.data.fileUrl = data.data.downloadUrl;
+    }
+    const resultUrl = data.data?.downloadUrl ?? data.data?.fileUrl;
+    if (resultUrl) {
+      const parsed = validatePublicHttpUrl(resultUrl, "Kie upload result URL");
+      if (parsed.protocol !== "https:") {
+        throw new Error("Kie upload result URL must use HTTPS.");
+      }
+    }
+    return data;
+  }
+
   private async makeRequest<T>(
     endpoint: string,
     method: "GET" | "POST" = "POST",
@@ -193,45 +274,19 @@ export class KieAiClient {
 
   async uploadFile(
     file: KieAiUploadFile,
-  ): Promise<KieAiResponse<{ fileUrl: string }>> {
-    const baseUrl = (
-      this.config.fileUploadBaseUrl ?? "https://kieai.redpandaai.co"
-    ).replace(/\/+$/, "");
-    const endpoint = baseUrl.endsWith("/api/v1")
-      ? `${baseUrl.slice(0, -"/api/v1".length)}/api/file-stream-upload`
-      : `${baseUrl}/api/file-stream-upload`;
+    uploadPath = "images/user-uploads",
+  ): Promise<KieAiResponse<KieAiUploadResult>> {
     const form = new FormData();
     form.append(
       "file",
       new Blob([file.bytes as unknown as BlobPart], { type: file.contentType }),
       file.filename,
     );
-    form.append("uploadPath", "images");
+    form.append("uploadPath", uploadPath);
+    form.append("fileName", file.filename);
 
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${this.config.apiKey}` },
-        body: form,
-        signal: AbortSignal.timeout(this.config.timeout),
-      });
-      let data: KieAiResponse<{ fileUrl: string }>;
-      try {
-        data = (await response.json()) as KieAiResponse<{ fileUrl: string }>;
-      } catch {
-        throw new KieAiRequestError(
-          `HTTP ${response.status}: The provider returned an invalid upload response.`,
-          response.status,
-        );
-      }
-      if (!response.ok) {
-        throw new KieAiRequestError(
-          `HTTP ${response.status}: ${providerMessage(data, "The provider rejected the file upload.")}`,
-          response.status,
-          data.code,
-        );
-      }
-      return data;
+      return await this.uploadRequest("/api/file-stream-upload", form);
     } catch (error) {
       if (error instanceof KieAiRequestError || isAbortError(error)) {
         throw error;
@@ -241,6 +296,30 @@ export class KieAiClient {
       }
       throw error;
     }
+  }
+
+  async uploadBase64(request: {
+    base64Data: string;
+    uploadPath: string;
+    fileName?: string;
+  }): Promise<KieAiResponse<KieAiUploadResult>> {
+    return this.uploadRequest(
+      "/api/file-base64-upload",
+      JSON.stringify(request),
+      "application/json",
+    );
+  }
+
+  async uploadFromUrl(request: {
+    fileUrl: string;
+    uploadPath: string;
+    fileName?: string;
+  }): Promise<KieAiResponse<KieAiUploadResult>> {
+    return this.uploadRequest(
+      "/api/file-url-upload",
+      JSON.stringify(request),
+      "application/json",
+    );
   }
 
   async downloadFile(

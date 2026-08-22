@@ -33,6 +33,19 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 
 El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
 
+## Carga segura de referencias
+
+- `upload_file` envía Base64 validado directamente a Kie. El CLI también puede
+  leer una ruta local solo bajo `KIE_CLI_UPLOAD_ROOTS`. La importación arbitraria
+  desde URLs no está disponible.
+- `upload_widget` muestra un selector minimalista de MCP Apps cuando el host
+  admite recursos `ui://`.
+- Operadores remotos pueden habilitar almacenamiento temporal con capacidades
+  usando `KIE_MCP_PUBLIC_BASE_URL`. La creación ocurre dentro del MCP
+  autenticado. Los capabilities quedan fuera del contenido visible al modelo y
+  solo un `media_id` opaco pasa por la conversación. Consulta
+  [la guía HTTP](docs/DEPLOY_HTTP.md).
+
 ## 🚀 Inicio rápido
 
 Agrega Kie.ai a tu cliente MCP. Elige cuántas herramientas quieres cargar:
@@ -94,7 +107,7 @@ Misma idea, distintas variables de entorno (dentro del bloque `env`, o como expo
 
 - **Categorías:** `image`, `video`, `audio`, `utility`.
 - **Prioridad:** `ENABLED_TOOLS` > `TOOL_CATEGORIES` > `DISABLED_TOOLS` > todas las herramientas (default).
-- Las herramientas de utilidad (`list_tasks`, `get_task_status`) están siempre activas y no se pueden desactivar, son como rastreas y consultas tus generaciones.
+- Las herramientas de utilidad, incluyendo seguimiento y carga, están siempre activas y no se pueden desactivar.
 - MCP oculta y rechaza por defecto las llamadas directas a herramientas de `image`, `video` y `audio`. Usa `prepare_media_generation`, la elicitación de aprobación del host y `submit_media_generation`. `KIE_AI_ALLOW_DIRECT_GENERATION=true` es el bypass explícito de legado cuando decides desactivar estas salvaguardas de aprobación. El filtrado todavía controla qué herramientas de generación pueden ser objetivos del plan.
 
 ## 🤖 Agent skill (opcional)
@@ -185,7 +198,8 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - **Recursos:**
   - `kie://tools/<name>`: una referencia en Markdown por herramienta (parámetros, tipos, defaults), generada desde su schema.
   - `kie://guides/image-models-comparison`, `kie://guides/video-models-comparison`, `kie://guides/quality-optimization`: comparativas de modelos y guías de costo/calidad.
-  - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
+- `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
+- `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
 ## Ejemplos
 
@@ -315,7 +329,7 @@ Actívalo con `MCP_TRANSPORT=http` o `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"4.0.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"4.3.0"}
 ```
 
 Un solo endpoint `/mcp` (POST + GET/SSE + DELETE), sesiones con estado vía

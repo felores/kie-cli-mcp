@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2026-08-22
+
+### Added
+- Added `upload_file` to MCP 4.3.0 and CLI 0.7.0. Base64 media is bounded and
+  signature-validated before Kie receives it. CLI local paths require an
+  explicit `KIE_CLI_UPLOAD_ROOTS` boundary. Arbitrary URL import is not exposed.
+- Added optional temporary HTTP storage through `get_upload_url`. Authenticated
+  MCP calls mint high-entropy upload and download capabilities. Uploads stream
+  to private temporary files with exact byte, MIME, signature, quota and TTL
+  checks. Only an opaque `media_id` enters app/model content; the server creates
+  a bounded read capability immediately before Kie fetches it.
+- Added the `upload_widget` MCP Apps resource at `ui://kie/upload.html`, using
+  the stable `text/html;profile=mcp-app` contract, a session grant for app-only helpers,
+  restrictive resource CSP and a plain-text fallback for non-Apps clients.
+
+### Security
+- Temporary browser uploads require explicit `KIE_MCP_PUBLIC_BASE_URL`, MCP
+  bearer auth, Host and Origin allowlists, and a separate upload Origin
+  allowlist. No widget or capability response contains the Kie or MCP bearer.
+- Replaced the unsafe PR #10 architecture instead of exposing unauthenticated
+  upload management routes or unrestricted server-side URL fetching.
+- MCP bearer and Origin checks now run before the JSON parser, so unauthorized
+  bodies are rejected without buffering or parsing.
+
+### Changed
+- Remote HTTP deployments can configure `MCP_ALLOWED_ORIGINS`; it is mandatory
+  together with `MCP_UPLOAD_ALLOWED_ORIGINS` when temporary storage is enabled.
+
 ## [4.2.0] - 2026-08-22
 
 ### Changed

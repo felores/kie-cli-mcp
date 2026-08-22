@@ -3,6 +3,8 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { startHttpServer } from "./http-transport.js";
+import { TemporaryUploadStore } from "./upload-storage.js";
+import { UPLOAD_WIDGET_HTML, UPLOAD_WIDGET_MIME } from "./upload-widget.js";
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -15,7 +17,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { requestMcpPlanApproval } from "./plan-approval.js";
 import { isMcpToolCallable } from "./tool-access.js";
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -30,6 +32,8 @@ import {
   toolToMarkdown,
   categoryPromptText,
   formatToolError,
+  uploadPathForMimeType,
+  UPLOAD_WIDGET_URI,
 } from "@felores/kie-ai-core";
 import { TaskDatabase } from "@felores/kie-ai-core/database";
 
@@ -87,7 +91,7 @@ export class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "4.2.0";
+  static readonly VERSION = "4.3.0";
 
   constructor() {
     // Initialize client with config from environment
@@ -98,6 +102,7 @@ export class KieAiMcpServer {
       callbackUrlFallback:
         process.env.KIE_AI_CALLBACK_URL_FALLBACK ||
         "https://proxy.kie.ai/mcp-callback",
+      fileUploadBaseUrl: process.env.KIE_AI_FILE_UPLOAD_BASE_URL,
     };
 
     if (!this.config.apiKey) {
@@ -262,6 +267,39 @@ export class KieAiMcpServer {
   }
 
   private setupHandlers(server: Server, toolContext: ToolContext): void {
+    const grants = new Map<string, { expiresAt: number; uses: number }>();
+    const grantHash = (value: string) =>
+      createHash("sha256").update(value).digest("hex");
+    const scopedContext: ToolContext = {
+      ...toolContext,
+      createWidgetGrant: () => {
+        const now = Date.now();
+        for (const [key, record] of grants) {
+          if (record.expiresAt <= now) grants.delete(key);
+        }
+        while (grants.size >= 16) {
+          const oldest = grants.keys().next().value as string | undefined;
+          if (!oldest) break;
+          grants.delete(oldest);
+        }
+        const grant = randomBytes(32).toString("base64url");
+        grants.set(grantHash(grant), {
+          expiresAt: now + 10 * 60 * 1000,
+          uses: 0,
+        });
+        return grant;
+      },
+      validateWidgetGrant: (grant) => {
+        const key = grantHash(grant);
+        const record = grants.get(key);
+        if (!record || record.expiresAt <= Date.now() || record.uses >= 4) {
+          grants.delete(key);
+          return false;
+        }
+        record.uses += 1;
+        return true;
+      },
+    };
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = TOOL_REGISTRY.filter((t) =>
         isMcpToolCallable(t, this.enabledTools),
@@ -269,6 +307,23 @@ export class KieAiMcpServer {
         name: t.name,
         description: t.description,
         inputSchema: toInputJsonSchema(t.schema),
+        ...(t.ui
+          ? {
+              _meta: {
+                ui: {
+                  ...(t.ui.resourceUri
+                    ? { resourceUri: t.ui.resourceUri }
+                    : {}),
+                  ...(t.ui.visibility
+                    ? { visibility: t.ui.visibility }
+                    : {}),
+                },
+                ...(t.ui.resourceUri
+                  ? { "ui/resourceUri": t.ui.resourceUri }
+                  : {}),
+              },
+            }
+          : {}),
       }));
       return { tools };
     });
@@ -307,7 +362,7 @@ export class KieAiMcpServer {
           request.params as { _meta?: { progressToken?: string | number } }
         )._meta?.progressToken;
         const requestContext: ToolContext = {
-          ...toolContext,
+          ...scopedContext,
           requestPlanApproval: (plan) => requestMcpPlanApproval(server, plan),
         };
         const ctx: ToolContext =
@@ -343,7 +398,8 @@ export class KieAiMcpServer {
     // Resource Handlers
     server.setRequestHandler(ListResourcesRequestSchema, async () => {
       const toolResources = TOOL_REGISTRY.filter((t) =>
-        isMcpToolCallable(t, this.enabledTools),
+        isMcpToolCallable(t, this.enabledTools) &&
+        (!t.ui?.visibility || t.ui.visibility.includes("model")),
       ).map((t) => ({
         uri: `kie://tools/${t.name}`,
         name: t.name,
@@ -353,6 +409,18 @@ export class KieAiMcpServer {
       }));
 
       const guideResources = [
+        ...(isMcpToolCallable(getTool("upload_widget")!, this.enabledTools)
+          ? [
+              {
+                uri: UPLOAD_WIDGET_URI,
+                name: "Secure Media Upload",
+                description:
+                  "Minimal MCP Apps file picker for temporary media uploads",
+                mimeType: UPLOAD_WIDGET_MIME,
+                annotations: { audience: ["user"], priority: 0.8 },
+              },
+            ]
+          : []),
         {
           uri: "kie://guides/image-models-comparison",
           name: "Image Models Comparison",
@@ -397,6 +465,37 @@ export class KieAiMcpServer {
 
     server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
       const { uri } = request.params;
+
+      if (uri === UPLOAD_WIDGET_URI) {
+        const widgetTool = getTool("upload_widget");
+        if (!widgetTool || !isMcpToolCallable(widgetTool, this.enabledTools)) {
+          throw new McpError(
+            ErrorCode.InvalidParams,
+            `Resource not found: ${uri}`,
+          );
+        }
+        const publicOrigin = scopedContext.getUploadPublicOrigin?.();
+        return {
+          contents: [
+            {
+              uri,
+              mimeType: UPLOAD_WIDGET_MIME,
+              text: UPLOAD_WIDGET_HTML,
+              _meta: {
+                ui: {
+                  csp: {
+                    connectDomains: publicOrigin ? [publicOrigin] : [],
+                    resourceDomains: [],
+                    frameDomains: [],
+                    baseUriDomains: [],
+                  },
+                  prefersBorder: true,
+                },
+              },
+            },
+          ],
+        };
+      }
 
       const toolMatch = uri.match(/^kie:\/\/tools\/(.+)$/);
       if (toolMatch) {
@@ -1194,9 +1293,55 @@ These guidelines ensure optimal balance between quality requirements and cost ma
   // Streamable HTTP transport (remote access). Each session gets its own Server
   // via createServer(); the shared client/db context is reused across sessions.
   runHttp(): void {
+    const publicBaseUrl = process.env.KIE_MCP_PUBLIC_BASE_URL;
+    const uploadStore = publicBaseUrl
+      ? new TemporaryUploadStore({
+          publicBaseUrl,
+          storageRoot: process.env.KIE_MCP_UPLOAD_DIR,
+          maxFileBytes: parseInt(
+            process.env.KIE_MCP_MAX_UPLOAD_BYTES || String(25 * 1024 * 1024),
+            10,
+          ),
+        })
+      : undefined;
+    if (uploadStore) {
+      const owner = "http-bearer-principal";
+      this.toolContext = {
+        ...this.toolContext,
+        createUploadCapability: (request) =>
+          uploadStore.createCapability({ ...request, owner }),
+        finalizeUpload: async (request) => {
+          const staged = await uploadStore.createProviderDownload({
+            mediaId: request.mediaId,
+            owner,
+          });
+          const response = await this.client.uploadFromUrl({
+            fileUrl: staged.url,
+            uploadPath: uploadPathForMimeType(staged.contentType),
+            fileName: staged.filename,
+          });
+          const downloadUrl =
+            response.data?.downloadUrl ?? response.data?.fileUrl;
+          if ((response.code !== 200 && response.code !== 0) || !downloadUrl) {
+            throw new Error(
+              response.msg || "Kie.ai did not return a finalized downloadUrl.",
+            );
+          }
+          await uploadStore.removeMedia(request.mediaId, owner);
+          return {
+            downloadUrl,
+            filename: staged.filename,
+            contentType: staged.contentType,
+            size: staged.size,
+          };
+        },
+        getUploadPublicOrigin: () => uploadStore.publicOrigin,
+      };
+    }
     startHttpServer({
       createServer: () => this.createServer(),
       version: KieAiMcpServer.VERSION,
+      uploadStore,
     });
   }
 }

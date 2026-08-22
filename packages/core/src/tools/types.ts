@@ -12,6 +12,8 @@ import type { PreparedGenerationPlan } from "../generation-plan.js";
  */
 export interface ToolResult {
   content: Array<{ type: "text"; text: string }>;
+  structuredContent?: Record<string, unknown>;
+  _meta?: Record<string, unknown>;
   isError?: boolean;
   [key: string]: unknown;
 }
@@ -19,6 +21,32 @@ export interface ToolResult {
 export interface PlanApprovalDecision {
   approved: boolean;
   reason: string;
+}
+
+export interface UploadCapabilityRequest {
+  filename: string;
+  contentType: string;
+  size: number;
+  owner: string;
+}
+
+export interface UploadCapability {
+  uploadUrl: string;
+  mediaId: string;
+  uploadExpiresAt: string;
+}
+
+export interface FinalizedUpload {
+  downloadUrl: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+export interface LocalUpload {
+  bytes: Uint8Array;
+  filename: string;
+  contentType: string;
 }
 
 /**
@@ -41,6 +69,19 @@ export interface ToolContext {
   ): ToolResult;
   /** Resolves a tool available to this adapter for approval-bound plan execution. */
   getTool(name: string): ToolDef | undefined;
+  /** Adapter-owned HTTP capability minting. Unavailable in stdio and CLI. */
+  createUploadCapability?(
+    request: UploadCapabilityRequest,
+  ): Promise<UploadCapability>;
+  finalizeUpload?(request: {
+    mediaId: string;
+    owner: string;
+  }): Promise<FinalizedUpload>;
+  readLocalUpload?(path: string, maxBytes: number): Promise<LocalUpload>;
+  createWidgetGrant?(): string;
+  validateWidgetGrant?(grant: string): boolean;
+  /** Public origin allowlisted in the MCP Apps resource CSP. */
+  getUploadPublicOrigin?(): string | undefined;
   /** Requests transport-specific approval for a persisted generation plan. */
   requestPlanApproval?(
     plan: PreparedGenerationPlan,
@@ -71,6 +112,11 @@ export interface ToolDef<S extends z.ZodTypeAny = z.ZodTypeAny> {
   category: ToolCategory;
   /** The only schema definition for this tool. MCP inputSchema is derived from it. */
   schema: S;
+  /** Optional MCP Apps presentation metadata. Other adapters ignore it. */
+  ui?: {
+    resourceUri?: string;
+    visibility?: Array<"model" | "app">;
+  };
   /** Returns the MCP content envelope. Validation/business logic lives here. */
   run(args: z.infer<S>, ctx: ToolContext): Promise<ToolResult>;
 }

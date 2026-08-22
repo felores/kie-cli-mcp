@@ -32,4 +32,27 @@ describe("HTTP transport security", () => {
       allowedHosts: [],
     })).not.toThrow();
   });
+
+  test("requires full browser and MCP boundaries when uploads are enabled", () => {
+    expect(() =>
+      validateHttpTransportSecurity({
+        host: "127.0.0.1",
+        token: "",
+        allowedHosts: [],
+        uploadEnabled: true,
+      }),
+    ).toThrow(
+      /MCP_ALLOWED_HOSTS and KIE_MCP_HTTP_TOKEN and MCP_ALLOWED_ORIGINS and MCP_UPLOAD_ALLOWED_ORIGINS are required/,
+    );
+    expect(() =>
+      validateHttpTransportSecurity({
+        host: "127.0.0.1",
+        token: "secret",
+        allowedHosts: ["127.0.0.1"],
+        allowedOrigins: ["https://host.example"],
+        uploadAllowedOrigins: ["https://sandbox.example"],
+        uploadEnabled: true,
+      }),
+    ).not.toThrow();
+  });
 });
