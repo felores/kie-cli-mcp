@@ -1294,14 +1294,25 @@ export class KieAiClient {
         };
         break;
 
+      case "image-to-image":
+        model = "grok-imagine-image-2-0/image-edit";
+        input = {
+          prompt: request.prompt,
+          aspect_ratio: request.aspect_ratio || "1:1",
+          image_urls: request.image_urls,
+        };
+        break;
+
       case "text-to-image":
-      default:
-        model = "grok-imagine/text-to-image";
+        model = "grok-imagine-image-2-0/text-to-image";
         input = {
           prompt: request.prompt,
           aspect_ratio: request.aspect_ratio || "1:1",
         };
         break;
+
+      default:
+        throw new Error(`Unsupported Grok Imagine generation mode: ${mode}`);
     }
 
     const jobRequest = {

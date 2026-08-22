@@ -1,6 +1,6 @@
 # Kie.ai Endpoints & MCP Tools Mapping
 
-> **Last Updated**: 2026-08-17
+> **Last Updated**: 2026-08-22
 > **Purpose**: Track Kie.ai API endpoints and their MCP/CLI tool implementation status.
 
 ## Overview
@@ -85,7 +85,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `happyhorse_video` | HappyHorse 1.0 (T2V/I2V/R2V/video-edit) | ✅ |
 | `hailuo_video` | MiniMax H3 (Hailuo 03: text/image/reference-to-video) | ✅ |
 | `kling_video` | Kling 3.0 (text/image-to-video, multi-shot, native audio) | ✅ |
-| `grok_imagine` | xAI Grok Imagine (text/image to image/video, upscale) | ✅ |
+| `grok_imagine` | xAI Grok Imagine Image 2.0 (text/image-to-image) plus Grok Imagine video and upscale | ✅ |
 | `infinitalk_lip_sync` | MeiGen-AI InfiniTalk (lip-sync talking video) | ✅ |
 | `kling_avatar` | Kuaishou Kling AI Avatar (talking avatar) | ✅ |
 | `omnihuman_video` | ByteDance OmniHuman 1.5 (image + audio avatar video) | ✅ |

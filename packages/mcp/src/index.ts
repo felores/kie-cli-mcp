@@ -73,7 +73,7 @@ export class KieAiMcpServer {
       "hailuo_video",
       "kling_video",
       "runway_aleph_video",
-      "grok_imagine", // xAI multimodal: text-to-image/video, image-to-video, upscale
+      "grok_imagine", // xAI multimodal: text/image-to-image, text/image-to-video, upscale
       "infinitalk_lip_sync", // MeiGen-AI lip sync video generator
       "kling_avatar", // Kuaishou talking avatar video generator
       "midjourney_generate", // Also generates videos (mj_video, mj_video_hd modes)
@@ -87,7 +87,7 @@ export class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "4.1.0";
+  static readonly VERSION = "4.2.0";
 
   constructor() {
     // Initialize client with config from environment

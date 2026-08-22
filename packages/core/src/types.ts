@@ -913,7 +913,8 @@ export const ZImageSchema = z.object({
 
 export type ZImageRequest = z.infer<typeof ZImageSchema>;
 
-// Grok Imagine - xAI multimodal image/video generation (text-to-image, text-to-video, image-to-video, upscale)
+// Grok Imagine - xAI multimodal image/video generation.
+// Image modes use Grok Imagine Image 2.0; video and upscale remain on Grok Imagine.
 export const GrokImagineSchema = z
   .object({
     prompt: z
@@ -923,13 +924,13 @@ export const GrokImagineSchema = z
       .describe(
         "Text prompt describing the desired content (required for text modes, optional for image-to-video)",
       ),
-    // Image-to-video mode: use image_urls OR task_id+index
+    // Image-to-video mode: use image_urls OR task_id+index. Image edit accepts up to five URLs.
     image_urls: z
       .array(z.string().url())
-      .max(1)
+      .max(5)
       .optional()
       .describe(
-        "Single image URL for image-to-video mode (alternative to task_id)",
+        "Reference image URLs. image-to-video accepts exactly one; image-to-image accepts one to five.",
       ),
     task_id: z
       .string()
@@ -948,23 +949,29 @@ export const GrokImagineSchema = z
       ),
     // Common parameters
     aspect_ratio: z
-      .enum(["2:3", "3:2", "1:1"])
-      .default("1:1")
-      .optional()
-      .describe("Aspect ratio for generated content"),
-    mode: z
-      .enum(["fun", "normal", "spicy"])
-      .default("normal")
+      .enum(["1:1", "2:3", "3:2", "16:9", "9:16", "auto"])
       .optional()
       .describe(
-        "Generation style: 'normal' (default), 'fun' (playful), 'spicy' (expressive, not available with external images)",
+        "Aspect ratio. Image 2.0 image modes default to 1:1; image-to-image also accepts auto.",
+      ),
+    mode: z
+      .enum(["fun", "normal", "spicy"])
+      .optional()
+      .describe(
+        "Video generation style: fun, normal, or spicy (spicy is not available with external images)",
       ),
     // Mode selection (auto-detected if not provided)
     generation_mode: z
-      .enum(["text-to-image", "text-to-video", "image-to-video", "upscale"])
+      .enum([
+        "text-to-image",
+        "image-to-image",
+        "text-to-video",
+        "image-to-video",
+        "upscale",
+      ])
       .optional()
       .describe(
-        "Explicit mode selection (auto-detected if not provided): text-to-image, text-to-video, image-to-video, or upscale",
+        "Explicit mode selection. image-to-image must be explicit; otherwise image_urls auto-detects image-to-video.",
       ),
     callBackUrl: z
       .string()
@@ -972,43 +979,63 @@ export const GrokImagineSchema = z
       .optional()
       .describe("Optional: URL for task completion notifications"),
   })
-  .refine(
-    (data) => {
-      // Upscale mode requires task_id only
-      if (data.generation_mode === "upscale") {
-        return !!data.task_id;
-      }
-      // Image-to-video needs image_urls OR task_id
-      if (data.generation_mode === "image-to-video") {
-        return (
-          (data.image_urls && data.image_urls.length > 0) || !!data.task_id
-        );
-      }
-      // Text modes require prompt
-      if (
-        data.generation_mode === "text-to-image" ||
-        data.generation_mode === "text-to-video"
-      ) {
-        return !!data.prompt;
-      }
-      // Auto-detect: if task_id without prompt = upscale, if image_urls = i2v, else text mode
-      if (data.task_id && !data.prompt && !data.image_urls) {
-        return true; // upscale
-      }
-      if (data.image_urls && data.image_urls.length > 0) {
-        return true; // image-to-video
-      }
-      if (data.prompt) {
-        return true; // text-to-image or text-to-video
-      }
-      return false;
-    },
-    {
-      message:
-        "Invalid parameters. Provide: 1) prompt for text-to-image/video, 2) image_urls or task_id+index for image-to-video, 3) task_id only for upscale",
-      path: [],
-    },
-  );
+  .superRefine((data, ctx) => {
+    const hasImages = (data.image_urls?.length ?? 0) > 0;
+    const effectiveMode =
+      data.generation_mode ??
+      (data.task_id && !data.prompt && !hasImages
+        ? "upscale"
+        : data.task_id || hasImages
+          ? "image-to-video"
+          : "text-to-video");
+    const addIssue = (message: string, path: string[]) =>
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message, path });
+    const reject = (field: keyof typeof data, message: string) => {
+      if (data[field] !== undefined) addIssue(message, [field]);
+    };
+    const imageRatios = ["1:1", "2:3", "3:2", "16:9", "9:16"];
+    const videoRatios = ["1:1", "2:3", "3:2"];
+
+    switch (effectiveMode) {
+      case "text-to-image":
+        if (!data.prompt) addIssue("prompt is required for text-to-image", ["prompt"]);
+        if (data.aspect_ratio && !imageRatios.includes(data.aspect_ratio)) addIssue("text-to-image aspect_ratio must be 1:1, 2:3, 3:2, 16:9, or 9:16", ["aspect_ratio"]);
+        reject("image_urls", "image_urls is not supported for text-to-image");
+        reject("task_id", "task_id is not supported for text-to-image");
+        reject("index", "index is not supported for text-to-image");
+        reject("mode", "mode is not supported for text-to-image");
+        break;
+      case "image-to-image":
+        if (!data.prompt) addIssue("prompt is required for image-to-image", ["prompt"]);
+        if (!hasImages) addIssue("image_urls with one to five URLs is required for image-to-image", ["image_urls"]);
+        reject("task_id", "task_id is not supported for image-to-image");
+        reject("index", "index is not supported for image-to-image");
+        reject("mode", "mode is not supported for image-to-image");
+        break;
+      case "text-to-video":
+        if (!data.prompt) addIssue("prompt is required for text-to-video", ["prompt"]);
+        if (data.aspect_ratio && !videoRatios.includes(data.aspect_ratio)) addIssue("text-to-video aspect_ratio must be 1:1, 2:3, or 3:2", ["aspect_ratio"]);
+        reject("image_urls", "image_urls is not supported for text-to-video");
+        reject("task_id", "task_id is not supported for text-to-video");
+        reject("index", "index is not supported for text-to-video");
+        break;
+      case "image-to-video":
+        if (!hasImages && !data.task_id) addIssue("image_urls or task_id is required for image-to-video", ["image_urls"]);
+        if (hasImages && data.image_urls?.length !== 1) addIssue("image-to-video accepts exactly one image URL", ["image_urls"]);
+        if (hasImages && data.task_id) addIssue("image-to-video accepts image_urls or task_id, not both", ["task_id"]);
+        if (data.index !== undefined && !data.task_id) addIssue("index requires task_id", ["index"]);
+        if (data.mode === "spicy" && hasImages) addIssue("mode spicy is not available with external images", ["mode"]);
+        break;
+      case "upscale":
+        if (!data.task_id) addIssue("task_id is required for upscale", ["task_id"]);
+        reject("prompt", "prompt is not supported for upscale");
+        reject("image_urls", "image_urls is not supported for upscale");
+        reject("index", "index is not supported for upscale");
+        reject("aspect_ratio", "aspect_ratio is not supported for upscale");
+        reject("mode", "mode is not supported for upscale");
+        break;
+    }
+  });
 
 export type GrokImagineRequest = z.infer<typeof GrokImagineSchema>;
 

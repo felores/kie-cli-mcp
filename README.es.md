@@ -159,7 +159,7 @@ Un catálogo unificado y siempre actualizado, organizado por trabajo:
 ### Edición de video y avatares
 
 - **Runway Aleph**: transformación y edición de video a video
-- **Midjourney** y **Grok Imagine**: imagen a video y generación estilizada
+- **Midjourney** y **Grok Imagine**: imagen a video, generación estilizada y edición de imágenes con Grok Imagine Image 2.0
 - **Wan Animate**: animación y reemplazo de personajes
 - **OmniHuman 1.5**, **Kling Avatar** e **InfiniTalk**: avatares hablantes y sincronización labial
 

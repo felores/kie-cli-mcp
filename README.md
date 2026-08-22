@@ -175,7 +175,7 @@ A unified, always-current catalog organized by job:
 ### Video editing and avatars
 
 - **Runway Aleph**: video-to-video transformation and editing
-- **Midjourney** and **Grok Imagine**: image-to-video and stylized generation
+- **Midjourney** and **Grok Imagine**: image-to-video, stylized generation, and Grok Imagine Image 2.0 image editing
 - **Wan Animate**: character animation and replacement
 - **OmniHuman 1.5**, **Kling Avatar**, and **InfiniTalk**: talking avatars and lip sync
 

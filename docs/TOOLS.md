@@ -263,19 +263,19 @@ Create Gemini Omni videos or reusable Omni characters and voices from multimodal
 
 ### grok_imagine
 
-Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.
+Generate images and videos using xAI's Grok Imagine (5 modes: Image 2.0 text-to-image, Image 2.0 image-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `prompt` | string | no | Text prompt describing the desired content (required for text modes, optional for image-to-video) |
-| `image_urls` | array | no | Single image URL for image-to-video mode (alternative to task_id) |
+| `image_urls` | array | no | Reference image URLs. image-to-video accepts exactly one; image-to-image accepts one to five. |
 | `task_id` | string | no | Task ID from a previous Grok generation (for upscale or image-to-video from generated image) |
 | `index` | integer | no | Image index from task_id (0-5, Grok generates 6 images per task) |
-| `aspect_ratio` | `2:3` / `3:2` / `1:1` | no | Aspect ratio for generated content (default: `"1:1"`) |
-| `mode` | `fun` / `normal` / `spicy` | no | Generation style: 'normal' (default), 'fun' (playful), 'spicy' (expressive, not available with external images) (default: `"normal"`) |
-| `generation_mode` | `text-to-image` / `text-to-video` / `image-to-video` / `upscale` | no | Explicit mode selection (auto-detected if not provided): text-to-image, text-to-video, image-to-video, or upscale |
+| `aspect_ratio` | `1:1` / `2:3` / `3:2` / `16:9` / `9:16` / `auto` | no | Aspect ratio. Image 2.0 image modes default to 1:1; image-to-image also accepts auto. |
+| `mode` | `fun` / `normal` / `spicy` | no | Video generation style: fun, normal, or spicy (spicy is not available with external images) |
+| `generation_mode` | `text-to-image` / `image-to-image` / `text-to-video` / `image-to-video` / `upscale` | no | Explicit mode selection. image-to-image must be explicit; otherwise image_urls auto-detects image-to-video. |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications |
 
 ### hailuo_video

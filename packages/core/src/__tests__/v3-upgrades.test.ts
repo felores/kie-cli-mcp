@@ -7,6 +7,7 @@ import {
   SunoGenerateSchema,
   OmniHumanVideoSchema,
   GeminiOmniSchema,
+  GrokImagineSchema,
 } from "../types.js";
 
 // ──────────────────────────────────────────────
@@ -157,6 +158,112 @@ describe("NanoBananaImageSchema (Nano Banana 2)", () => {
         expect(result.data.image_input).toBeUndefined();
       }
     });
+  });
+});
+
+describe("GrokImagineSchema (Grok Imagine Image 2.0)", () => {
+  const imageUrl = "https://example.com/reference.png";
+
+  it("keeps prompt-only auto detection compatible with text-to-video", () => {
+    expect(GrokImagineSchema.safeParse({ prompt: "A fox runs" }).success).toBe(
+      true,
+    );
+  });
+
+  it("keeps image URL auto detection compatible with image-to-video", () => {
+    expect(
+      GrokImagineSchema.safeParse({ image_urls: [imageUrl] }).success,
+    ).toBe(true);
+  });
+
+  it("accepts Image 2.0 text-to-image and defaults its required provider ratio", () => {
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "text-to-image",
+        prompt: "A studio portrait",
+        aspect_ratio: "16:9",
+      }).success,
+    ).toBe(true);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "text-to-image",
+        prompt: "A studio portrait",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts Image 2.0 image-to-image with one to five URLs and auto ratio", () => {
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-image",
+        prompt: "Paint this in watercolor",
+        image_urls: Array.from({ length: 5 }, (_, index) =>
+          `https://example.com/reference-${index}.png`,
+        ),
+        aspect_ratio: "auto",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects invalid image mode combinations", () => {
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-image",
+        prompt: "Paint this in watercolor",
+        image_urls: [imageUrl],
+      }).success,
+    ).toBe(true);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-image",
+        prompt: "Paint this in watercolor",
+        image_urls: [imageUrl],
+        aspect_ratio: "1:1",
+        task_id: "old-task",
+      }).success,
+    ).toBe(false);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-video",
+        image_urls: [imageUrl, "https://example.com/second.png"],
+      }).success,
+    ).toBe(false);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-video",
+        image_urls: [imageUrl],
+        task_id: "old-task",
+      }).success,
+    ).toBe(false);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-video",
+        image_urls: [imageUrl],
+        index: 1,
+      }).success,
+    ).toBe(false);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "image-to-video",
+        image_urls: [imageUrl],
+        mode: "spicy",
+      }).success,
+    ).toBe(false);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "text-to-image",
+        prompt: "A studio portrait",
+        aspect_ratio: "1:1",
+        image_urls: [imageUrl],
+      }).success,
+    ).toBe(false);
+    expect(
+      GrokImagineSchema.safeParse({
+        generation_mode: "upscale",
+        task_id: "old-task",
+        prompt: "Do not accept this",
+      }).success,
+    ).toBe(false);
   });
 });
 

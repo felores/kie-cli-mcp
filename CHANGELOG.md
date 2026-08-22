@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.2.0] - 2026-08-22
+
+### Changed
+- `grok_imagine` now sends text-to-image requests to Grok Imagine Image 2.0
+  (`grok-imagine-image-2-0/text-to-image`) instead of the retired legacy image
+  endpoint. The tool supplies `1:1` when `aspect_ratio` is omitted.
+- Added explicit `image-to-image` routing through Grok Imagine Image 2.0 image
+  edit (`grok-imagine-image-2-0/image-edit`). It requires `prompt` and one to
+  five `image_urls`; image URLs without this explicit mode continue to mean
+  image-to-video for backward compatibility.
+- Image pricing remains `unknown` because no source-backed exact rate-card
+  formula is available.
+
 ## [4.1.0] - 2026-08-22
 
 ### Added

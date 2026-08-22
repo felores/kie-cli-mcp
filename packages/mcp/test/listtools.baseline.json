@@ -589,23 +589,23 @@
   },
   {
     "name": "grok_imagine",
-    "description": "Generate images and videos using xAI's Grok Imagine (4 modes: text-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video. Pricing: ~$0.10 per 6-second video",
+    "description": "Generate images and videos using xAI's Grok Imagine (5 modes: Image 2.0 text-to-image, Image 2.0 image-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.",
     "inputSchema": {
       "type": "object",
       "properties": {
         "prompt": {
           "type": "string",
-          "description": "Text prompt describing the desired content (required for text modes, optional for image-to-video)",
-          "maxLength": 5000
+          "maxLength": 5000,
+          "description": "Text prompt describing the desired content (required for text modes, optional for image-to-video)"
         },
         "image_urls": {
           "type": "array",
-          "description": "Single image URL for image-to-video mode (alternative to task_id)",
           "items": {
             "type": "string",
             "format": "uri"
           },
-          "maxItems": 1
+          "maxItems": 5,
+          "description": "Reference image URLs. image-to-video accepts exactly one; image-to-image accepts one to five."
         },
         "task_id": {
           "type": "string",
@@ -613,46 +613,49 @@
         },
         "index": {
           "type": "integer",
-          "description": "Image index from task_id (0-5, Grok generates 6 images per task)",
           "minimum": 0,
-          "maximum": 5
+          "maximum": 5,
+          "description": "Image index from task_id (0-5, Grok generates 6 images per task)"
         },
         "aspect_ratio": {
           "type": "string",
-          "description": "Aspect ratio for generated content",
           "enum": [
+            "1:1",
             "2:3",
             "3:2",
-            "1:1"
+            "16:9",
+            "9:16",
+            "auto"
           ],
-          "default": "1:1"
+          "description": "Aspect ratio. Image 2.0 image modes default to 1:1; image-to-image also accepts auto."
         },
         "mode": {
           "type": "string",
-          "description": "Generation style: 'normal' (default), 'fun' (playful), 'spicy' (expressive, not available with external images)",
           "enum": [
             "fun",
             "normal",
             "spicy"
           ],
-          "default": "normal"
+          "description": "Video generation style: fun, normal, or spicy (spicy is not available with external images)"
         },
         "generation_mode": {
           "type": "string",
-          "description": "Explicit mode selection (auto-detected if not provided): text-to-image, text-to-video, image-to-video, or upscale",
           "enum": [
             "text-to-image",
+            "image-to-image",
             "text-to-video",
             "image-to-video",
             "upscale"
-          ]
+          ],
+          "description": "Explicit mode selection. image-to-image must be explicit; otherwise image_urls auto-detects image-to-video."
         },
         "callBackUrl": {
           "type": "string",
-          "description": "Optional: URL for task completion notifications",
-          "format": "uri"
+          "format": "uri",
+          "description": "Optional: URL for task completion notifications"
         }
-      }
+      },
+      "additionalProperties": false
     }
   },
   {

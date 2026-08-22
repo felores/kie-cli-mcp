@@ -228,3 +228,63 @@ describe("KieAiClient Seedance 2.5 routing", () => {
     });
   });
 });
+
+describe("KieAiClient Grok Imagine routing", () => {
+  const response = () =>
+    new Response(JSON.stringify({ code: 200, data: { taskId: "task-1" } }), {
+      headers: { "content-type": "application/json" },
+    });
+
+  test.each([
+    [
+      "Image 2.0 text-to-image",
+      {
+        generation_mode: "text-to-image" as const,
+        prompt: "A cinematic portrait",
+      },
+      "grok-imagine-image-2-0/text-to-image",
+      { prompt: "A cinematic portrait", aspect_ratio: "1:1" },
+    ],
+    [
+      "Image 2.0 image-to-image",
+      {
+        generation_mode: "image-to-image" as const,
+        prompt: "Paint this in watercolor",
+        image_urls: ["https://example.com/reference.png"],
+      },
+      "grok-imagine-image-2-0/image-edit",
+      {
+        prompt: "Paint this in watercolor",
+        aspect_ratio: "1:1",
+        image_urls: ["https://example.com/reference.png"],
+      },
+    ],
+    [
+      "prompt-only auto text-to-video",
+      { prompt: "A fox runs" },
+      "grok-imagine/text-to-video",
+      { prompt: "A fox runs", aspect_ratio: "1:1", mode: "normal" },
+    ],
+    [
+      "image URL auto image-to-video",
+      { image_urls: ["https://example.com/first.png"] },
+      "grok-imagine/image-to-video",
+      { image_urls: ["https://example.com/first.png"], mode: "normal" },
+    ],
+    [
+      "task-only auto upscale",
+      { task_id: "previous-task" },
+      "grok-imagine/upscale",
+      { task_id: "previous-task" },
+    ],
+  ])("routes %s to the expected model and input", async (_name, request, model, input) => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(response());
+
+    await new KieAiClient(config).generateGrokImagine(request);
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      model,
+      input,
+    });
+  });
+});
