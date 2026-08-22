@@ -6,6 +6,8 @@ import { elevenlabsTtsfxTool } from "./elevenlabs_ttsfx.js";
 import { flux2ImageTool } from "./flux2_image.js";
 import { fluxKontextImageTool } from "./flux_kontext_image.js";
 import { getTaskStatusTool } from "./get_task_status.js";
+import { getUploadUrlTool } from "./get_upload_url.js";
+import { uploadWidgetTool } from "./upload_widget.js";
 import { gptImage2Tool } from "./gpt_image_2.js";
 import { geminiOmniTool } from "./gemini_omni.js";
 import { grokImagineTool } from "./grok_imagine.js";
@@ -27,6 +29,7 @@ import { runwayAlephVideoTool } from "./runway_aleph_video.js";
 import { sunoGenerateMusicTool } from "./suno_generate_music.js";
 import { submitMediaGenerationTool } from "./submit_media_generation.js";
 import { topazUpscaleImageTool } from "./topaz_upscale_image.js";
+import { uploadFileTool } from "./upload_file.js";
 import { veo3GenerateVideoTool } from "./veo3_generate_video.js";
 import { veo3Get1080pVideoTool } from "./veo3_get_1080p_video.js";
 import { waitForTaskTool } from "./wait_for_task.js";
@@ -49,8 +52,10 @@ export const TOOL_REGISTRY: ToolDef[] = [
   flux2ImageTool,
   fluxKontextImageTool,
   getTaskStatusTool,
-  geminiOmniTool,
+  getUploadUrlTool,
+  uploadWidgetTool,
   gptImage2Tool,
+  geminiOmniTool,
   grokImagineTool,
   hailuoVideoTool,
   happyhorseVideoTool,
@@ -70,6 +75,7 @@ export const TOOL_REGISTRY: ToolDef[] = [
   sunoGenerateMusicTool,
   submitMediaGenerationTool,
   topazUpscaleImageTool,
+  uploadFileTool,
   veo3GenerateVideoTool,
   veo3Get1080pVideoTool,
   waitForTaskTool,

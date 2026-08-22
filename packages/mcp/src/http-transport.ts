@@ -4,6 +4,8 @@ import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 
+import { createUploadRouter } from "./upload-storage.js";
+
 export interface HttpTransportOptions {
   // Factory that builds a fresh MCP Server per session (SDK Servers bind to one
   // transport), wired to the shared client/db context.
@@ -54,6 +56,9 @@ export function startHttpServer(opts: HttpTransportOptions): void {
 
   const app = express();
   app.use(express.json({ limit: "10mb" }));
+
+  // Mount local upload storage (no auth needed for GET /files, token-gated for PUT)
+  app.use(createUploadRouter());
 
   // Active sessions, keyed by Mcp-Session-Id.
   const transports = new Map<string, StreamableHTTPServerTransport>();

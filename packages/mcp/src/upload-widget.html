@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Reference File</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    h2 { margin-bottom: 16px; font-size: 18px; font-weight: 600; }
+    .drop-zone {
+      border: 2px dashed #4a5568;
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #63b3ed;
+      background: rgba(99, 179, 237, 0.1);
+    }
+    .drop-zone.has-file {
+      border-color: #48bb78;
+      background: rgba(72, 187, 120, 0.1);
+    }
+    #file-input { display: none; }
+    .file-info {
+      display: none;
+      margin-top: 8px;
+      padding: 8px;
+      background: #2d3748;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .file-info.show { display: block; }
+    .file-name { font-weight: 500; color: #63b3ed; }
+    .file-size { color: #a0aec0; margin-top: 4px; }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #4299e1;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #3182ce; }
+    button:disabled {
+      background: #4a5568;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    .status.show { display: block; }
+    .status.success { background: #276749; color: #c6f6d5; }
+    .status.error { background: #742a2a; color: #fed7d7; }
+    .status.loading { background: #2b6cb0; color: #bee3f8; }
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #bee3f8;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📎 Upload Reference File</h2>
+    <div class="drop-zone" id="drop-zone">
+      <p>Drag & drop a file here</p>
+      <p style="margin-top: 8px; font-size: 13px; color: #a0aec0;">or click to browse</p>
+    </div>
+    <input type="file" id="file-input" accept="image/*,video/*,audio/*">
+    <div class="file-info" id="file-info">
+      <div class="file-name" id="file-name"></div>
+      <div class="file-size" id="file-size"></div>
+    </div>
+    <button id="upload-btn" disabled>Upload File</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const uploadBtn = document.getElementById('upload-btn');
+    const status = document.getElementById('status');
+
+    let selectedFile = null;
+
+    // Click to browse
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFile(e.target.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = formatSize(file.size);
+      fileInfo.classList.add('show');
+      dropZone.classList.add('has-file');
+      uploadBtn.disabled = false;
+      hideStatus();
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    function showStatus(type, message) {
+      status.className = 'status show ' + type;
+      if (type === 'loading') {
+        status.innerHTML = '<span class="spinner"></span>' + message;
+      } else {
+        status.textContent = message;
+      }
+    }
+
+    function hideStatus() {
+      status.className = 'status';
+    }
+
+    // Upload
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      uploadBtn.disabled = true;
+      showStatus('loading', 'Uploading ' + selectedFile.name + '...');
+
+      try {
+        // Step 1: Get upload token from MCP server
+        const tokenRes = await fetch('/upload/token?filename=' +
+          encodeURIComponent(selectedFile.name) +
+          '&content_type=' + encodeURIComponent(selectedFile.type));
+
+        if (!tokenRes.ok) throw new Error('Failed to get upload token');
+        const tokenData = await tokenRes.json();
+
+        // Step 2: PUT file to upload URL
+        const uploadRes = await fetch(tokenData.upload_url, {
+          method: 'PUT',
+          headers: { 'Content-Type': selectedFile.type },
+          body: selectedFile
+        });
+
+        if (!uploadRes.ok) throw new Error('Upload failed');
+        const uploadData = await uploadRes.json();
+
+        // Copy to clipboard
+        let clipboardMsg = '';
+        try {
+          await navigator.clipboard.writeText(uploadData.file_url);
+          clipboardMsg = ' URL copied to clipboard.';
+        } catch(e) {
+          clipboardMsg = ' Click the link to copy.';
+        }
+
+        showStatus('success', '✅ Uploaded!' + clipboardMsg + ' Window closes in 3s...');
+
+        // Auto-close after 3 seconds
+        setTimeout(() => window.close(), 3000);
+
+        // Step 3: Notify MCP host (if available)
+        if (window.parent !== window) {
+          window.parent.postMessage({
+            type: 'mcp-tool-result',
+            tool: 'upload_widget',
+            result: {
+              success: true,
+              file_url: uploadData.file_url,
+              filename: selectedFile.name,
+              size: selectedFile.size
+            }
+          }, '*');
+        }
+
+      } catch (err) {
+        showStatus('error', '❌ Upload failed: ' + err.message);
+        uploadBtn.disabled = false;
+      }
+    });
+
+    // Click link to copy manually (fallback)
+    document.addEventListener('click', async (e) => {
+      if (e.target.tagName === 'A' && e.target.href.includes('/files/')) {
+        e.preventDefault();
+        try {
+          await navigator.clipboard.writeText(e.target.href);
+          e.target.textContent = '✅ Copied!';
+          setTimeout(() => window.close(), 1500);
+        } catch(err) {
+          window.location.href = e.target.href;
+        }
+      }
+    });
+  </script>
+</body>
+</html>
