@@ -22,7 +22,36 @@
 >
 > Esto lo resuelve: carga **solo las herramientas que realmente usas** con `KIE_AI_ENABLED_TOOLS` (o categorías completas con `KIE_AI_TOOL_CATEGORIES`). Tu contexto queda liviano y pagas exactamente la superficie que necesitas, ni más ni menos.
 >
-> Y el **CLI (`kie-cli`) cuesta cero tokens de contexto** hasta que lo llamas: el agente descubre comandos on-demand con `kie-cli --help` en vez de cargar schemas. Un registro, dos superficies, footprint mínimo.
+## ✨ Novedades en MCP 5.0.0
+
+Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
+`@modelcontextprotocol/node`) con **Node >= 20** y **zod v4**:
+
+- **Doble era de protocolo.** El servidor negocia la versión del protocolo por
+  cliente: los clientes de la era 2025 siguen funcionando sin cambios,
+  mientras que el vocabulario de 2026-07-28 (`server/discover`, cache hints,
+  extensiones, schemas estructurados, tasks) se sirve apenas el SDK levante su
+  tope de negociación.
+- **Resultados estructurados.** Las llamadas fallidas llegan como `isError:
+  true` con contenido de error estructurado; las herramientas de generación,
+  subida y planificación exponen `structuredContent` (`task_id`, `media_id`,
+  `plan_id`) y anuncian `outputSchema` en `tools/list`.
+- **Schemas de entrada modernos.** El `inputSchema` de cada herramienta se
+  genera como JSON Schema 2020-12, el dialecto que apunta MCP 2026-07-28.
+- **Aprobación MRTR.** En hosts de la era 2026 la aprobación es un flujo
+  `input_required` de varias rondas; los hosts de 2025 conservan la
+  elicitación push.
+- **`server/discover` + cache hints + negociación de extensiones.** El
+  servidor responde discovery con sus versiones soportadas, capacidades e
+  instrucciones, y anuncia la extensión MCP Apps que controla el recurso del
+  widget de subida.
+- **Tasks oficiales de MCP (opt-in).** `KIE_AI_MCP_TASKS=true` expone la
+  capacidad `tasks` y las llamadas `tools/call` en modo tarea respaldadas por
+  un motor en proceso espejado en la base SQLite local; las herramientas de
+  estado legacy siguen disponibles en todos los modos.
+- **OAuth está diseñado, aún no implementado.** Ver
+  [docs/OAUTH.md](docs/OAUTH.md) para la arquitectura diferida de servidor de
+  recursos (se activa solo con un despliegue remoto público).
 
 ## Dos formas de usarlo (un núcleo compartido)
 
@@ -47,6 +76,8 @@ El servidor MCP corre localmente por **stdio** por defecto, y también puede cor
   [la guía HTTP](docs/DEPLOY_HTTP.md).
 
 ## 🚀 Inicio rápido
+
+**Requiere Node.js >= 20** para ejecutar el servidor MCP.
 
 Agrega Kie.ai a tu cliente MCP. Elige cuántas herramientas quieres cargar:
 
@@ -108,6 +139,7 @@ Misma idea, distintas variables de entorno (dentro del bloque `env`, o como expo
 - **Categorías:** `image`, `video`, `audio`, `utility`.
 - **Prioridad:** `ENABLED_TOOLS` > `TOOL_CATEGORIES` > `DISABLED_TOOLS` > todas las herramientas (default).
 - Las herramientas de utilidad, incluyendo seguimiento y carga, están siempre activas y no se pueden desactivar.
+- Tasks oficiales de MCP (experimental, opt-in): define `KIE_AI_MCP_TASKS=true` para declarar la capacidad `tasks`, el `execution.taskSupport` por herramienta y la superficie `tools/call` en modo tarea. El SDK de MCP publicado todavía negocia como máximo 2025-11-25, así que hoy las llamadas en modo tarea se rechazan con un error claro en vez de ejecutarse; la superficie se activa cuando el SDK negocie la revisión 2026-07-28. Las herramientas de estado legacy `get_task_status` / `list_tasks` / `wait_for_task` siguen disponibles en todos los modos.
 - MCP oculta y rechaza por defecto las llamadas directas a herramientas de `image`, `video` y `audio`. Usa `prepare_media_generation`, la elicitación de aprobación del host y `submit_media_generation`. `KIE_AI_ALLOW_DIRECT_GENERATION=true` es el bypass explícito de legado cuando decides desactivar estas salvaguardas de aprobación. El filtrado todavía controla qué herramientas de generación pueden ser objetivos del plan.
 
 ## 🤖 Agent skill (opcional)
@@ -304,11 +336,10 @@ Es un monorepo de npm workspaces: `packages/core` (registro compartido privado, 
 </details>
 
 <details>
-<summary><strong>🌐 Transporte remoto / HTTP (v4.0.0+)</strong></summary>
+<summary><strong>🌐 Transporte remoto / HTTP (v5.0.0+)</strong></summary>
 
 El servidor usa **stdio** por defecto (un proceso local por cliente). También
-puede correr como **servicio HTTP remoto** vía **Streamable HTTP** (spec MCP
-2025-11-25).
+puede correr como **servicio HTTP remoto** vía **Streamable HTTP**. Desde v5.0.0 está construido sobre los paquetes SDK v2 de MCP y sirve a clientes de la era 2025 y de 2026-07-28 mediante negociación de protocolo.
 
 **Por qué usarlo:**
 - **Una sola instancia compartida para varios clientes**: hospédalo una vez y
@@ -389,6 +420,7 @@ El servidor expone los códigos de respuesta de Kie.ai (solo trata `code === 200
 - [docs/DATABASE.md](docs/DATABASE.md): base de datos y ciclo de vida de tareas
 - [docs/ADMIN.md](docs/ADMIN.md): despliegue y configuración de entorno
 - [docs/INTELLIGENCE.md](docs/INTELLIGENCE.md): detección inteligente de modo y optimización de costo
+- [docs/OAUTH.md](docs/OAUTH.md): diseño diferido de OAuth MCP para futuros despliegues remotos públicos
 
 ## Soporte
 
