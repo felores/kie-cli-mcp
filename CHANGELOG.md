@@ -30,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (MRTR) seam: prepared plans without a decision become input_required
   results carrying the approval form, and the host answers on the retried
   call. Legacy 2025-era hosts keep the push-style elicitation flow.
+- Protocol-modern discovery: the server answers `server/discover` with the
+  supported versions, capabilities and instructions, declares the MCP Apps
+  extension used by the upload widget, and advertises cache hints for the
+  stable `tools/list` and `server/discover` results. Tools with guaranteed
+  structured content (preparation, upload capabilities, and generation task
+  results) now advertise `outputSchema`.
 
 
 ### Security
