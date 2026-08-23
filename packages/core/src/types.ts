@@ -2358,7 +2358,9 @@ export const PrepareMediaGenerationSchema = z.object({
     .array(
       z.object({
         tool: z.string().min(1).describe("Registered generation tool name"),
-        args: z.record(z.unknown()).describe("Arguments for that tool"),
+        args: z
+          .record(z.string(), z.unknown())
+          .describe("Arguments for that tool"),
       }),
     )
     .min(1)

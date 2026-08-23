@@ -28,8 +28,7 @@
   },
   "dependencies": {
     "sqlite3": "^5.1.6",
-    "zod": "^3.24.0",
-    "zod-to-json-schema": "^3.23.5"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/jest": "^29.5.8",
