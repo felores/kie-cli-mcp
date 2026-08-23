@@ -36,6 +36,7 @@ import {
   principalApprovalId,
   STDIO_PRINCIPAL,
 } from "./principal.js";
+import { normalizeToolResult } from "./result-normalization.js";
 import { isMcpToolCallable } from "./tool-access.js";
 import { TemporaryUploadStore } from "./upload-storage.js";
 import { UPLOAD_WIDGET_HTML, UPLOAD_WIDGET_MIME } from "./upload-widget.js";
@@ -373,7 +374,7 @@ export class KieAiMcpServer {
                 },
               };
 
-        return await tool.run(args, ctx);
+        return normalizeToolResult(await tool.run(args, ctx));
       } catch (error) {
         if (error instanceof McpError) {
           throw error;
