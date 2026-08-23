@@ -26,6 +26,11 @@ import {
   Server,
 } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import {
+  appsExtensions,
+  buildDiscoverPayload,
+  toolOutputSchema,
+} from "./discovery.js";
 import { startHttpServer } from "./http-transport.js";
 import {
   approvalInputRequired,
@@ -144,12 +149,18 @@ export class KieAiMcpServer {
         version: KieAiMcpServer.VERSION,
       },
       {
-        // SDK 1.x requires declaring the capabilities whose request handlers we
-        // register below (tools, resources, prompts).
+        // SDK v2: declare the capabilities whose request handlers are
+        // registered below, the MCP Apps extension used by the upload widget,
+        // and the modern cache hints for stable list/discovery results.
         capabilities: {
           tools: {},
           resources: {},
           prompts: {},
+          extensions: appsExtensions,
+        },
+        cacheHints: {
+          "tools/list": { cacheScope: "private", ttlMs: 60_000 },
+          "server/discover": { cacheScope: "private", ttlMs: 60_000 },
         },
       },
     );
@@ -293,6 +304,7 @@ export class KieAiMcpServer {
       validateWidgetGrant: (grant) =>
         this.widgetGrants.validateGrant(owner, grant),
     };
+
     server.setRequestHandler("tools/list", async () => {
       const tools = TOOL_REGISTRY.filter((t) =>
         isMcpToolCallable(t, this.enabledTools),
@@ -302,6 +314,13 @@ export class KieAiMcpServer {
         inputSchema: toInputJsonSchema(
           t.schema,
         ) as ListToolsResult["tools"][number]["inputSchema"],
+        ...(toolOutputSchema(t)
+          ? {
+              outputSchema: toolOutputSchema(
+                t,
+              ) as ListToolsResult["tools"][number]["outputSchema"],
+            }
+          : {}),
         ...(t.ui
           ? {
               _meta: {
@@ -628,6 +647,12 @@ export class KieAiMcpServer {
           },
         ],
       };
+    });
+
+    server.setRequestHandler("server/discover", async () => {
+      return buildDiscoverPayload(
+        "Kie.ai media generation. Prepare media plans explicitly and approve them before submission; poll with get_task_status.",
+      );
     });
   }
 
