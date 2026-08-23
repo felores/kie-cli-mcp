@@ -5,17 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [5.0.0] - 2026-08-22
 
 ### Changed
+- Migrated the MCP server to the split SDK v2 packages (`@modelcontextprotocol/server`,
+  `@modelcontextprotocol/node`, `@modelcontextprotocol/client` in tests) on the
+  2026-07-28 specification line. The server negotiates the protocol version per
+  client and continues serving 2025-era clients (dual era). Node >= 20 required.
+- Upgraded the workspace to zod v4. Tool `inputSchema` is now derived with
+  zod4's native `toJSONSchema` (JSON Schema 2020-12, the dialect MCP 2026-07-28
+  targets) while keeping defaulted fields optional and unknown parameters
+  tolerated.
 - Adopted Biome for formatting, import organization, and linting across the
   monorepo. The `check` script (Biome) runs in the Verify workflow; type
   checking remains authoritative via `tsc --noEmit`.
 - MCP state is now owned by a transport-independent caller principal instead of
   an individual Server instance: the approval owner, generation plans, widget
   grants, and staged uploads stay addressable across fresh Server instances of
-  the same session. This is the first step toward the stateless SDK v2
-  transport.
+  the same session.
+- Structured results: failed tool calls return `isError: true` with structured
+  error content, and task-bearing successes expose `structuredContent`
+  (`task_id`, `status`, `api_type`) through a central normalization seam.
 
 ### Security
 - Streamable HTTP uploads are now scoped per session owner; one session can no

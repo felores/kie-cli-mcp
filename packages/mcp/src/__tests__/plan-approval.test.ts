@@ -1,6 +1,6 @@
 import type { PreparedGenerationPlan } from "@felores/kie-ai-core";
 import { describe, expect, jest, test } from "@jest/globals";
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import type { Server } from "@modelcontextprotocol/server";
 import { requestMcpPlanApproval } from "../plan-approval.js";
 
 const plan: PreparedGenerationPlan = {
