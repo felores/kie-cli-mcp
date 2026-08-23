@@ -272,7 +272,7 @@ if (apiType === 'veo3') {
 
 ### Release Workflow (Canonical)
 
-1. Bump each affected public package independently: MCP changes require `packages/mcp/package.json` and `packages/mcp/src/index.ts`; CLI changes require `packages/cli/package.json`. Update `package-lock.json`, `CHANGELOG.md`, README model references, `docs/TOOLS.md` (`npm run docs`), and relevant `docs/kie/` contracts.
+1. Bump each affected public package independently: MCP changes require `packages/mcp/package.json` and `packages/mcp/src/index.ts`; CLI changes require `packages/cli/package.json`. Update `package-lock.json`, `CHANGELOG.md`, model/feature references in BOTH READMEs (`README.md` and `README.es.md`), `docs/TOOLS.md` (`npm run docs`), and relevant `docs/kie/` contracts.
 2. Verify locally: `npm run typecheck`, `npm run build`, `npm test`, and `npm pack -w @felores/kie-ai-mcp-server --dry-run` plus `npm pack -w @felores/kie-cli --dry-run` for affected packages.
 3. Commit the release preparation on a branch, push it, open a pull request, and merge only after the required `Verify` check passes. Update local `main`, create and push tag `vX.Y.Z`, then create the GitHub Release with notes from the changelog.
 4. Publish affected packages to npm with a fresh OTP when manual publishing is required. The release workflow also publishes to npm and GitHub Packages (`https://npm.pkg.github.com/`); monitor its run to completion.
@@ -287,7 +287,7 @@ if (apiType === 'veo3') {
    - `packages/mcp/package.json` → `"version": "X.Y.Z"`
    - `packages/mcp/src/index.ts` → `version: "X.Y.Z"` (in Server constructor)
    - `CHANGELOG.md` → Add new version section with changes
-   - `README.md` → Update changelog section
+   - `README.md` → Update changelog section (and mirror in `README.es.md`)
    - CLI bumps require `packages/cli/package.json`.
 
 3. **Pre-publish checklist**:
@@ -352,13 +352,13 @@ if (apiType === 'veo3') {
 - **Package.json files field** - Only dist/, README.md, LICENSE are published (configured)
 - **GitHub Actions secrets**: Ensure `NPM_TOKEN` and `GITHUB_TOKEN` are properly configured
 - **Release automation**: Tag pushes trigger automated publishing to both NPM and GitHub Packages
-- **Repository consistency**: Keep README, CHANGELOG, and package.json in sync
+- **Repository consistency**: Keep both READMEs (`README.md`, `README.es.md`), CHANGELOG, and package.json in sync
 
 ## Release Best Practices
 
 ### Pre-Release Checklist
 1. **Version consistency**: All version files updated (package.json, index.ts, CHANGELOG.md)
-2. **Documentation**: README.md reflects current tool names and features
+2. **Documentation**: `README.md` and `README.es.md` reflect current tool names and features
 3. **Build verification**: Agent runs `npm run build` - must succeed without errors
 4. **Type checking**: Agent runs `npx tsc --noEmit` - must have no errors
 5. **Tests**: Agent runs `npm test` - must pass (if tests exist)
@@ -634,7 +634,7 @@ async generateMidjourney(request: MidjourneyGenerateRequest) {
    - Provide helpful error messages for invalid combinations
 
 4. **Update Documentation**:
-   - Add tool to README.md with examples
+   - Add tool to README.md and README.es.md with examples
    - Update CHANGELOG.md
    - Document mode detection logic in AGENTS.md
 
