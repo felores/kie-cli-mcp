@@ -70,7 +70,7 @@ const SUBMIT_OUTPUT_SCHEMA = z.toJSONSchema(
       z.object({
         index: z.number(),
         tool: z.string(),
-        task_id: z.string().optional(),
+        taskId: z.string().optional(),
         error: z.string().optional(),
         result: z.unknown().optional(),
       }),
