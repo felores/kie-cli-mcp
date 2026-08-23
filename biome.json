@@ -11,6 +11,7 @@
       "!**/.scratchpad",
       "!**/coverage",
       "!**/dist",
+      "!.beads",
       "!package-lock.json",
       "!.mcp.json",
       "!packages/core/src/pricing/evidence-manifest.json",
