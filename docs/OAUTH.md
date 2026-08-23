@@ -36,6 +36,11 @@ Both are currently deferred. Nothing in this document changes today's behavior.
   (`principalApprovalId`, Phase 1). With per-owner tenant state, the same
   principal scopes tasks, plans, reservations, uploads, and widget grants —
   no new identity plumbing in tools.
+- **Audience and resource validation:** a token minted for another server is
+  rejected. The verifier must enforce the token's `aud`/token-type claims
+  against the protected resource identifier advertised in the RFC 9728
+  resource metadata (`getOAuthProtectedResourceMetadataUrl`), and the RS must
+  not accept tokens lacking that binding.
 - **Provisioning:** after handshake, sessions bind to the authenticated
   subject; unauthenticated requests get an `authorization_required` discovery
   answer, then the normal OAuth flow.
