@@ -18,6 +18,12 @@ import {
 } from "@felores/kie-ai-core";
 import { TaskDatabase } from "@felores/kie-ai-core/database";
 import {
+  CancelTaskRequestSchema,
+  GetTaskPayloadRequestSchema,
+  ListTasksRequestSchema,
+} from "@modelcontextprotocol/core";
+import {
+  type CallToolResult,
   type ListResourcesResult,
   type ListToolsResult,
   ProtocolError,
@@ -42,6 +48,7 @@ import {
   STDIO_PRINCIPAL,
 } from "./principal.js";
 import { normalizeToolResult } from "./result-normalization.js";
+import { type MCPTask, TaskEngine, taskToWire } from "./tasks.js";
 import { isMcpToolCallable } from "./tool-access.js";
 import { TemporaryUploadStore } from "./upload-storage.js";
 import { UPLOAD_WIDGET_HTML, UPLOAD_WIDGET_MIME } from "./upload-widget.js";
@@ -55,6 +62,8 @@ export class KieAiMcpServer {
   private enabledTools: Set<string>;
   private toolContext: Omit<ToolContext, "approvalContext">;
   private readonly widgetGrants = new WidgetGrantService();
+  private taskEngine!: TaskEngine;
+  private readonly tasksEnabled = process.env.KIE_AI_MCP_TASKS === "true";
   // Utility tools are derived from the registry's `category` field, not a
   // hardcoded list, so they are always-on by definition: any tool marked
   // `category: "utility"` (get_task_status, list_tasks, wait_for_task) cannot be
@@ -121,6 +130,7 @@ export class KieAiMcpServer {
 
     this.client = new KieAiClient(this.config);
     this.db = new TaskDatabase(process.env.KIE_AI_DB_PATH);
+    this.taskEngine = new TaskEngine(this.db);
     this.enabledTools = this.getEnabledTools();
     this.toolContext = {
       client: this.client,
@@ -157,6 +167,7 @@ export class KieAiMcpServer {
           resources: {},
           prompts: {},
           extensions: appsExtensions,
+          ...(this.tasksEnabled ? { tasks: {} } : {}),
         },
         cacheHints: {
           "tools/list": { cacheScope: "private", ttlMs: 60_000 },
@@ -314,6 +325,9 @@ export class KieAiMcpServer {
         inputSchema: toInputJsonSchema(
           t.schema,
         ) as ListToolsResult["tools"][number]["inputSchema"],
+        ...(this.tasksEnabled
+          ? { execution: { taskSupport: "optional" as const } }
+          : {}),
         ...(toolOutputSchema(t)
           ? {
               outputSchema: toolOutputSchema(
@@ -399,6 +413,38 @@ export class KieAiMcpServer {
                 },
               };
 
+        const taskParam = (
+          request.params as { task?: { ttl?: number; pollInterval?: number } }
+        ).task;
+        if (taskParam) {
+          if (!this.tasksEnabled) {
+            throw new ProtocolError(
+              ProtocolErrorCode.InvalidRequest,
+              "Task mode is disabled. Set KIE_AI_MCP_TASKS=true to enable official MCP Tasks.",
+            );
+          }
+          const negotiated = server.getNegotiatedProtocolVersion();
+          if (negotiated === undefined || negotiated < "2026-07-28") {
+            // The published SDK validates task results against the 2025-era
+            // schema; starting a task here would orphan it (the response is
+            // rejected after the engine starts), so refuse before running.
+            throw new ProtocolError(
+              ProtocolErrorCode.InvalidRequest,
+              "Task mode requires the 2026-07-28 protocol revision, which the installed MCP SDK cannot negotiate yet.",
+            );
+          }
+          // Official MCP Tasks: run the tool asynchronously and return the
+          // task descriptor; clients poll tasks/result for the original
+          // result. The progress sink and plan-approval seam stay out of the
+          // async run (task mode has no retry round).
+          const task = this.taskEngine.start(
+            name,
+            async () =>
+              normalizeToolResult(await tool.run(args, requestContext)),
+            taskParam,
+          );
+          return { task: taskToWire(task) } as unknown as CallToolResult;
+        }
         const toolResult = normalizeToolResult(await tool.run(args, ctx));
         if (toolResult.structuredContent?.input_required === true) {
           const plan = toolResult._meta?.["kie/approval-plan"] as
@@ -663,6 +709,47 @@ export class KieAiMcpServer {
         "Kie.ai media generation. Prepare media plans explicitly and approve them before submission; poll with get_task_status.",
       );
     });
+
+    if (this.tasksEnabled) {
+      // Official MCP Tasks: the result of a task-mode tools/call, the active
+      // task list, and cancellation. Only registered when the capability is
+      // enabled (KIE_AI_MCP_TASKS=true).
+      const notFoundTask = (): Record<string, unknown> => ({
+        taskId: "not-found",
+        status: "failed",
+        ttl: 0,
+        pollInterval: 0,
+        createdAt: new Date(0).toISOString(),
+        lastUpdatedAt: new Date(0).toISOString(),
+        statusMessage: "Task not found or expired.",
+      });
+      server.setRequestHandler(
+        "tasks/result",
+        { params: GetTaskPayloadRequestSchema, result: undefined },
+        async (request) => {
+          const task = this.taskEngine.get(request.params.taskId);
+          if (!task) return notFoundTask();
+          if (task.status === "completed" && task.result) return task.result;
+          return taskToWire(task);
+        },
+      );
+      server.setRequestHandler(
+        "tasks/list",
+        { params: ListTasksRequestSchema, result: undefined },
+        async () => ({
+          tasks: this.taskEngine.list().map(taskToWire),
+        }),
+      );
+      server.setRequestHandler(
+        "tasks/cancel",
+        { params: CancelTaskRequestSchema, result: undefined },
+        async (request) => {
+          const task = this.taskEngine.cancel(request.params.taskId);
+          if (!task) return { task: notFoundTask() };
+          return { task: taskToWire(task) };
+        },
+      );
+    }
   }
 
   // Dynamic Resource Methods

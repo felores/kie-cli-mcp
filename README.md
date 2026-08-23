@@ -120,7 +120,9 @@ Same idea, different env vars (inside the `env` block, or as shell exports for t
 - **Categories:** `image`, `video`, `audio`, `utility`.
 - **Priority:** `ENABLED_TOOLS` > `TOOL_CATEGORIES` > `DISABLED_TOOLS` > all tools (default).
 - Utility tools, including task tracking and upload helpers, are always enabled and cannot be disabled.
+- Official MCP Tasks are experimental and opt-in: set `KIE_AI_MCP_TASKS=true` to declare the `tasks` capability, per-tool `execution.taskSupport`, and the task-mode `tools/call` surface. The published MCP SDK still negotiates at most 2025-11-25, so task-mode calls are currently refused with a clear error instead of running; the surface activates once the SDK negotiates the 2026-07-28 revision. Legacy `get_task_status` / `list_tasks` / `wait_for_task` remain available in all modes.
 - MCP hides and rejects direct `image`, `video`, and `audio` tool calls by default. Use `prepare_media_generation`, host approval elicitation, and `submit_media_generation` instead. `KIE_AI_ALLOW_DIRECT_GENERATION=true` is the explicit legacy bypass when you intentionally disable these approval safeguards. Filtering still controls which generation tools can be plan targets.
+- MCP hides and rejects direct `image`, `video`, and `audio` tool calls by default. Use `prepare_media_generation`, host approval elicitation, and `submit_media_generation` instead. `KIE_AI_ALLOW_DIRECT_GENERATION=true` is the explicit legacy bypass when you intentionally disable these approval safeguards. Filtering still controls which generation tools can be plan targets. Use `prepare_media_generation`, host approval elicitation, and `submit_media_generation` instead. `KIE_AI_ALLOW_DIRECT_GENERATION=true` is the explicit legacy bypass when you intentionally disable these approval safeguards. Filtering still controls which generation tools can be plan targets.
 
 ## 🤖 Agent skill (optional)
 
