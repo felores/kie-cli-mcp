@@ -39,6 +39,12 @@ export const finalizeUploadTool: ToolDef<typeof FinalizeUploadSchema> = {
             ),
           },
         ],
+        structuredContent: {
+          download_url: finalized.downloadUrl,
+          filename: finalized.filename,
+          content_type: finalized.contentType,
+          size: finalized.size,
+        },
       };
     } catch (error) {
       return ctx.formatError("finalize_upload", error, {

@@ -171,6 +171,11 @@ export const submitMediaGenerationTool: ToolDef<
             ),
           },
         ],
+        structuredContent: {
+          plan_id: planId,
+          request_hash: stored.requestHash,
+          results,
+        },
       };
     } catch (error) {
       return ctx.formatError("submit_media_generation", error, {

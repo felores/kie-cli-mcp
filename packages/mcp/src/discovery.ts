@@ -53,6 +53,31 @@ const PREPARE_OUTPUT_SCHEMA = z.toJSONSchema(
   }),
 );
 
+const FINALIZE_OUTPUT_SCHEMA = z.toJSONSchema(
+  z.object({
+    download_url: z.string(),
+    filename: z.string(),
+    content_type: z.string(),
+    size: z.number(),
+  }),
+);
+
+const SUBMIT_OUTPUT_SCHEMA = z.toJSONSchema(
+  z.object({
+    plan_id: z.string(),
+    request_hash: z.string(),
+    results: z.array(
+      z.object({
+        index: z.number(),
+        tool: z.string(),
+        task_id: z.string().optional(),
+        error: z.string().optional(),
+        result: z.unknown().optional(),
+      }),
+    ),
+  }),
+);
+
 const TASK_BEARING_CATEGORIES = new Set(["image", "video", "audio"]);
 
 /** Output schema for a tool, when its structured content is guaranteed. */
@@ -62,6 +87,8 @@ export function toolOutputSchema(tool: {
 }): Record<string, unknown> | undefined {
   if (tool.name === "prepare_media_generation") return PREPARE_OUTPUT_SCHEMA;
   if (tool.name === "get_upload_url") return UPLOAD_OUTPUT_SCHEMA;
+  if (tool.name === "finalize_upload") return FINALIZE_OUTPUT_SCHEMA;
+  if (tool.name === "submit_media_generation") return SUBMIT_OUTPUT_SCHEMA;
   if (TASK_BEARING_CATEGORIES.has(tool.category)) return TASK_OUTPUT_SCHEMA;
   return undefined;
 }

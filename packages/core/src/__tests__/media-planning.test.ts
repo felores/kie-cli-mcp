@@ -310,6 +310,7 @@ describe("media planning", () => {
         success: false,
         error: expect.stringContaining("not approved"),
       });
+      void submitted;
       expect(client.generateNanoBananaImage).not.toHaveBeenCalled();
     } finally {
       await cleanup();
@@ -572,6 +573,13 @@ describe("media planning", () => {
       const submission = readResult(submitted);
       expect(submission.success).toBe(true);
       expect(submission.results as unknown[]).toHaveLength(6);
+      expect(submitted.structuredContent).toMatchObject({
+        plan_id: planId,
+        request_hash: stored!.requestHash,
+      });
+      const submittedResults = submitted.structuredContent?.results;
+      expect(Array.isArray(submittedResults)).toBe(true);
+      expect((submittedResults as unknown[]).length).toBe(6);
       expect(client.generateNanoBananaImage).toHaveBeenCalledTimes(6);
       expect(maximum).toBeLessThanOrEqual(4);
       expect(
