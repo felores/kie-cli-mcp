@@ -49,9 +49,6 @@ Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
   capacidad `tasks` y las llamadas `tools/call` en modo tarea respaldadas por
   un motor en proceso espejado en la base SQLite local; las herramientas de
   estado legacy siguen disponibles en todos los modos.
-- **OAuth está diseñado, aún no implementado.** Ver
-  [docs/OAUTH.md](docs/OAUTH.md) para la arquitectura diferida de servidor de
-  recursos (se activa solo con un despliegue remoto público).
 
 ## Dos formas de usarlo (un núcleo compartido)
 
@@ -420,7 +417,6 @@ El servidor expone los códigos de respuesta de Kie.ai (solo trata `code === 200
 - [docs/DATABASE.md](docs/DATABASE.md): base de datos y ciclo de vida de tareas
 - [docs/ADMIN.md](docs/ADMIN.md): despliegue y configuración de entorno
 - [docs/INTELLIGENCE.md](docs/INTELLIGENCE.md): detección inteligente de modo y optimización de costo
-- [docs/OAUTH.md](docs/OAUTH.md): diseño diferido de OAuth MCP para futuros despliegues remotos públicos
 
 ## Soporte
 
