@@ -117,5 +117,8 @@ Thumbs.db
 # Agent scratchpad (experiments, codemods)
 .scratchpad/
 
+# Beads (bd) issue tracking workspace; tool retired, guard against daemon recreation
+.beads/
+
 # Firecrawl local artifacts
 .firecrawl/
