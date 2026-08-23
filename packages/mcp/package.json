@@ -60,7 +60,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "express": "^4.21.2",
     "sqlite3": "^5.1.6",
-    "zod": "^3.24.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@felores/kie-ai-core": "*",
