@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Structured results: failed tool calls return `isError: true` with structured
   error content, and task-bearing successes expose `structuredContent`
   (`task_id`, `status`, `api_type`) through a central normalization seam.
+- Plan approval now works on 2026-07-28 hosts through the multi-round-trip
+  (MRTR) seam: prepared plans without a decision become input_required
+  results carrying the approval form, and the host answers on the retried
+  call. Legacy 2025-era hosts keep the push-style elicitation flow.
+
 
 ### Security
 - Streamable HTTP uploads are now scoped per session owner; one session can no

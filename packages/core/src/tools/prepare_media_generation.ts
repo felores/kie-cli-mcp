@@ -39,6 +39,43 @@ function pendingResult(
   };
 }
 
+/**
+ * Modern-protocol result: host input still required. The MCP adapter converts
+ * this into an `input_required` multi-round-trip return. The plan travels in
+ * `_meta` so the adapter can rebuild the approval form for the round trip.
+ */
+function approvalRequiredResult(
+  plan: ReturnType<typeof prepareGenerationPlan>,
+): ToolResult {
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            success: true,
+            planId: plan.id,
+            status: "prepared",
+            approved: false,
+            input_required: true,
+            message:
+              "Host approval required. The MCP host will present the approval form.",
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+    structuredContent: {
+      plan_id: plan.id,
+      status: "prepared",
+      approved: false,
+      input_required: true,
+    },
+    _meta: { "kie/approval-plan": plan },
+  };
+}
+
 export const prepareMediaGenerationTool: ToolDef<
   typeof PrepareMediaGenerationSchema
 > = {
@@ -78,6 +115,9 @@ export const prepareMediaGenerationTool: ToolDef<
           plan,
           `Approval elicitation failed: ${error instanceof Error ? error.message : String(error)}`,
         );
+      }
+      if (decision.inputRequired) {
+        return approvalRequiredResult(plan);
       }
       if (!decision.approved) {
         return pendingResult(plan, decision.reason);

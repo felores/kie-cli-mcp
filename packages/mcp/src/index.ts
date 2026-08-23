@@ -27,7 +27,10 @@ import {
 } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { startHttpServer } from "./http-transport.js";
-import { requestMcpPlanApproval } from "./plan-approval.js";
+import {
+  approvalInputRequired,
+  requestMcpPlanApproval,
+} from "./plan-approval.js";
 import {
   type CallerPrincipal,
   principalApprovalId,
@@ -356,7 +359,8 @@ export class KieAiMcpServer {
         )._meta?.progressToken;
         const requestContext: ToolContext = {
           ...scopedContext,
-          requestPlanApproval: (plan) => requestMcpPlanApproval(server, plan),
+          requestPlanApproval: (plan) =>
+            requestMcpPlanApproval(server, plan, serverCtx),
         };
         const ctx: ToolContext =
           progressToken === undefined
@@ -376,7 +380,14 @@ export class KieAiMcpServer {
                 },
               };
 
-        return normalizeToolResult(await tool.run(args, ctx));
+        const toolResult = normalizeToolResult(await tool.run(args, ctx));
+        if (toolResult.structuredContent?.input_required === true) {
+          const plan = toolResult._meta?.["kie/approval-plan"] as
+            | Parameters<typeof approvalInputRequired>[0]
+            | undefined;
+          if (plan) return approvalInputRequired(plan);
+        }
+        return toolResult;
       } catch (error) {
         if (error instanceof ProtocolError) {
           throw error;

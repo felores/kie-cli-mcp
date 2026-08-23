@@ -21,6 +21,12 @@ export interface ToolResult {
 export interface PlanApprovalDecision {
   approved: boolean;
   reason: string;
+  /**
+   * Modern-protocol hosts must be asked for input through a multi-round-trip
+   * `input_required` result. When true, the adapter converts the tool result
+   * into an input-required return instead of surfacing the pending text.
+   */
+  inputRequired?: boolean;
 }
 
 export interface UploadCapabilityRequest {
