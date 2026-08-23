@@ -534,17 +534,26 @@ describe("KIE OpenAI image contract", () => {
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
         statusCalls += 1;
+        if (statusCalls === 1) {
+          // Guarantee the 1ms poll deadline elapses before the second poll:
+          // a fast mocked provider otherwise completes and the first response
+          // flips from an expected 504 to 200 (timing flake).
+          await new Promise((resolvePromise) => {
+            setTimeout(resolvePromise, 25);
+          });
+          return jsonResponse({
+            code: 200,
+            data: { state: "waiting" },
+          });
+        }
         return jsonResponse({
           code: 200,
-          data:
-            statusCalls === 1
-              ? { state: "waiting" }
-              : {
-                  state: "success",
-                  resultJson: JSON.stringify({
-                    resultUrls: ["https://cdn.example/resume.png"],
-                  }),
-                },
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/resume.png"],
+            }),
+          },
         });
       }
       if (url === "https://cdn.example/resume.png") {
