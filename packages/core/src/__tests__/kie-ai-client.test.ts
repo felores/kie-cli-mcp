@@ -52,14 +52,17 @@ describe("KieAiClient transport safety", () => {
   });
 
   test("caps streamed result downloads", async () => {
-    jest.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(new Uint8Array([1, 2, 3, 4, 5])),
-    );
+    jest
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(new Uint8Array([1, 2, 3, 4, 5])));
 
     await expect(
-      new KieAiClient(config).downloadFile("https://file.aiquickdraw.com/result.png", {
-        maxBytes: 4,
-      }),
+      new KieAiClient(config).downloadFile(
+        "https://file.aiquickdraw.com/result.png",
+        {
+          maxBytes: 4,
+        },
+      ),
     ).rejects.toMatchObject({
       message: "The provider result exceeded the download size limit.",
       status: 502,
@@ -378,14 +381,19 @@ describe("KieAiClient Grok Imagine routing", () => {
       "grok-imagine/upscale",
       { task_id: "previous-task" },
     ],
-  ])("routes %s to the expected model and input", async (_name, request, model, input) => {
-    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(response());
+  ])(
+    "routes %s to the expected model and input",
+    async (_name, request, model, input) => {
+      const fetchMock = jest
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(response());
 
-    await new KieAiClient(config).generateGrokImagine(request);
+      await new KieAiClient(config).generateGrokImagine(request);
 
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
-      model,
-      input,
-    });
-  });
+      expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+        model,
+        input,
+      });
+    },
+  );
 });

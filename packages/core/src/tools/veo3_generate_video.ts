@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Veo3GenerateSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const veo3GenerateVideoTool: ToolDef<typeof Veo3GenerateSchema> = {
   name: "veo3_generate_video",

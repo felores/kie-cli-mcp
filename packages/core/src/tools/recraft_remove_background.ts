@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { RecraftRemoveBackgroundSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
-export const recraftRemoveBackgroundTool: ToolDef<typeof RecraftRemoveBackgroundSchema> = {
+export const recraftRemoveBackgroundTool: ToolDef<
+  typeof RecraftRemoveBackgroundSchema
+> = {
   name: "recraft_remove_background",
-  description: "Remove backgrounds from images using Recraft AI background removal model",
+  description:
+    "Remove backgrounds from images using Recraft AI background removal model",
   category: "image",
   schema: RecraftRemoveBackgroundSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

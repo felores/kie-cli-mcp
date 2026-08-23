@@ -2,10 +2,10 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  hashRequestId,
   RequestJournal,
   RequestJournalConflictError,
   RequestJournalTransitionError,
-  hashRequestId,
 } from "../src/request-journal.js";
 
 async function dataDir(): Promise<string> {
@@ -27,7 +27,9 @@ describe("request journal", () => {
     );
 
     expect(claims.filter((claim) => claim.created)).toHaveLength(1);
-    expect(new Set(claims.map((claim) => claim.record.requestIdHash)).size).toBe(1);
+    expect(
+      new Set(claims.map((claim) => claim.record.requestIdHash)).size,
+    ).toBe(1);
     expect(claims[0].record.state).toBe("reserved");
     expect(claims[0].record.taskIds).toEqual([null, null]);
 
@@ -91,11 +93,15 @@ describe("request journal", () => {
     await Promise.all([
       journal.updateCurrent(hash, (record) => ({
         state: "submitted",
-        taskIds: record.taskIds.map((taskId, index) => taskId ?? (index === 0 ? "task-a" : null)),
+        taskIds: record.taskIds.map(
+          (taskId, index) => taskId ?? (index === 0 ? "task-a" : null),
+        ),
       })),
       journal.updateCurrent(hash, (record) => ({
         state: "submitted",
-        taskIds: record.taskIds.map((taskId, index) => taskId ?? (index === 1 ? "task-b" : null)),
+        taskIds: record.taskIds.map(
+          (taskId, index) => taskId ?? (index === 1 ? "task-b" : null),
+        ),
       })),
     ]);
     const submitted = await journal.read(hash);

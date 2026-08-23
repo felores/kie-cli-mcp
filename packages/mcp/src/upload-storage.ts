@@ -12,14 +12,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import type { Request, Response } from "express";
 import {
   normalizeUploadMimeType,
-  validateUploadBytes,
   type SupportedUploadMimeType,
   type UploadCapability,
   type UploadCapabilityRequest,
+  validateUploadBytes,
 } from "@felores/kie-ai-core";
+import type { Request, Response } from "express";
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
@@ -83,7 +83,9 @@ function validatePublicBaseUrl(value: string): URL {
     );
   }
   if (url.pathname !== "/" && url.pathname !== "") {
-    throw new Error("KIE_MCP_PUBLIC_BASE_URL must be an origin without a path.");
+    throw new Error(
+      "KIE_MCP_PUBLIC_BASE_URL must be an origin without a path.",
+    );
   }
   url.pathname = "/";
   return url;
@@ -154,7 +156,10 @@ export class TemporaryUploadStore {
     const ownerRecords = [...this.records].filter(
       (record) => record.owner === request.owner,
     );
-    const ownerBytes = ownerRecords.reduce((sum, record) => sum + record.size, 0);
+    const ownerBytes = ownerRecords.reduce(
+      (sum, record) => sum + record.size,
+      0,
+    );
     if (
       ownerRecords.length >= this.maxOwnerFiles ||
       ownerBytes + request.size > this.maxOwnerBytes
@@ -243,7 +248,11 @@ export class TemporaryUploadStore {
     if (record) await this.removeRecord(record);
   }
 
-  async handleUpload(req: Request, res: Response, token: string): Promise<void> {
+  async handleUpload(
+    req: Request,
+    res: Response,
+    token: string,
+  ): Promise<void> {
     if (!TOKEN_PATTERN.test(token)) {
       res.status(404).end();
       return;
@@ -259,18 +268,19 @@ export class TemporaryUploadStore {
       return;
     }
     const declaredLength = Number(req.headers["content-length"]);
-    if (
-      Number.isFinite(declaredLength) &&
-      declaredLength !== record.size
-    ) {
-      res.status(413).json({ error: "Upload byte count does not match the capability." });
+    if (Number.isFinite(declaredLength) && declaredLength !== record.size) {
+      res
+        .status(413)
+        .json({ error: "Upload byte count does not match the capability." });
       return;
     }
     const requestType = normalizeUploadMimeType(
       String(req.headers["content-type"] ?? ""),
     );
     if (!requestType || requestType !== record.contentType) {
-      res.status(415).json({ error: "Content-Type does not match the capability." });
+      res
+        .status(415)
+        .json({ error: "Content-Type does not match the capability." });
       return;
     }
 
@@ -335,7 +345,11 @@ export class TemporaryUploadStore {
     }
   }
 
-  async handleDownload(req: Request, res: Response, token: string): Promise<void> {
+  async handleDownload(
+    req: Request,
+    res: Response,
+    token: string,
+  ): Promise<void> {
     if (!TOKEN_PATTERN.test(token)) {
       res.status(404).end();
       return;

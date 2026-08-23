@@ -1,13 +1,13 @@
 import {
-  NanoBananaImageSchema,
-  ByteDanceSeedreamImageSchema,
-  KlingVideoSchema,
   ByteDanceSeedanceVideoSchema,
-  HailuoVideoSchema,
-  SunoGenerateSchema,
-  OmniHumanVideoSchema,
+  ByteDanceSeedreamImageSchema,
   GeminiOmniSchema,
   GrokImagineSchema,
+  HailuoVideoSchema,
+  KlingVideoSchema,
+  NanoBananaImageSchema,
+  OmniHumanVideoSchema,
+  SunoGenerateSchema,
 } from "../types.js";
 
 // ──────────────────────────────────────────────
@@ -197,8 +197,9 @@ describe("GrokImagineSchema (Grok Imagine Image 2.0)", () => {
       GrokImagineSchema.safeParse({
         generation_mode: "image-to-image",
         prompt: "Paint this in watercolor",
-        image_urls: Array.from({ length: 5 }, (_, index) =>
-          `https://example.com/reference-${index}.png`,
+        image_urls: Array.from(
+          { length: 5 },
+          (_, index) => `https://example.com/reference-${index}.png`,
         ),
         aspect_ratio: "auto",
       }).success,
@@ -547,7 +548,10 @@ describe("OmniHumanVideoSchema", () => {
       OmniHumanVideoSchema.safeParse({
         image_url: "https://example.com/portrait.png",
         audio_url: "https://example.com/speech.mp3",
-        mask_url: Array.from({ length: 6 }, (_, index) => `https://example.com/mask-${index}.png`),
+        mask_url: Array.from(
+          { length: 6 },
+          (_, index) => `https://example.com/mask-${index}.png`,
+        ),
       }).success,
     ).toBe(false);
   });
@@ -568,14 +572,20 @@ describe("GeminiOmniSchema", () => {
     expect(
       GeminiOmniSchema.safeParse({
         prompt: "A product demonstration",
-        image_urls: Array.from({ length: 7 }, (_, index) => `https://example.com/image-${index}.png`),
+        image_urls: Array.from(
+          { length: 7 },
+          (_, index) => `https://example.com/image-${index}.png`,
+        ),
         character_ids: ["character-1"],
       }).success,
     ).toBe(false);
   });
 
   it("requires the operation-specific fields for audio", () => {
-    expect(GeminiOmniSchema.safeParse({ operation: "audio", audio_id: "aoede" }).success).toBe(false);
+    expect(
+      GeminiOmniSchema.safeParse({ operation: "audio", audio_id: "aoede" })
+        .success,
+    ).toBe(false);
   });
 });
 

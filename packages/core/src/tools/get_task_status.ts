@@ -1,5 +1,5 @@
 import { GetTaskStatusSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
   name: "get_task_status",
@@ -30,8 +30,8 @@ export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
           // Handle different response formats for different API types
           let status: "pending" | "processing" | "completed" | "failed" =
             "pending";
-          let resultUrl = undefined;
-          let errorMessage = undefined;
+          let resultUrl: string | undefined;
+          let errorMessage: string | undefined;
           const creditsConsumed =
             typeof apiData.creditsConsumed === "number"
               ? apiData.creditsConsumed
@@ -317,7 +317,7 @@ export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
       };
 
       // Prepare response based on API type
-      let responseData: any = {
+      const responseData: any = {
         success: true,
         task_id: task_id,
         status: updatedTask?.status,

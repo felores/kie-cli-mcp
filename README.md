@@ -320,6 +320,8 @@ See [docs/ADMIN.md](docs/ADMIN.md) for Docker, Kubernetes and Systemd examples.
 git clone https://github.com/felores/kie-cli-mcp.git
 cd kie-cli-mcp
 npm install
+npm run check       # Biome: format + lint + import organization
+npm run format      # apply Biome formatting
 npm run build       # build all workspaces
 npm run typecheck   # type-check all workspaces
 npm test            # run the test suite

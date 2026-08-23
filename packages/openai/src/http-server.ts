@@ -1,14 +1,11 @@
+import { KieAiClient } from "@felores/kie-ai-core/client";
 import express, {
   type NextFunction,
   type Request,
   type Response,
   type Router,
 } from "express";
-import { KieAiClient } from "@felores/kie-ai-core/client";
-import {
-  OpenAiHttpError,
-  openAiErrorHandler,
-} from "./errors.js";
+import { OpenAiHttpError, openAiErrorHandler } from "./errors.js";
 import {
   DEFAULT_RESULT_HOSTS,
   handleImageEdit,
@@ -54,7 +51,9 @@ function resultHosts(value: string[] | undefined): Set<string> {
   return new Set(
     (value ?? [...DEFAULT_RESULT_HOSTS])
       .map((host) => host.trim().toLowerCase().replace(/\.$/, ""))
-      .filter((host) => host.length > 0 && !host.includes("/") && !host.includes("*")),
+      .filter(
+        (host) => host.length > 0 && !host.includes("/") && !host.includes("*"),
+      ),
   );
 }
 

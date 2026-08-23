@@ -18,11 +18,17 @@ export const SUPPORTED_UPLOAD_MIME_TYPES = [
 export type SupportedUploadMimeType =
   (typeof SUPPORTED_UPLOAD_MIME_TYPES)[number];
 
-function startsWith(bytes: Uint8Array, signature: number[], offset = 0): boolean {
+function startsWith(
+  bytes: Uint8Array,
+  signature: number[],
+  offset = 0,
+): boolean {
   return signature.every((value, index) => bytes[offset + index] === value);
 }
 
-export function detectUploadMimeType(bytes: Uint8Array): SupportedUploadMimeType | null {
+export function detectUploadMimeType(
+  bytes: Uint8Array,
+): SupportedUploadMimeType | null {
   if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
     return "image/png";
   }
@@ -43,24 +49,18 @@ export function detectUploadMimeType(bytes: Uint8Array): SupportedUploadMimeType
   }
   if (startsWith(bytes, [0x4f, 0x67, 0x67, 0x53])) return "audio/ogg";
   if (startsWith(bytes, [0x49, 0x44, 0x33])) return "audio/mpeg";
-  if (
-    bytes.length >= 2 &&
-    bytes[0] === 0xff &&
-    (bytes[1] & 0xe0) === 0xe0
-  ) {
+  if (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) {
     return "audio/mpeg";
   }
-  if (
-    bytes.length >= 2 &&
-    bytes[0] === 0xff &&
-    (bytes[1] & 0xf6) === 0xf0
-  ) {
+  if (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xf6) === 0xf0) {
     return "audio/aac";
   }
   return null;
 }
 
-export function normalizeUploadMimeType(value: string): SupportedUploadMimeType | null {
+export function normalizeUploadMimeType(
+  value: string,
+): SupportedUploadMimeType | null {
   const normalized = value.toLowerCase().split(";", 1)[0].trim();
   if (normalized === "audio/x-wav") return "audio/wav";
   return SUPPORTED_UPLOAD_MIME_TYPES.includes(
@@ -85,7 +85,9 @@ export function validateUploadBytes(
         normalized === "video/quicktime" ||
         normalized === "audio/mp4");
     if (!normalized || (normalized !== detected && !compatibleMp4)) {
-      throw new Error("The declared content_type does not match the file bytes.");
+      throw new Error(
+        "The declared content_type does not match the file bytes.",
+      );
     }
     return normalized;
   }

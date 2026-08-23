@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { KlingAvatarSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const klingAvatarTool: ToolDef<typeof KlingAvatarSchema> = {
   name: "kling_avatar",
-  description: "Generate lifelike talking avatar videos using Kuaishou Kling AI. Transforms portrait photo and audio into a realistic avatar with accurate lip-sync, emotions, and identity preservation.",
+  description:
+    "Generate lifelike talking avatar videos using Kuaishou Kling AI. Transforms portrait photo and audio into a realistic avatar with accurate lip-sync, emotions, and identity preservation.",
   category: "video",
   schema: KlingAvatarSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

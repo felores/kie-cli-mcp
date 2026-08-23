@@ -1,11 +1,11 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { afterEach, describe, expect, test } from "@jest/globals";
 import type { ToolContext } from "@felores/kie-ai-core";
 import { UPLOAD_WIDGET_URI } from "@felores/kie-ai-core";
+import { afterEach, describe, expect, test } from "@jest/globals";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { KieAiMcpServer } from "../index.js";
 
 const directories: string[] = [];
@@ -153,7 +153,9 @@ describe("MCP Apps upload widget", () => {
           size: 9,
         },
       })) as { content: Array<{ type: "text"; text: string }> };
-      expect(JSON.parse(denied.content[0].text)).toMatchObject({ success: false });
+      expect(JSON.parse(denied.content[0].text)).toMatchObject({
+        success: false,
+      });
 
       const minted = (await client.callTool({
         name: "get_upload_url",

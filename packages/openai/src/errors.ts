@@ -77,7 +77,6 @@ export function normalizeOpenAiError(error: unknown): {
     };
   }
 
-
   if (hasErrorShape(error) && error.type) {
     const parserError = PARSER_ERROR_BY_TYPE[error.type];
     if (parserError) {

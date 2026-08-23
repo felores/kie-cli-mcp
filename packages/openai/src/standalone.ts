@@ -6,10 +6,7 @@ import express, {
   type RequestHandler,
   type Response,
 } from "express";
-import {
-  OpenAiHttpError,
-  openAiErrorHandler,
-} from "./errors.js";
+import { OpenAiHttpError, openAiErrorHandler } from "./errors.js";
 import {
   createKieOpenAiRouter,
   type KieOpenAiRouter,
@@ -35,7 +32,10 @@ function parseHostHeader(value: string | undefined): string | null {
   }
 }
 
-function secureTokenMatches(header: string | undefined, token: string): boolean {
+function secureTokenMatches(
+  header: string | undefined,
+  token: string,
+): boolean {
   if (!header?.startsWith("Bearer ")) return false;
   const candidate = Buffer.from(header.slice("Bearer ".length));
   const expected = Buffer.from(token);

@@ -1,9 +1,9 @@
-import sqlite3 from "sqlite3";
-import { TaskRecord } from "./types.js";
-import type { PreparedGenerationPlan } from "./generation-plan.js";
-import { dirname, resolve } from "path";
-import { mkdirSync, existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { homedir } from "os";
+import { dirname, resolve } from "path";
+import sqlite3 from "sqlite3";
+import type { PreparedGenerationPlan } from "./generation-plan.js";
+import type { TaskRecord } from "./types.js";
 
 export class TaskDatabase {
   private db: sqlite3.Database;
@@ -52,12 +52,15 @@ export class TaskDatabase {
         )
       `);
 
-      this.db.run(`ALTER TABLE tasks ADD COLUMN credits_consumed REAL`, (err) => {
-        // Existing databases already have this column after the first migration.
-        if (err && !err.message.includes("duplicate column name")) {
-          console.error("Failed to add tasks.credits_consumed:", err);
-        }
-      });
+      this.db.run(
+        `ALTER TABLE tasks ADD COLUMN credits_consumed REAL`,
+        (err) => {
+          // Existing databases already have this column after the first migration.
+          if (err && !err.message.includes("duplicate column name")) {
+            console.error("Failed to add tasks.credits_consumed:", err);
+          }
+        },
+      );
 
       this.db.run(`
         CREATE TABLE IF NOT EXISTS generation_plans (
@@ -75,14 +78,22 @@ export class TaskDatabase {
 
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_task_id ON tasks(task_id)`);
       this.db.run(`CREATE INDEX IF NOT EXISTS idx_status ON tasks(status)`);
-      this.db.run(`CREATE INDEX IF NOT EXISTS idx_generation_plans_status ON generation_plans(status)`);
+      this.db.run(
+        `CREATE INDEX IF NOT EXISTS idx_generation_plans_status ON generation_plans(status)`,
+      );
 
-      this.db.run(`ALTER TABLE generation_plans ADD COLUMN approval_context TEXT`, (err) => {
-        // Existing databases already have this column after the first migration.
-        if (err && !err.message.includes("duplicate column name")) {
-          console.error("Failed to add generation_plans.approval_context:", err);
-        }
-      });
+      this.db.run(
+        `ALTER TABLE generation_plans ADD COLUMN approval_context TEXT`,
+        (err) => {
+          // Existing databases already have this column after the first migration.
+          if (err && !err.message.includes("duplicate column name")) {
+            console.error(
+              "Failed to add generation_plans.approval_context:",
+              err,
+            );
+          }
+        },
+      );
     });
   }
 
@@ -101,7 +112,7 @@ export class TaskDatabase {
           taskData.error_message || null,
           taskData.credits_consumed ?? null,
         ],
-        function (err) {
+        (err) => {
           if (err) reject(err);
           else resolve();
         },
@@ -157,7 +168,7 @@ export class TaskDatabase {
         this.db.run(
           `UPDATE tasks SET ${updateFields.join(", ")} WHERE task_id = ?`,
           values,
-          function (err) {
+          (err) => {
             if (err) reject(err);
             else resolve();
           },
@@ -203,13 +214,25 @@ export class TaskDatabase {
       this.db.run(
         `INSERT INTO generation_plans (plan_id, status, created_at, expires_at, plan_json, request_hash, approval_context)
          VALUES (?, 'prepared', ?, ?, ?, ?, ?)`,
-        [plan.id, plan.createdAt, plan.expiresAt, JSON.stringify(plan), plan.requestHash, approvalContext],
+        [
+          plan.id,
+          plan.createdAt,
+          plan.expiresAt,
+          JSON.stringify(plan),
+          plan.requestHash,
+          approvalContext,
+        ],
         (err) => (err ? reject(err) : resolve()),
       );
     });
   }
 
-  async getGenerationPlan(planId: string): Promise<{ plan: PreparedGenerationPlan; status: string; requestHash: string; results?: unknown } | null> {
+  async getGenerationPlan(planId: string): Promise<{
+    plan: PreparedGenerationPlan;
+    status: string;
+    requestHash: string;
+    results?: unknown;
+  } | null> {
     return new Promise((resolve, reject) => {
       this.db.get(
         `SELECT status, plan_json, request_hash, task_results_json FROM generation_plans WHERE plan_id = ?`,
@@ -217,13 +240,20 @@ export class TaskDatabase {
         (err, row) => {
           if (err) return reject(err);
           if (!row) return resolve(null);
-          const stored = row as { status: string; plan_json: string; request_hash: string; task_results_json: string | null };
+          const stored = row as {
+            status: string;
+            plan_json: string;
+            request_hash: string;
+            task_results_json: string | null;
+          };
           try {
             resolve({
               plan: JSON.parse(stored.plan_json) as PreparedGenerationPlan,
               status: stored.status,
               requestHash: stored.request_hash,
-              ...(stored.task_results_json ? { results: JSON.parse(stored.task_results_json) as unknown } : {}),
+              ...(stored.task_results_json
+                ? { results: JSON.parse(stored.task_results_json) as unknown }
+                : {}),
             });
           } catch (parseError) {
             reject(parseError);
@@ -244,7 +274,7 @@ export class TaskDatabase {
         `UPDATE generation_plans
          SET status = 'approved'
           WHERE plan_id = ? AND request_hash = ? AND approval_context = ? AND status = 'prepared' AND expires_at > ?`,
-         [planId, requestHash, approvalContext, new Date().toISOString()],
+        [planId, requestHash, approvalContext, new Date().toISOString()],
         function (err) {
           if (err) reject(err);
           else resolve(this.changes === 1);
@@ -264,7 +294,7 @@ export class TaskDatabase {
         `UPDATE generation_plans
          SET status = 'submitting', submitted_at = CURRENT_TIMESTAMP
           WHERE plan_id = ? AND request_hash = ? AND approval_context = ? AND status = 'approved' AND expires_at > ?`,
-         [planId, requestHash, approvalContext, new Date().toISOString()],
+        [planId, requestHash, approvalContext, new Date().toISOString()],
         function (err) {
           if (err) reject(err);
           else resolve(this.changes === 1);

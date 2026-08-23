@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { Wan27VideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const wanVideoTool: ToolDef<typeof Wan27VideoSchema> = {
   name: "wan_video",
-  description: "Generate videos using Alibaba Wan 2.7 (text-to-video, image-to-video, reference-to-video, video-edit with native audio support)",
+  description:
+    "Generate videos using Alibaba Wan 2.7 (text-to-video, image-to-video, reference-to-video, video-edit with native audio support)",
   category: "video",
   schema: Wan27VideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

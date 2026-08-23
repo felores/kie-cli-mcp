@@ -1,13 +1,13 @@
-import { KieAiClient } from "./kie-ai-client.js";
+import { constants } from "node:fs";
+import { open, realpath } from "node:fs/promises";
+import { basename, isAbsolute, relative } from "node:path";
 import { TaskDatabase } from "./database.js";
+import { KieAiClient } from "./kie-ai-client.js";
+import { detectUploadMimeType } from "./media-validation.js";
 import { formatToolError } from "./tools/format-error.js";
 import { getTool } from "./tools/index.js";
 import type { ToolContext } from "./tools/types.js";
 import type { KieAiConfig } from "./types.js";
-import { constants } from "node:fs";
-import { open, realpath } from "node:fs/promises";
-import { basename, isAbsolute, relative } from "node:path";
-import { detectUploadMimeType } from "./media-validation.js";
 
 function isWithinRoot(candidate: string, root: string): boolean {
   const path = relative(root, candidate);
@@ -70,11 +70,14 @@ export function createToolContext(approvalContext = "cli"): ToolContext {
             try {
               const stat = await handle.stat();
               if (!stat.isFile() || stat.size <= 0 || stat.size > maxBytes) {
-                throw new Error("file_path is empty, not a file, or exceeds the size limit.");
+                throw new Error(
+                  "file_path is empty, not a file, or exceeds the size limit.",
+                );
               }
               const bytes = new Uint8Array(await handle.readFile());
               const contentType = detectUploadMimeType(bytes);
-              if (!contentType) throw new Error("Unsupported or invalid media file.");
+              if (!contentType)
+                throw new Error("Unsupported or invalid media file.");
               return { bytes, filename: basename(candidate), contentType };
             } finally {
               await handle.close();

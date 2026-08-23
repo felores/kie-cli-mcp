@@ -1,12 +1,12 @@
+import { createHash } from "node:crypto";
+import { once } from "node:events";
 import { mkdtemp, readdir } from "node:fs/promises";
+import type { Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { once } from "node:events";
-import type { AddressInfo } from "node:net";
-import type { Server } from "node:http";
-import express from "express";
 import { jest } from "@jest/globals";
-import { createHash } from "node:crypto";
+import express from "express";
 import { createKieOpenAiRouter } from "../src/http-server.js";
 
 const providerBaseUrl = "https://provider.example/api/v1";
@@ -33,7 +33,9 @@ async function makeDataDir(): Promise<string> {
   return mkdtemp(join(tmpdir(), "kie-openai-video-"));
 }
 
-async function responseJson(response: Response): Promise<Record<string, unknown>> {
+async function responseJson(
+  response: Response,
+): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>;
 }
 
@@ -58,12 +60,21 @@ afterAll(() => {
 });
 
 function mockProviderForTask(taskId: string, state = "submit") {
-  const calls = { createBodies: [] as Record<string, unknown>[], uploadBodies: [] as Record<string, unknown>[] };
+  const calls = {
+    createBodies: [] as Record<string, unknown>[],
+    uploadBodies: [] as Record<string, unknown>[],
+  };
   jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     if (url.endsWith("/api/file-stream-upload")) {
       calls.uploadBodies.push({ url });
-      return jsonResponse({ code: 200, msg: "ok", data: { fileUrl: `https://upload.example/${taskId}-${calls.uploadBodies.length}` } });
+      return jsonResponse({
+        code: 200,
+        msg: "ok",
+        data: {
+          fileUrl: `https://upload.example/${taskId}-${calls.uploadBodies.length}`,
+        },
+      });
     }
     if (url === `${providerBaseUrl}/jobs/createTask`) {
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
@@ -79,7 +90,7 @@ function mockProviderForTask(taskId: string, state = "submit") {
 }
 
 describe("KIE OpenAI video contract", () => {
-    test("video creation maps documented Seedance 2.5 inputs", async () => {
+  test("video creation maps documented Seedance 2.5 inputs", async () => {
     const dataDir = await makeDataDir();
     const calls = mockProviderForTask("vid-1", "submit");
     const app = express();
@@ -94,7 +105,10 @@ describe("KIE OpenAI video contract", () => {
 
     const response = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "req-1" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "req-1",
+      },
       body: JSON.stringify({
         model: "kie-bytedance-video",
         prompt: "A cat playing piano",
@@ -133,7 +147,10 @@ describe("KIE OpenAI video contract", () => {
 
     await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "req-2" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "req-2",
+      },
       body: JSON.stringify({
         model: "kie-bytedance-fast-video",
         prompt: "Fast motion test",
@@ -142,7 +159,9 @@ describe("KIE OpenAI video contract", () => {
       }),
     });
     expect(calls.createBodies[0].model).toBe("bytedance/seedance-2-5");
-    expect((calls.createBodies[0].input as Record<string, unknown>).aspect_ratio).toBe("9:16");
+    expect(
+      (calls.createBodies[0].input as Record<string, unknown>).aspect_ratio,
+    ).toBe("9:16");
     router.close();
   });
 
@@ -219,7 +238,9 @@ describe("KIE OpenAI video contract", () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect((calls.createBodies[0].input as Record<string, unknown>).duration).toBe(3);
+    expect(
+      (calls.createBodies[0].input as Record<string, unknown>).duration,
+    ).toBe(3);
     router.close();
   });
 
@@ -243,12 +264,18 @@ describe("KIE OpenAI video contract", () => {
     });
     await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "idem-1" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "idem-1",
+      },
       body: body1,
     });
     await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "idem-1" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "idem-1",
+      },
       body: body1,
     });
     expect(calls.createBodies).toHaveLength(1);
@@ -272,7 +299,9 @@ describe("KIE OpenAI video contract", () => {
           code: 200,
           data: {
             state: "success",
-            resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/video-4.mp4"] }),
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/video-4.mp4"],
+            }),
           },
         });
       }
@@ -293,8 +322,15 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "status-1" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "status test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "status-1",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "status test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;
@@ -320,8 +356,15 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "content-1" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "content test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "content-1",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "content test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;
@@ -336,7 +379,13 @@ describe("KIE OpenAI video contract", () => {
   test("content route streams completed video bytes", async () => {
     const dataDir = await makeDataDir();
     let pollCount = 0;
-    const videoData = new Uint8Array([0x00, 0x00, 0x00, 0x20, ...new Array(28).fill(0x66)]);
+    const videoData = new Uint8Array([
+      0x00,
+      0x00,
+      0x00,
+      0x20,
+      ...new Array(28).fill(0x66),
+    ]);
     jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === `${providerBaseUrl}/jobs/createTask`) {
@@ -344,14 +393,23 @@ describe("KIE OpenAI video contract", () => {
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
         pollCount += 1;
-        if (pollCount < 2) return jsonResponse({ code: 200, data: { state: "waiting" } });
+        if (pollCount < 2)
+          return jsonResponse({ code: 200, data: { state: "waiting" } });
         return jsonResponse({
           code: 200,
-          data: { state: "success", resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/video-6.mp4"] }) },
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/video-6.mp4"],
+            }),
+          },
         });
       }
       if (url === "https://cdn.example/video-6.mp4") {
-        return new Response(videoData, { status: 200, headers: { "content-type": "video/mp4" } });
+        return new Response(videoData, {
+          status: 200,
+          headers: { "content-type": "video/mp4" },
+        });
       }
       return originalFetch(input, init);
     });
@@ -370,8 +428,15 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "content-2" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "content download test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "content-2",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "content download test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;
@@ -397,10 +462,16 @@ describe("KIE OpenAI video contract", () => {
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
         pollCount += 1;
-        if (pollCount < 2) return jsonResponse({ code: 200, data: { state: "waiting" } });
+        if (pollCount < 2)
+          return jsonResponse({ code: 200, data: { state: "waiting" } });
         return jsonResponse({
           code: 200,
-          data: { state: "success", resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/video-7.mp4"] }) },
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/video-7.mp4"],
+            }),
+          },
         });
       }
       return originalFetch(input, init);
@@ -420,26 +491,40 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "cb-1" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "callback test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "cb-1",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "callback test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;
 
     // Read the journal record to get the callback token
     const files = await readdir(dataDir);
-    const journalFile = files.find((f) => f.endsWith(".json") && !f.startsWith("."));
+    const journalFile = files.find(
+      (f) => f.endsWith(".json") && !f.startsWith("."),
+    );
     expect(journalFile).toBeDefined();
-    const journalRaw = await import("node:fs/promises").then((fs) => fs.readFile(join(dataDir, journalFile!), "utf8"));
+    const journalRaw = await import("node:fs/promises").then((fs) =>
+      fs.readFile(join(dataDir, journalFile!), "utf8"),
+    );
     const journal = JSON.parse(journalRaw) as Record<string, unknown>;
     const callbackToken = journal.callbackToken as string;
     expect(callbackToken).toBeTruthy();
 
     // Simulate callback with valid token
     pollCount = 0;
-    const cbRes = await fetch(`${base}/v1/videos/${taskId}/callback?token=${callbackToken}`, {
-      method: "POST",
-    });
+    const cbRes = await fetch(
+      `${base}/v1/videos/${taskId}/callback?token=${callbackToken}`,
+      {
+        method: "POST",
+      },
+    );
     expect(cbRes.status).toBe(200);
     const cbBody = await responseJson(cbRes);
     expect(cbBody.ok).toBe(true);
@@ -448,9 +533,12 @@ describe("KIE OpenAI video contract", () => {
     expect(createCount).toBe(1);
 
     // Second callback is idempotent
-    const cb2Res = await fetch(`${base}/v1/videos/${taskId}/callback?token=${callbackToken}`, {
-      method: "POST",
-    });
+    const cb2Res = await fetch(
+      `${base}/v1/videos/${taskId}/callback?token=${callbackToken}`,
+      {
+        method: "POST",
+      },
+    );
     expect(cb2Res.status).toBe(200);
     expect(createCount).toBe(1);
     router.close();
@@ -471,15 +559,25 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "cb-2" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "callback auth test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "cb-2",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "callback auth test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;
 
-    const cbRes = await fetch(`${base}/v1/videos/${taskId}/callback?token=invalid-token`, {
-      method: "POST",
-    });
+    const cbRes = await fetch(
+      `${base}/v1/videos/${taskId}/callback?token=invalid-token`,
+      {
+        method: "POST",
+      },
+    );
     expect(cbRes.status).toBe(401);
     router.close();
   });
@@ -512,8 +610,15 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base1}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "restart-1" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "restart test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "restart-1",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "restart test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;
@@ -554,18 +659,43 @@ describe("KIE OpenAI video contract", () => {
     app.use(router);
     const base = await serve(app);
 
-    const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-    const mp4Bytes = new Uint8Array([0x00, 0x00, 0x00, 0x20, ...new Array(28).fill(0x61)]);
-    const mp3Bytes = new Uint8Array([0x49, 0x44, 0x33, ...new Array(100).fill(0x00)]);
+    const pngBytes = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    const mp4Bytes = new Uint8Array([
+      0x00,
+      0x00,
+      0x00,
+      0x20,
+      ...new Array(28).fill(0x61),
+    ]);
+    const mp3Bytes = new Uint8Array([
+      0x49,
+      0x44,
+      0x33,
+      ...new Array(100).fill(0x00),
+    ]);
 
     const formData = new FormData();
     formData.append("model", "kie-bytedance-video");
     formData.append("prompt", "multimodal test");
     formData.append("seconds", "5");
     formData.append("size", "1280x720");
-    formData.append("input_reference", new Blob([pngBytes], { type: "image/png" }), "ref.png");
-    formData.append("reference_video", new Blob([mp4Bytes], { type: "video/mp4" }), "ref.mp4");
-    formData.append("reference_audio", new Blob([mp3Bytes], { type: "audio/mpeg" }), "ref.mp3");
+    formData.append(
+      "input_reference",
+      new Blob([pngBytes], { type: "image/png" }),
+      "ref.png",
+    );
+    formData.append(
+      "reference_video",
+      new Blob([mp4Bytes], { type: "video/mp4" }),
+      "ref.mp4",
+    );
+    formData.append(
+      "reference_audio",
+      new Blob([mp3Bytes], { type: "audio/mpeg" }),
+      "ref.mp3",
+    );
 
     const response = await fetch(`${base}/v1/videos`, {
       method: "POST",
@@ -597,8 +727,15 @@ describe("KIE OpenAI video contract", () => {
 
     await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "cb-url-1" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "callback url test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "cb-url-1",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "callback url test",
+        seconds: 5,
+      }),
     });
     expect(calls.createBodies).toHaveLength(1);
     const callBackUrl = calls.createBodies[0].callBackUrl as string;
@@ -622,7 +759,10 @@ describe("KIE OpenAI video contract", () => {
 
     const response = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "audio-1" },
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "audio-1",
+      },
       body: JSON.stringify({
         model: "kie-bytedance-video",
         prompt: "audio controls test",
@@ -650,7 +790,11 @@ describe("KIE OpenAI video contract", () => {
     const response = await fetch(`${base}/v1/videos`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "test", seconds: 5 }),
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "test",
+        seconds: 5,
+      }),
     });
     expect(response.status).toBe(503);
     const body = await responseJson(response);
@@ -685,8 +829,15 @@ describe("KIE OpenAI video contract", () => {
 
     const createRes = await fetch(`${base}/v1/videos`, {
       method: "POST",
-      headers: { "content-type": "application/json", "Idempotency-Key": "fail-1" },
-      body: JSON.stringify({ model: "kie-bytedance-video", prompt: "failure test", seconds: 5 }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "fail-1",
+      },
+      body: JSON.stringify({
+        model: "kie-bytedance-video",
+        prompt: "failure test",
+        seconds: 5,
+      }),
     });
     const created = await responseJson(createRes);
     const taskId = created.id as string;

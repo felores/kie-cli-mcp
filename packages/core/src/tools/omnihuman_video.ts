@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { OmniHumanVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const omniHumanVideoTool: ToolDef<typeof OmniHumanVideoSchema> = {
   name: "omnihuman_video",
@@ -14,7 +14,9 @@ export const omniHumanVideoTool: ToolDef<typeof OmniHumanVideoSchema> = {
       request.callBackUrl = ctx.getCallbackUrl(request.callBackUrl);
       const response = await ctx.client.generateOmniHumanVideo(request);
       if (response.code !== 200 || !response.data?.taskId) {
-        throw new Error(response.msg || "Failed to create OmniHuman video task");
+        throw new Error(
+          response.msg || "Failed to create OmniHuman video task",
+        );
       }
       await ctx.db.createTask({
         task_id: response.data.taskId,

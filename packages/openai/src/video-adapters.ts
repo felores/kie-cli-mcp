@@ -1,17 +1,39 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import type { Request, Response } from "express";
 import type { ByteDanceSeedanceVideoRequest } from "@felores/kie-ai-core";
 import {
-  KieAiClient,
+  type KieAiClient,
   KieAiRequestError,
 } from "@felores/kie-ai-core/client";
+import type { Request, Response } from "express";
 import { OpenAiHttpError } from "./errors.js";
 import {
+  hashRequestId,
+  type JournalError,
+  type RequestJournal,
+  RequestJournalConflictError,
+  type RequestJournalRecord,
+} from "./request-journal.js";
+import {
+  assertSafeResultUrl,
+  classifyProviderError,
+  DEFAULT_VIDEO_RESULT_HOSTS,
+  downloadResultBytes,
+  InvalidProviderResultError,
+  isRecord,
+  journalError,
+  providerError,
+  readResultUrls,
+  responseCodeIsSuccessful,
+  taskIdFromResponse,
+  UnsafeResultUrlError,
+  validateVideoBytes,
+} from "./result-download.js";
+import {
   KieAiResponseError,
-  MultipartImageFile,
-  MultipartParseError,
-  MAX_VIDEO_REFERENCE_FILE_BYTES,
   MAX_AUDIO_REFERENCE_FILE_BYTES,
+  MAX_VIDEO_REFERENCE_FILE_BYTES,
+  type MultipartImageFile,
+  MultipartParseError,
   parseMultipartForm,
   uploadReferenceFiles,
   uploadReferenceImages,
@@ -19,28 +41,6 @@ import {
   validateImageFile,
   validateVideoFile,
 } from "./uploads.js";
-import {
-  RequestJournal,
-  RequestJournalConflictError,
-  hashRequestId,
-  type JournalError,
-  type RequestJournalRecord,
-} from "./request-journal.js";
-import {
-  DEFAULT_VIDEO_RESULT_HOSTS,
-  InvalidProviderResultError,
-  UnsafeResultUrlError,
-  assertSafeResultUrl,
-  classifyProviderError,
-  downloadResultBytes,
-  isRecord,
-  journalError,
-  providerError,
-  readResultUrls,
-  responseCodeIsSuccessful,
-  taskIdFromResponse,
-  validateVideoBytes,
-} from "./result-download.js";
 
 export const KIE_VIDEO_MODELS = [
   "kie-bytedance-video",
@@ -171,10 +171,7 @@ function readDuration(value: unknown): number | undefined {
         ? Number(value)
         : Number.NaN;
   if (!Number.isInteger(duration)) {
-    throw invalidSetting(
-      "The seconds setting must be an integer.",
-      "seconds",
-    );
+    throw invalidSetting("The seconds setting must be an integer.", "seconds");
   }
   return duration;
 }
@@ -205,10 +202,7 @@ function readResolution(value: unknown): string | undefined {
   return value;
 }
 
-function readBoolean(
-  value: unknown,
-  field: string,
-): boolean | undefined {
+function readBoolean(value: unknown, field: string): boolean | undefined {
   if (value === undefined) return undefined;
   if (typeof value === "boolean") return value;
   if (value === "true") return true;
@@ -284,17 +278,31 @@ function partitionMultipartFiles(files: MultipartImageFile[]): {
         file.fieldName,
       );
     }
-    if (file.fieldName === "input_reference" || file.fieldName === "input_reference[]") {
+    if (
+      file.fieldName === "input_reference" ||
+      file.fieldName === "input_reference[]"
+    ) {
       images.push(file);
-    } else if (file.fieldName === "reference_video" || file.fieldName === "reference_video[]") {
+    } else if (
+      file.fieldName === "reference_video" ||
+      file.fieldName === "reference_video[]"
+    ) {
       videos.push(file);
-    } else if (file.fieldName === "reference_audio" || file.fieldName === "reference_audio[]") {
+    } else if (
+      file.fieldName === "reference_audio" ||
+      file.fieldName === "reference_audio[]"
+    ) {
       audios.push(file);
     } else if (file.fieldName === "first_frame") {
-      if (firstFrame) throw invalidReference("Only one first_frame is allowed.", "first_frame");
+      if (firstFrame)
+        throw invalidReference(
+          "Only one first_frame is allowed.",
+          "first_frame",
+        );
       firstFrame = file;
     } else if (file.fieldName === "last_frame") {
-      if (lastFrame) throw invalidReference("Only one last_frame is allowed.", "last_frame");
+      if (lastFrame)
+        throw invalidReference("Only one last_frame is allowed.", "last_frame");
       lastFrame = file;
     }
   }
@@ -302,7 +310,10 @@ function partitionMultipartFiles(files: MultipartImageFile[]): {
   if (lastFrame && !firstFrame) {
     throw invalidReference("last_frame requires first_frame.", "last_frame");
   }
-  if ((firstFrame || lastFrame) && (images.length || videos.length || audios.length)) {
+  if (
+    (firstFrame || lastFrame) &&
+    (images.length || videos.length || audios.length)
+  ) {
     throw invalidReference(
       "Frame inputs and multimodal reference inputs cannot be combined.",
     );
@@ -488,10 +499,7 @@ function assertMatchingRequest(
   input: NormalizedVideoRequest,
   fingerprint: string,
 ): void {
-  if (
-    record.model !== input.model ||
-    record.fingerprint !== fingerprint
-  ) {
+  if (record.model !== input.model || record.fingerprint !== fingerprint) {
     throw idempotencyConflict();
   }
 }
@@ -551,9 +559,12 @@ function extractVideoContentType(
   return ext ? `video/${ext}` : null;
 }
 
-function normalizeVideoStatus(
-  record: RequestJournalRecord,
-): { id: string; status: string; model: string; created: number } {
+function normalizeVideoStatus(record: RequestJournalRecord): {
+  id: string;
+  status: string;
+  model: string;
+  created: number;
+} {
   const id = record.requestIdHash;
   let status: string;
   if (record.state === "succeeded") status = "completed";
@@ -579,7 +590,10 @@ export async function handleVideoCreate(
 
   const contentType = request.headers["content-type"];
   let input: NormalizedVideoRequest;
-  if (typeof contentType === "string" && contentType.startsWith("multipart/form-data")) {
+  if (
+    typeof contentType === "string" &&
+    contentType.startsWith("multipart/form-data")
+  ) {
     try {
       input = await normalizeMultipartVideoRequest(
         request,
@@ -654,11 +668,7 @@ export async function handleVideoCreate(
   }
 
   try {
-    const seedanceRequest = buildSeedanceRequest(
-      input,
-      uploaded,
-      callbackUrl,
-    );
+    const seedanceRequest = buildSeedanceRequest(input, uploaded, callbackUrl);
     const providerResponse =
       await context.client.generateByteDanceSeedanceVideo(seedanceRequest);
     const taskId = taskIdFromResponse(providerResponse);
@@ -752,7 +762,8 @@ export async function handleVideoStatus(
       } else if (
         error instanceof Error &&
         (error.message === "The provider task failed." ||
-          error.message === "The provider returned multiple video results where one was expected.")
+          error.message ===
+            "The provider returned multiple video results where one was expected.")
       ) {
         const failure = providerError(
           "KIE reported that the video task failed.",
@@ -868,7 +879,10 @@ export async function handleVideoContent(
   }
 }
 
-function secureTokenMatches(header: string | undefined, token: string): boolean {
+function secureTokenMatches(
+  header: string | undefined,
+  token: string,
+): boolean {
   if (!header?.startsWith("Bearer ")) return false;
   const candidate = Buffer.from(header.slice("Bearer ".length));
   const expected = Buffer.from(token);
@@ -887,16 +901,22 @@ export async function handleVideoCallback(
     return;
   }
   const requestIdHash = request.params.id;
-  const token = (request.query.token as string) || request.get("X-Callback-Token");
+  const token =
+    (request.query.token as string) || request.get("X-Callback-Token");
   const record = await context.journal.read(requestIdHash);
   if (!record || !record.callbackToken) {
-    response.status(404).json({ error: { message: "Not found", type: "not_found" } });
+    response
+      .status(404)
+      .json({ error: { message: "Not found", type: "not_found" } });
     return;
   }
   if (!token || !secureTokenMatches(`Bearer ${token}`, record.callbackToken)) {
-    response
-      .status(401)
-      .json({ error: { message: "Invalid callback token", type: "authentication_error" } });
+    response.status(401).json({
+      error: {
+        message: "Invalid callback token",
+        type: "authentication_error",
+      },
+    });
     return;
   }
 

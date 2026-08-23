@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { RunwayAlephVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const runwayAlephVideoTool: ToolDef<typeof RunwayAlephVideoSchema> = {
   name: "runway_aleph_video",
-  description: "Transform videos using Runway Aleph video-to-video generation with AI-powered editing",
+  description:
+    "Transform videos using Runway Aleph video-to-video generation with AI-powered editing",
   category: "video",
   schema: RunwayAlephVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { QwenImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const qwenImageTool: ToolDef<typeof QwenImageSchema> = {
   name: "qwen_image",
-  description: "Generate and edit images using Qwen models (unified tool for both text-to-image and image editing)",
+  description:
+    "Generate and edit images using Qwen models (unified tool for both text-to-image and image editing)",
   category: "image",
   schema: QwenImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

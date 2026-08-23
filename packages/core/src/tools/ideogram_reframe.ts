@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { IdeogramReframeSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const ideogramReframeTool: ToolDef<typeof IdeogramReframeSchema> = {
   name: "ideogram_reframe",
-  description: "Reframe images to different aspect ratios and sizes using Ideogram V3 Reframe model",
+  description:
+    "Reframe images to different aspect ratios and sizes using Ideogram V3 Reframe model",
   category: "image",
   schema: IdeogramReframeSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

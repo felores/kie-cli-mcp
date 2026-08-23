@@ -1,5 +1,5 @@
-import type { ToolDef, ToolCategory } from "./tools/types.js";
 import { toInputJsonSchema } from "./json-schema.js";
+import type { ToolCategory, ToolDef } from "./tools/types.js";
 
 interface JsonProp {
   type?: string | string[];

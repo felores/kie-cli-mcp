@@ -1,14 +1,21 @@
-import { mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  rm,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import { request as httpRequest } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import type { ToolContext } from "@felores/kie-ai-core";
+import { getUploadUrlTool } from "@felores/kie-ai-core";
 import { afterEach, describe, expect, test } from "@jest/globals";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { createHttpApp } from "../http-transport.js";
 import { TemporaryUploadStore } from "../upload-storage.js";
-import { getUploadUrlTool } from "@felores/kie-ai-core";
-import type { ToolContext } from "@felores/kie-ai-core";
 
 const roots: string[] = [];
 const stores: TemporaryUploadStore[] = [];
@@ -21,9 +28,7 @@ afterEach(async () => {
 });
 
 function pngBytes(): Uint8Array {
-  return new Uint8Array([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00,
-  ]);
+  return new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
 }
 
 function uploadBody(): BodyInit {
@@ -78,7 +83,9 @@ function stalledPut(url: string, body: Uint8Array): Promise<void> {
 }
 
 async function createStore(
-  overrides: Partial<ConstructorParameters<typeof TemporaryUploadStore>[0]> = {},
+  overrides: Partial<
+    ConstructorParameters<typeof TemporaryUploadStore>[0]
+  > = {},
 ): Promise<TemporaryUploadStore> {
   const root = await mkdtemp(join(tmpdir(), "kie-upload-test-"));
   roots.push(root);
@@ -187,7 +194,9 @@ describe("temporary upload primary path", () => {
         owner: "owner-1",
       });
       const downloadPath = new URL(providerDownload.url).pathname;
-      const head = await fetch(runtime.origin + downloadPath, { method: "HEAD" });
+      const head = await fetch(runtime.origin + downloadPath, {
+        method: "HEAD",
+      });
       expect(head.status).toBe(200);
       expect(head.headers.get("x-content-type-options")).toBe("nosniff");
       expect(head.headers.get("cache-control")).toBe("private, no-store");
@@ -483,11 +492,7 @@ describe("temporary upload quotas and expiry", () => {
     expect(await readdir(join(root, "kie-mcp-uploads"))).not.toContain(
       "instance-stale",
     );
-    const laterStale = join(
-      root,
-      "kie-mcp-uploads",
-      "instance-later-stale",
-    );
+    const laterStale = join(root, "kie-mcp-uploads", "instance-later-stale");
     await mkdir(laterStale, { recursive: true });
     await writeFile(join(laterStale, "orphan.media"), pngBytes());
     await utimes(laterStale, new Date(0), new Date(0));

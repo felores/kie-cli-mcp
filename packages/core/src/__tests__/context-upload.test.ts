@@ -8,9 +8,9 @@ const directories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
-    directories.splice(0).map((path) =>
-      rm(path, { recursive: true, force: true }),
-    ),
+    directories
+      .splice(0)
+      .map((path) => rm(path, { recursive: true, force: true })),
   );
 });
 
@@ -36,7 +36,9 @@ describe("CLI local upload roots", () => {
     process.env.KIE_AI_DB_PATH = join(root, "tasks.db");
     const context = createToolContext();
     try {
-      await expect(context.readLocalUpload?.(allowedFile, 1024)).resolves.toMatchObject({
+      await expect(
+        context.readLocalUpload?.(allowedFile, 1024),
+      ).resolves.toMatchObject({
         filename: "reference.png",
         contentType: "image/png",
       });

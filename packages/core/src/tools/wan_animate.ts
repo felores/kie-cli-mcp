@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { WanAnimateSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const wanAnimateTool: ToolDef<typeof WanAnimateSchema> = {
   name: "wan_animate",

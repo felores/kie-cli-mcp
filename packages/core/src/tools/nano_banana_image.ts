@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { NanoBananaImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const nanoBananaImageTool: ToolDef<typeof NanoBananaImageSchema> = {
   name: "nano_banana_image",

@@ -1,7 +1,7 @@
 import { jest } from "@jest/globals";
-import { GetUploadUrlSchema, UploadFileSchema } from "../types.js";
-import { uploadFileTool } from "../tools/upload_file.js";
 import type { ToolContext } from "../tools/types.js";
+import { uploadFileTool } from "../tools/upload_file.js";
+import { GetUploadUrlSchema, UploadFileSchema } from "../types.js";
 
 function pngDataUrl(): string {
   return `data:image/png;base64,${Buffer.from([
@@ -71,7 +71,11 @@ describe("UploadFileSchema", () => {
   });
 
   test("rejects hostile filenames before temporary storage", () => {
-    for (const filename of ["../secret.png", "folder/file.png", "evil\r\nX-Test: yes.png"]) {
+    for (const filename of [
+      "../secret.png",
+      "folder/file.png",
+      "evil\r\nX-Test: yes.png",
+    ]) {
       expect(
         GetUploadUrlSchema.safeParse({
           app_grant: "g".repeat(43),
@@ -91,7 +95,9 @@ describe("upload_file tool", () => {
       { file_base64: "not-base64", content_type: "image/png" },
       ctx,
     );
-    expect(JSON.parse(result.content[0].text)).toMatchObject({ success: false });
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      success: false,
+    });
     expect(ctx.client.uploadBase64).not.toHaveBeenCalled();
   });
 
@@ -116,10 +122,7 @@ describe("upload_file tool", () => {
       filename: "reference.png",
       contentType: "image/png",
     });
-    await uploadFileTool.run(
-      { file_path: "/allowed/reference.png" },
-      ctx,
-    );
+    await uploadFileTool.run({ file_path: "/allowed/reference.png" }, ctx);
     expect(ctx.client.uploadFile).toHaveBeenCalledWith(
       expect.objectContaining({ filename: "reference.png" }),
       "images/user-uploads",
@@ -128,11 +131,10 @@ describe("upload_file tool", () => {
 
   test("rejects local paths on non-CLI adapters", async () => {
     const ctx = context();
-    const result = await uploadFileTool.run(
-      { file_path: "/etc/passwd" },
-      ctx,
-    );
-    expect(JSON.parse(result.content[0].text)).toMatchObject({ success: false });
+    const result = await uploadFileTool.run({ file_path: "/etc/passwd" }, ctx);
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      success: false,
+    });
     expect(ctx.client.uploadFile).not.toHaveBeenCalled();
   });
 });

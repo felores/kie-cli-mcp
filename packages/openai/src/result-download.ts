@@ -1,13 +1,10 @@
 import { isIP } from "node:net";
 import {
-  KieAiClient,
+  type KieAiClient,
   KieAiRequestError,
 } from "@felores/kie-ai-core/client";
 import { OpenAiHttpError } from "./errors.js";
-import {
-  KieAiResponseError,
-  MAX_RESULT_FILE_BYTES,
-} from "./uploads.js";
+import { KieAiResponseError, MAX_RESULT_FILE_BYTES } from "./uploads.js";
 
 export const DEFAULT_VIDEO_RESULT_HOSTS = [
   "file.aiquickdraw.com",
@@ -222,7 +219,11 @@ export function classifyProviderError(error: unknown): {
         unknownAcceptance: false,
       };
     }
-    if (error.status !== undefined && error.status >= 400 && error.status < 500) {
+    if (
+      error.status !== undefined &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
       return {
         httpError: providerError(
           "KIE rejected the request.",

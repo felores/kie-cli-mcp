@@ -1,37 +1,37 @@
-import {
+import { validatePublicHttpUrl } from "./media-validation.js";
+import type {
+  ByteDanceSeedanceVideoRequest,
+  ByteDanceSeedreamImageRequest,
+  ElevenLabsSoundEffectsRequest,
+  ElevenLabsTTSRequest,
+  Flux2ImageRequest,
+  FluxKontextImageRequest,
+  GeminiOmniRequest,
+  GptImage2Request,
+  GrokImagineRequest,
+  HailuoVideoRequest,
+  HappyHorseVideoRequest,
+  IdeogramReframeRequest,
+  ImageResponse,
+  InfiniTalkRequest,
   KieAiConfig,
   KieAiResponse,
-  NanoBananaImageRequest,
-  Veo3GenerateRequest,
-  SunoGenerateRequest,
-  ElevenLabsTTSRequest,
-  ElevenLabsSoundEffectsRequest,
-  ByteDanceSeedanceVideoRequest,
-  RunwayAlephVideoRequest,
-  WanVideoRequest,
-  ByteDanceSeedreamImageRequest,
-  QwenImageRequest,
-  MidjourneyGenerateRequest,
-  GptImage2Request,
-  FluxKontextImageRequest,
-  RecraftRemoveBackgroundRequest,
-  IdeogramReframeRequest,
-  KlingVideoRequest,
-  HailuoVideoRequest,
-  Flux2ImageRequest,
-  WanAnimateRequest,
-  ZImageRequest,
-  GrokImagineRequest,
-  InfiniTalkRequest,
   KlingAvatarRequest,
-  TopazUpscaleImageRequest,
-  HappyHorseVideoRequest,
+  KlingVideoRequest,
+  MidjourneyGenerateRequest,
+  NanoBananaImageRequest,
   OmniHumanVideoRequest,
-  GeminiOmniRequest,
-  ImageResponse,
+  QwenImageRequest,
+  RecraftRemoveBackgroundRequest,
+  RunwayAlephVideoRequest,
+  SunoGenerateRequest,
   TaskResponse,
+  TopazUpscaleImageRequest,
+  Veo3GenerateRequest,
+  WanAnimateRequest,
+  WanVideoRequest,
+  ZImageRequest,
 } from "./types.js";
-import { validatePublicHttpUrl } from "./media-validation.js";
 
 export class KieAiRequestError extends Error {
   constructor(
@@ -90,7 +90,11 @@ async function readResponseBytes(
   maxBytes?: number,
 ): Promise<Uint8Array> {
   const contentLength = Number(response.headers.get("content-length"));
-  if (maxBytes !== undefined && Number.isFinite(contentLength) && contentLength > maxBytes) {
+  if (
+    maxBytes !== undefined &&
+    Number.isFinite(contentLength) &&
+    contentLength > maxBytes
+  ) {
     throw new KieAiRequestError(
       "The provider result exceeded the download size limit.",
       502,
@@ -150,7 +154,8 @@ export class KieAiClient {
   }
 
   private fileUploadEndpoint(path: string): string {
-    const rawBase = this.config.fileUploadBaseUrl ?? "https://kieai.redpandaai.co";
+    const rawBase =
+      this.config.fileUploadBaseUrl ?? "https://kieai.redpandaai.co";
     const parsed = new URL(rawBase);
     const isLoopback =
       parsed.hostname === "127.0.0.1" ||
@@ -161,14 +166,20 @@ export class KieAiClient {
       parsed.password ||
       parsed.search ||
       parsed.hash ||
-      (parsed.protocol !== "https:" && !(parsed.protocol === "http:" && isLoopback))
+      (parsed.protocol !== "https:" &&
+        !(parsed.protocol === "http:" && isLoopback))
     ) {
-      throw new Error("KIE_AI_FILE_UPLOAD_BASE_URL must be HTTPS without credentials, query, or fragment.");
+      throw new Error(
+        "KIE_AI_FILE_UPLOAD_BASE_URL must be HTTPS without credentials, query, or fragment.",
+      );
     }
     let pathname = parsed.pathname.replace(/\/+$/, "");
-    if (pathname.endsWith("/api/v1")) pathname = pathname.slice(0, -"/api/v1".length);
+    if (pathname.endsWith("/api/v1"))
+      pathname = pathname.slice(0, -"/api/v1".length);
     if (pathname && pathname !== "/") {
-      throw new Error("KIE_AI_FILE_UPLOAD_BASE_URL must not contain an application path.");
+      throw new Error(
+        "KIE_AI_FILE_UPLOAD_BASE_URL must not contain an application path.",
+      );
     }
     parsed.pathname = path;
     return parsed.toString();
@@ -396,7 +407,9 @@ export class KieAiClient {
 
     if (isLite) {
       if (request.image_input && request.image_input.length > 10) {
-        throw new Error("Nano Banana 2 Lite supports at most 10 reference images");
+        throw new Error(
+          "Nano Banana 2 Lite supports at most 10 reference images",
+        );
       }
       input.image_urls = request.image_input || [];
     } else {
@@ -461,9 +474,9 @@ export class KieAiClient {
       apiType === "flux2-image" ||
       apiType === "wan-animate" ||
       apiType === "topaz-upscale" ||
-       apiType === "happyhorse-video" ||
-       apiType === "omnihuman-video" ||
-       apiType === "gemini-omni-video" ||
+      apiType === "happyhorse-video" ||
+      apiType === "omnihuman-video" ||
+      apiType === "gemini-omni-video" ||
       apiType === "gpt-image-2"
     ) {
       return this.makeRequest<any>(`/jobs/recordInfo?taskId=${taskId}`, "GET");
@@ -818,8 +831,12 @@ export class KieAiClient {
       return this.makeRequest("/omni/audio/create", "POST", {
         audio_id: request.audio_id,
         name: request.name,
-        ...(request.voice_description && { voice_description: request.voice_description }),
-        ...(request.example_dialogue && { example_dialogue: request.example_dialogue }),
+        ...(request.voice_description && {
+          voice_description: request.voice_description,
+        }),
+        ...(request.example_dialogue && {
+          example_dialogue: request.example_dialogue,
+        }),
       });
     }
     if (request.operation === "character") {
@@ -827,11 +844,22 @@ export class KieAiClient {
         descriptions: request.descriptions,
         image_urls: request.image_urls,
         ...(request.audio_ids?.length && { audio_ids: request.audio_ids }),
-        ...(request.character_name && { character_name: request.character_name }),
+        ...(request.character_name && {
+          character_name: request.character_name,
+        }),
       });
     }
     const input: Record<string, unknown> = { prompt: request.prompt };
-    for (const key of ["image_urls", "audio_ids", "video_list", "character_ids", "duration", "aspect_ratio", "resolution", "seed"] as const) {
+    for (const key of [
+      "image_urls",
+      "audio_ids",
+      "video_list",
+      "character_ids",
+      "duration",
+      "aspect_ratio",
+      "resolution",
+      "seed",
+    ] as const) {
       if (request[key] !== undefined) input[key] = request[key];
     }
     return this.makeRequest("/jobs/createTask", "POST", {

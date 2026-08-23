@@ -26,6 +26,9 @@ jobs:
 
       - run: npm ci
 
+      - name: Lint and format (Biome)
+        run: npm run check
+
       - name: Build
         run: npm run build
 
