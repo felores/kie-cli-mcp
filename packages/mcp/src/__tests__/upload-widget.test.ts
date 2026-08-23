@@ -178,15 +178,64 @@ describe("MCP Apps upload widget", () => {
           app_grant: latestGrant,
           media_id: "02a9f79d-cbca-44f8-a93e-10fbe6e76848",
         },
-      })) as { content: Array<{ type: "text"; text: string }> };
+      })) as {
+        content: Array<{ type: "text"; text: string }>;
+        structuredContent?: Record<string, unknown>;
+      };
       expect(JSON.parse(finalized.content[0].text)).toMatchObject({
         success: true,
         download_url: "https://tempfile.redpandaai.co/final.png",
+      });
+      expect(finalized.structuredContent).toEqual({
+        download_url: "https://tempfile.redpandaai.co/final.png",
+        filename: "reference.png",
+        content_type: "image/png",
+        size: 9,
       });
     } finally {
       await client.close();
       await server.close();
       await privateApp.db.close();
+      if (previousKey === undefined) delete process.env.KIE_AI_API_KEY;
+      else process.env.KIE_AI_API_KEY = previousKey;
+      if (previousDb === undefined) delete process.env.KIE_AI_DB_PATH;
+      else process.env.KIE_AI_DB_PATH = previousDb;
+    }
+  });
+
+  test("does not advertise the app resource to hosts without the Apps extension", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "kie-widget-negtest-"));
+    directories.push(directory);
+    const previousKey = process.env.KIE_AI_API_KEY;
+    const previousDb = process.env.KIE_AI_DB_PATH;
+    process.env.KIE_AI_API_KEY = "test-key-no-network";
+    process.env.KIE_AI_DB_PATH = join(directory, "tasks.db");
+
+    const app = new KieAiMcpServer();
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client(
+      { name: "widget-negtest", version: "1.0.0" },
+      { capabilities: {} },
+    );
+    const server = app.createServer();
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+      const resources = await client.listResources();
+      expect(resources.resources.map((r) => r.uri)).not.toContain(
+        UPLOAD_WIDGET_URI,
+      );
+      const tools = await client.listTools();
+      expect(tools.tools.some((tool) => tool.name === "upload_widget")).toBe(
+        true,
+      );
+    } finally {
+      await client.close();
+      await server.close();
+      await (app as unknown as { db: { close(): Promise<void> } }).db.close();
       if (previousKey === undefined) delete process.env.KIE_AI_API_KEY;
       else process.env.KIE_AI_API_KEY = previousKey;
       if (previousDb === undefined) delete process.env.KIE_AI_DB_PATH;

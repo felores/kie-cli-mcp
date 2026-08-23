@@ -89,6 +89,18 @@ describe("MCP server discovery and output schemas", () => {
         properties: { media_id: { type: "string" } },
       });
 
+      const finalize = byName.get("finalize_upload");
+      expect(finalize?.outputSchema).toMatchObject({
+        type: "object",
+        properties: { download_url: { type: "string" } },
+      });
+
+      const submit = byName.get("submit_media_generation");
+      expect(submit?.outputSchema).toMatchObject({
+        type: "object",
+        properties: { plan_id: { type: "string" } },
+      });
+
       // Utility tools without guaranteed structured content stay schema-free.
       expect(byName.get("list_tasks")?.outputSchema).toBeUndefined();
     } finally {

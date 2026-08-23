@@ -432,8 +432,17 @@ export class KieAiMcpServer {
         annotations: { audience: ["assistant"], priority: 0.6 },
       }));
 
+      // MCP Apps negotiation: the app resource is exposed only to hosts that
+      // declare the Apps extension; other clients keep the widget tool's
+      // plain-text fallback.
+      const appsSupported = Boolean(
+        server.getClientCapabilities()?.extensions?.[
+          "io.modelcontextprotocol/ui"
+        ],
+      );
       const guideResources = [
-        ...(isMcpToolCallable(getTool("upload_widget")!, this.enabledTools)
+        ...(appsSupported &&
+        isMcpToolCallable(getTool("upload_widget")!, this.enabledTools)
           ? [
               {
                 uri: UPLOAD_WIDGET_URI,

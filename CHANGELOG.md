@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stable `tools/list` and `server/discover` results. Tools with guaranteed
   structured content (preparation, upload capabilities, and generation task
   results) now advertise `outputSchema`.
+- MCP Apps negotiation: the upload widget resource (`ui://kie/upload.html`) is
+  exposed only to hosts that declare the Apps extension; other clients keep the
+  widget tool's plain-text fallback.
+- Structured results extended to the media pipeline: `finalize_upload` and
+  `submit_media_generation` return `structuredContent` and advertise
+  `outputSchema`.
 
 
 ### Security
