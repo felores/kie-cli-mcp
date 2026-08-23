@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adopted Biome for formatting, import organization, and linting across the
   monorepo. The `check` script (Biome) runs in the Verify workflow; type
   checking remains authoritative via `tsc --noEmit`.
+- MCP state is now owned by a transport-independent caller principal instead of
+  an individual Server instance: the approval owner, generation plans, widget
+  grants, and staged uploads stay addressable across fresh Server instances of
+  the same session. This is the first step toward the stateless SDK v2
+  transport.
+
+### Security
+- Streamable HTTP uploads are now scoped per session owner; one session can no
+  longer finalize media staged by a different session (they previously shared a
+  single bearer owner).
 
 ## [4.3.0] - 2026-08-22
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
@@ -32,9 +31,15 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { startHttpServer } from "./http-transport.js";
 import { requestMcpPlanApproval } from "./plan-approval.js";
+import {
+  type CallerPrincipal,
+  principalApprovalId,
+  STDIO_PRINCIPAL,
+} from "./principal.js";
 import { isMcpToolCallable } from "./tool-access.js";
 import { TemporaryUploadStore } from "./upload-storage.js";
 import { UPLOAD_WIDGET_HTML, UPLOAD_WIDGET_MIME } from "./upload-widget.js";
+import { WidgetGrantService } from "./widget-grants.js";
 
 export class KieAiMcpServer {
   private server: Server;
@@ -43,7 +48,7 @@ export class KieAiMcpServer {
   private config: KieAiConfig;
   private enabledTools: Set<string>;
   private toolContext: Omit<ToolContext, "approvalContext">;
-
+  private readonly widgetGrants = new WidgetGrantService();
   // Utility tools are derived from the registry's `category` field, not a
   // hardcoded list, so they are always-on by definition: any tool marked
   // `category: "utility"` (get_task_status, list_tasks, wait_for_task) cannot be
@@ -126,10 +131,12 @@ export class KieAiMcpServer {
   }
 
   // Build a fresh MCP Server with all handlers wired to the shared client/db
-  // context. Each SDK Server gets an opaque approval context: stable for stdio
-  // and distinct for every Streamable HTTP session.
-  createServer(): Server {
-    const approvalContext = randomUUID();
+  // context. State ownership is derived from the caller principal, never from
+  // the Server instance: same principal across instances => same approval
+  // owner, the same widget grant space, and the same plan/upload state. This
+  // keeps subsequent stateless (SDK v2) requests resolveable.
+  createServer(principal: CallerPrincipal = STDIO_PRINCIPAL): Server {
+    const approvalContext = principalApprovalId(principal);
     const server = new Server(
       {
         name: "kie-ai-mcp-server",
@@ -145,7 +152,14 @@ export class KieAiMcpServer {
         },
       },
     );
-    this.setupHandlers(server, { ...this.toolContext, approvalContext });
+    this.setupHandlers(
+      server,
+      {
+        ...this.toolContext,
+        approvalContext,
+      },
+      principal,
+    );
     return server;
   }
 
@@ -266,39 +280,17 @@ export class KieAiMcpServer {
     );
   }
 
-  private setupHandlers(server: Server, toolContext: ToolContext): void {
-    const grants = new Map<string, { expiresAt: number; uses: number }>();
-    const grantHash = (value: string) =>
-      createHash("sha256").update(value).digest("hex");
+  private setupHandlers(
+    server: Server,
+    toolContext: ToolContext,
+    principal: CallerPrincipal,
+  ): void {
+    const owner = principalApprovalId(principal);
     const scopedContext: ToolContext = {
       ...toolContext,
-      createWidgetGrant: () => {
-        const now = Date.now();
-        for (const [key, record] of grants) {
-          if (record.expiresAt <= now) grants.delete(key);
-        }
-        while (grants.size >= 16) {
-          const oldest = grants.keys().next().value as string | undefined;
-          if (!oldest) break;
-          grants.delete(oldest);
-        }
-        const grant = randomBytes(32).toString("base64url");
-        grants.set(grantHash(grant), {
-          expiresAt: now + 10 * 60 * 1000,
-          uses: 0,
-        });
-        return grant;
-      },
-      validateWidgetGrant: (grant) => {
-        const key = grantHash(grant);
-        const record = grants.get(key);
-        if (!record || record.expiresAt <= Date.now() || record.uses >= 4) {
-          grants.delete(key);
-          return false;
-        }
-        record.uses += 1;
-        return true;
-      },
+      createWidgetGrant: () => this.widgetGrants.createGrant(owner),
+      validateWidgetGrant: (grant) =>
+        this.widgetGrants.validateGrant(owner, grant),
     };
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools = TOOL_REGISTRY.filter((t) =>
@@ -1304,15 +1296,17 @@ These guidelines ensure optimal balance between quality requirements and cost ma
         })
       : undefined;
     if (uploadStore) {
-      const owner = "http-bearer-principal";
+      // Uploads are scoped by the calling session's owner (its derived
+      // approvalContext), never shared across principals, so one session
+      // cannot finalize another session's staged media.
       this.toolContext = {
         ...this.toolContext,
         createUploadCapability: (request) =>
-          uploadStore.createCapability({ ...request, owner }),
+          uploadStore.createCapability(request),
         finalizeUpload: async (request) => {
           const staged = await uploadStore.createProviderDownload({
             mediaId: request.mediaId,
-            owner,
+            owner: request.owner,
           });
           const response = await this.client.uploadFromUrl({
             fileUrl: staged.url,
@@ -1326,7 +1320,7 @@ These guidelines ensure optimal balance between quality requirements and cost ma
               response.msg || "Kie.ai did not return a finalized downloadUrl.",
             );
           }
-          await uploadStore.removeMedia(request.mediaId, owner);
+          await uploadStore.removeMedia(request.mediaId, request.owner);
           return {
             downloadUrl,
             filename: staged.filename,
@@ -1338,7 +1332,7 @@ These guidelines ensure optimal balance between quality requirements and cost ma
       };
     }
     startHttpServer({
-      createServer: () => this.createServer(),
+      createServer: (principal) => this.createServer(principal),
       version: KieAiMcpServer.VERSION,
       uploadStore,
     });
