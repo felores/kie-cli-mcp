@@ -12,8 +12,8 @@
     "bundle": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-    "start": "node --env-file=.env dist/index.js",
-    "dev": "tsx --env-file=.env src/index.ts",
+    "start": "node --env-file=../../.env dist/index.js",
+    "dev": "tsx --env-file=../../.env src/index.ts",
     "prepack": "npm run build -w @felores/kie-ai-core && npm run bundle"
   },
   "keywords": [

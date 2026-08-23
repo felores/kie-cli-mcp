@@ -364,7 +364,7 @@ if (apiType === 'veo3') {
 5. **Tests**: Agent runs `npm test` - must pass (if tests exist)
 6. **Local testing with MCP Inspector** *(manual user step - after agent hands off dist/)*: 
    - Agent builds the project and hands dist/ to user
-   - User runs: `npx @modelcontextprotocol/inspector node --env-file=.env dist/index.js`
+   - User runs, from the repository root: `npx @modelcontextprotocol/inspector node --env-file=.env packages/mcp/dist/index.js`
    - User verifies in Inspector UI:
      - ListTools response shows all tools including new ones
      - Test new/critical tools in Tools tab with sample parameters
