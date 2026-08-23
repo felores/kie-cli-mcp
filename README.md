@@ -331,10 +331,13 @@ This is an npm-workspaces monorepo: `packages/core` (private shared registry, bu
 </details>
 
 <details>
-<summary><strong>🌐 Remote / HTTP transport (v4.0.0+)</strong></summary>
+
+<summary><strong>🌐 Remote / HTTP transport (v5.0.0+)</strong></summary>
 
 The server defaults to **stdio** (one local process per client). It can also run
-as a **remote HTTP service** over **Streamable HTTP** (MCP spec 2025-11-25).
+as a **remote HTTP service** over **Streamable HTTP**. Since v5.0.0 it is built
+on the MCP SDK v2 packages and serves both 2025-era and 2026-07-28 clients by
+protocol negotiation.
 
 **Why use it:**
 - **One shared instance for many clients** — host it once, connect your whole

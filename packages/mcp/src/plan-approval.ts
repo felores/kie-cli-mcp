@@ -2,7 +2,7 @@ import type {
   PlanApprovalDecision,
   PreparedGenerationPlan,
 } from "@felores/kie-ai-core";
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import type { Server } from "@modelcontextprotocol/server";
 
 function priceSummary(plan: PreparedGenerationPlan): string {
   return plan.total.status === "exact"

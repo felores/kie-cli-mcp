@@ -2,9 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, jest, test } from "@jest/globals";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { ElicitRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { KieAiMcpServer } from "../index.js";
 
 function resultPayload(result: {
@@ -103,7 +101,7 @@ describe("MCP media planning integration", () => {
       message: string;
       confirmRequired: boolean;
     }> = [];
-    client.setRequestHandler(ElicitRequestSchema, async (request) => {
+    client.setRequestHandler("elicitation/create", async (request) => {
       if (request.params.mode !== "form")
         throw new Error("Expected form elicitation.");
       elicitationRequests.push({

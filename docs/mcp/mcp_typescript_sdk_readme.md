@@ -1,4 +1,10 @@
-# MCP TypeScript SDK ![NPM Version](https://img.shields.io/npm/v/%40modelcontextprotocol%2Fsdk) ![MIT licensed](https://img.shields.io/npm/l/%40modelcontextprotocol%2Fsdk)
+# MCP TypeScript SDK (v1 reference)
+
+> **Legacy reference.** Snapshot of the monolithic `@modelcontextprotocol/sdk`
+> (v1) README. The MCP server ships since v5.0.0 on the split v2 packages
+> (`@modelcontextprotocol/server`, `@modelcontextprotocol/node`,
+> `@modelcontextprotocol/client`). Migration guide:
+> https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/migration/upgrade-to-v2.md.
 
 <details>
 <summary>Table of Contents</summary>

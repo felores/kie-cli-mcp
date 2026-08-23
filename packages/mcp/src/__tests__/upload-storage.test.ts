@@ -13,7 +13,7 @@ import { join } from "node:path";
 import type { ToolContext } from "@felores/kie-ai-core";
 import { getUploadUrlTool } from "@felores/kie-ai-core";
 import { afterEach, describe, expect, test } from "@jest/globals";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Server } from "@modelcontextprotocol/server";
 import { createHttpApp } from "../http-transport.js";
 import { TemporaryUploadStore } from "../upload-storage.js";
 

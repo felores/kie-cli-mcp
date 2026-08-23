@@ -4,8 +4,7 @@ import { join } from "node:path";
 import type { ToolContext } from "@felores/kie-ai-core";
 import { UPLOAD_WIDGET_URI } from "@felores/kie-ai-core";
 import { afterEach, describe, expect, test } from "@jest/globals";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { KieAiMcpServer } from "../index.js";
 
 const directories: string[] = [];

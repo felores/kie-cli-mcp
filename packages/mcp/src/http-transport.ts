@@ -1,8 +1,8 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Server as HttpServer } from "node:http";
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
+import type { Server } from "@modelcontextprotocol/server";
+import { isInitializeRequest } from "@modelcontextprotocol/server";
 import express, {
   type Express,
   type NextFunction,
@@ -136,7 +136,7 @@ export function createHttpApp(options: HttpTransportOptions): Express {
   });
 
   const app = express();
-  const transports = new Map<string, StreamableHTTPServerTransport>();
+  const transports = new Map<string, NodeStreamableHTTPServerTransport>();
 
   app.get("/health", (_req: Request, res: Response) => {
     res.json({
@@ -266,7 +266,7 @@ export function createHttpApp(options: HttpTransportOptions): Express {
     mcpJsonParser,
     async (req: Request, res: Response) => {
       const sessionId = req.headers["mcp-session-id"] as string | undefined;
-      let transport: StreamableHTTPServerTransport | undefined = sessionId
+      let transport: NodeStreamableHTTPServerTransport | undefined = sessionId
         ? transports.get(sessionId)
         : undefined;
 
@@ -296,7 +296,7 @@ export function createHttpApp(options: HttpTransportOptions): Express {
           // created so both are bound to the same caller principal: a fresh
           // Server for a resumed session resolves the same owner and state.
           const newSessionId = randomUUID();
-          transport = new StreamableHTTPServerTransport({
+          transport = new NodeStreamableHTTPServerTransport({
             sessionIdGenerator: () => newSessionId,
             onsessioninitialized: () => {
               transports.set(newSessionId, transport!);

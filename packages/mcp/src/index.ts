@@ -17,18 +17,15 @@ import {
   uploadPathForMimeType,
 } from "@felores/kie-ai-core";
 import { TaskDatabase } from "@felores/kie-ai-core/database";
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
-  CallToolRequestSchema,
-  ErrorCode,
-  GetPromptRequestSchema,
-  ListPromptsRequestSchema,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  McpError,
-  ReadResourceRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
+  type ListResourcesResult,
+  type ListToolsResult,
+  ProtocolError,
+  ProtocolErrorCode,
+  type ReadResourceResult,
+  Server,
+} from "@modelcontextprotocol/server";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { startHttpServer } from "./http-transport.js";
 import { requestMcpPlanApproval } from "./plan-approval.js";
 import {
@@ -96,7 +93,7 @@ export class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "4.3.0";
+  static readonly VERSION = "5.0.0";
 
   constructor() {
     // Initialize client with config from environment
@@ -293,13 +290,15 @@ export class KieAiMcpServer {
       validateWidgetGrant: (grant) =>
         this.widgetGrants.validateGrant(owner, grant),
     };
-    server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler("tools/list", async () => {
       const tools = TOOL_REGISTRY.filter((t) =>
         isMcpToolCallable(t, this.enabledTools),
       ).map((t) => ({
         name: t.name,
         description: t.description,
-        inputSchema: toInputJsonSchema(t.schema),
+        inputSchema: toInputJsonSchema(
+          t.schema,
+        ) as ListToolsResult["tools"][number]["inputSchema"],
         ...(t.ui
           ? {
               _meta: {
@@ -316,29 +315,32 @@ export class KieAiMcpServer {
             }
           : {}),
       }));
-      return { tools };
+      return { tools } as ListToolsResult;
     });
 
-    server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
+    server.setRequestHandler("tools/call", async (request, serverCtx) => {
       try {
         const { name, arguments: args } = request.params;
 
         const tool = getTool(name);
         if (!tool) {
-          throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
+          throw new ProtocolError(
+            ProtocolErrorCode.MethodNotFound,
+            `Unknown tool: ${name}`,
+          );
         }
 
         if (!this.enabledTools.has(name)) {
-          throw new McpError(
-            ErrorCode.InvalidRequest,
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidRequest,
             `Tool '${name}' is not enabled. This tool has been disabled by server configuration. ` +
               `Please check KIE_AI_ENABLED_TOOLS, KIE_AI_TOOL_CATEGORIES, or KIE_AI_DISABLED_TOOLS environment variables.`,
           );
         }
 
         if (!isMcpToolCallable(tool, this.enabledTools)) {
-          throw new McpError(
-            ErrorCode.InvalidRequest,
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidRequest,
             `Tool '${name}' requires prepare_media_generation, host approval, and submit_media_generation. ` +
               "Set KIE_AI_ALLOW_DIRECT_GENERATION=true only to explicitly bypass approval safeguards.",
           );
@@ -363,7 +365,7 @@ export class KieAiMcpServer {
                 ...requestContext,
                 onProgress: async (update) => {
                   try {
-                    await extra.sendNotification({
+                    await serverCtx.mcpReq.notify({
                       method: "notifications/progress",
                       params: { progressToken, ...update },
                     });
@@ -376,18 +378,18 @@ export class KieAiMcpServer {
 
         return normalizeToolResult(await tool.run(args, ctx));
       } catch (error) {
-        if (error instanceof McpError) {
+        if (error instanceof ProtocolError) {
           throw error;
         }
 
         const message =
           error instanceof Error ? error.message : "Unknown error";
-        throw new McpError(ErrorCode.InternalError, message);
+        throw new ProtocolError(ProtocolErrorCode.InternalError, message);
       }
     });
 
     // Resource Handlers
-    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+    server.setRequestHandler("resources/list", async () => {
       const toolResources = TOOL_REGISTRY.filter(
         (t) =>
           isMcpToolCallable(t, this.enabledTools) &&
@@ -451,18 +453,19 @@ export class KieAiMcpServer {
           annotations: { audience: ["user"], priority: 0.3 },
         },
       ];
-
-      return { resources: [...toolResources, ...guideResources] };
+      return {
+        resources: [...toolResources, ...guideResources],
+      } as ListResourcesResult;
     });
 
-    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    server.setRequestHandler("resources/read", async (request) => {
       const { uri } = request.params;
 
       if (uri === UPLOAD_WIDGET_URI) {
         const widgetTool = getTool("upload_widget");
         if (!widgetTool || !isMcpToolCallable(widgetTool, this.enabledTools)) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
             `Resource not found: ${uri}`,
           );
         }
@@ -493,14 +496,14 @@ export class KieAiMcpServer {
       if (toolMatch) {
         const tool = getTool(toolMatch[1]);
         if (!tool) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
             `Resource not found: ${uri}`,
           );
         }
         if (!isMcpToolCallable(tool, this.enabledTools)) {
-          throw new McpError(
-            ErrorCode.InvalidParams,
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
             `Resource not found: ${uri}`,
           );
         }
@@ -563,15 +566,15 @@ export class KieAiMcpServer {
             ],
           };
         default:
-          throw new McpError(
-            ErrorCode.InvalidParams,
+          throw new ProtocolError(
+            ProtocolErrorCode.InvalidParams,
             `Resource not found: ${uri}`,
           );
       }
     });
 
     // Prompt Handlers
-    server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    server.setRequestHandler("prompts/list", async () => {
       return {
         prompts: [
           {
@@ -590,10 +593,13 @@ export class KieAiMcpServer {
       };
     });
 
-    server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    server.setRequestHandler("prompts/get", async (request) => {
       const { name } = request.params;
       if (name !== "image" && name !== "video") {
-        throw new McpError(ErrorCode.InvalidParams, `Unknown prompt: ${name}`);
+        throw new ProtocolError(
+          ProtocolErrorCode.InvalidParams,
+          `Unknown prompt: ${name}`,
+        );
       }
       const text = categoryPromptText(
         name,
