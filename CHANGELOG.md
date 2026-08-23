@@ -52,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `outputSchema`.
 
 
+### CLI (0.8.0)
+- CLI help and command derivation follow the shared zod4 JSON Schema generator
+  (`toInputJsonSchema`, JSON Schema 2020-12) with no user-facing command
+  changes. Ships alongside MCP 5.0.0.
+
 ### Security
 - Streamable HTTP uploads are now scoped per session owner; one session can no
   longer finalize media staged by a different session (they previously shared a
