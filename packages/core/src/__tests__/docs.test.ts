@@ -1,5 +1,5 @@
-import { TOOL_REGISTRY, getTool } from "../tools/index.js";
-import { toolToMarkdown, categoryPromptText } from "../docs.js";
+import { categoryPromptText, toolToMarkdown } from "../docs.js";
+import { getTool, TOOL_REGISTRY } from "../tools/index.js";
 
 describe("registry-generated docs (resources + prompts)", () => {
   it("renders Markdown for every tool with name and parameters section", () => {

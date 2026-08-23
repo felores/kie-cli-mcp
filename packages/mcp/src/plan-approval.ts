@@ -1,5 +1,8 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import type { PreparedGenerationPlan, PlanApprovalDecision } from "@felores/kie-ai-core";
+import type {
+  PlanApprovalDecision,
+  PreparedGenerationPlan,
+} from "@felores/kie-ai-core";
+import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 
 function priceSummary(plan: PreparedGenerationPlan): string {
   return plan.total.status === "exact"
@@ -7,16 +10,21 @@ function priceSummary(plan: PreparedGenerationPlan): string {
     : "total price unknown because one or more request dimensions lack a verified formula";
 }
 
-export function formatPlanApprovalMessage(plan: PreparedGenerationPlan): string {
-  const items = plan.items.map((item) => {
-    const price = item.price.status === "exact"
-      ? `${item.price.credits} credits`
-      : "price unknown";
-    return [
-      `${item.index + 1}. ${item.tool}: ${item.model}, ${item.mode}, ${item.outputCount} output(s), ${price}`,
-      `Resolved settings: ${JSON.stringify(item.effectiveSettings)}`,
-    ].join("\n");
-  }).join("\n");
+export function formatPlanApprovalMessage(
+  plan: PreparedGenerationPlan,
+): string {
+  const items = plan.items
+    .map((item) => {
+      const price =
+        item.price.status === "exact"
+          ? `${item.price.credits} credits`
+          : "price unknown";
+      return [
+        `${item.index + 1}. ${item.tool}: ${item.model}, ${item.mode}, ${item.outputCount} output(s), ${price}`,
+        `Resolved settings: ${JSON.stringify(item.effectiveSettings)}`,
+      ].join("\n");
+    })
+    .join("\n");
   return [
     `Approve media generation plan ${plan.id}?`,
     `Expires: ${plan.expiresAt}. Max concurrent creates: ${plan.maxConcurrency}.`,
@@ -35,7 +43,8 @@ export async function requestMcpPlanApproval(
   if (!server.getClientCapabilities()?.elicitation) {
     return {
       approved: false,
-      reason: "MCP client does not support form elicitation, so this plan remains unapproved.",
+      reason:
+        "MCP client does not support form elicitation, so this plan remains unapproved.",
     };
   }
   const response = await server.elicitInput({
@@ -58,10 +67,11 @@ export async function requestMcpPlanApproval(
   }
   return {
     approved: false,
-    reason: response.action === "accept"
-      ? "Host accepted the form without confirming the plan."
-      : response.action === "cancel"
-        ? "Host cancelled the approval request."
-        : "Host declined the approval request.",
+    reason:
+      response.action === "accept"
+        ? "Host accepted the form without confirming the plan."
+        : response.action === "cancel"
+          ? "Host cancelled the approval request."
+          : "Host declined the approval request.",
   };
 }

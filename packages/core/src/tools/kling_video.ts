@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { KlingVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const klingVideoTool: ToolDef<typeof KlingVideoSchema> = {
   name: "kling_video",

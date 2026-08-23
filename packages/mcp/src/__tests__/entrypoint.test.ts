@@ -8,9 +8,9 @@ const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true }),
-    ),
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => rm(directory, { recursive: true, force: true })),
   );
 });
 
@@ -33,6 +33,8 @@ describe("MCP entrypoint detection", () => {
 
   test("does not recognize unrelated paths or missing entrypoints", () => {
     expect(isMcpEntrypoint(undefined, process.execPath)).toBe(false);
-    expect(isMcpEntrypoint("/missing/kie-ai-mcp-server", process.execPath)).toBe(false);
+    expect(
+      isMcpEntrypoint("/missing/kie-ai-mcp-server", process.execPath),
+    ).toBe(false);
   });
 });

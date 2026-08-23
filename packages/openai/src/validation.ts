@@ -25,7 +25,8 @@ function findForbiddenField(
   value: unknown,
   seen = new Set<object>(),
 ): { field: string; code: string; message: string } | null {
-  if (typeof value !== "object" || value === null || seen.has(value)) return null;
+  if (typeof value !== "object" || value === null || seen.has(value))
+    return null;
   seen.add(value);
 
   if (Array.isArray(value)) {
@@ -111,11 +112,7 @@ export function declaredBodyLimit(options: {
   };
 }
 
-export const rejectClientControlFields: RequestHandler = (
-  req,
-  _res,
-  next,
-) => {
+export const rejectClientControlFields: RequestHandler = (req, _res, next) => {
   const forbidden = findForbiddenField(req.body);
   if (!forbidden) {
     next();

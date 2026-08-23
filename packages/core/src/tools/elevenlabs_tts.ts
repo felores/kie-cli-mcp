@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { ElevenLabsTTSSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const elevenlabsTtsTool: ToolDef<typeof ElevenLabsTTSSchema> = {
   name: "elevenlabs_tts",
-  description: "Generate speech from text using ElevenLabs TTS models (Turbo 2.5 by default, with optional Multilingual v2 support)",
+  description:
+    "Generate speech from text using ElevenLabs TTS models (Turbo 2.5 by default, with optional Multilingual v2 support)",
   category: "audio",
   schema: ElevenLabsTTSSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

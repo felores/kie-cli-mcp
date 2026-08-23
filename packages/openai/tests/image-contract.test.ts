@@ -1,11 +1,11 @@
+import { once } from "node:events";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import type { Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { once } from "node:events";
-import type { AddressInfo } from "node:net";
-import type { Server } from "node:http";
-import express from "express";
 import { jest } from "@jest/globals";
+import express from "express";
 import { createKieOpenAiRouter } from "../src/http-server.js";
 
 const providerBaseUrl = "https://provider.example/api/v1";
@@ -40,7 +40,9 @@ async function serve(app: express.Express): Promise<string> {
   return `http://127.0.0.1:${address.port}`;
 }
 
-async function responseJson(response: Response): Promise<Record<string, unknown>> {
+async function responseJson(
+  response: Response,
+): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>;
 }
 
@@ -81,8 +83,13 @@ describe("KIE OpenAI image contract", () => {
       const url = String(input);
       if (url === `${providerBaseUrl}/jobs/createTask`) {
         activeCreates.value += 1;
-        activeCreates.maximum = Math.max(activeCreates.maximum, activeCreates.value);
-        createdBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        activeCreates.maximum = Math.max(
+          activeCreates.maximum,
+          activeCreates.value,
+        );
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
         const taskId = `task-${taskNumber++}`;
         await new Promise((resolvePromise) => setTimeout(resolvePromise, 2));
         activeCreates.value -= 1;
@@ -94,7 +101,9 @@ describe("KIE OpenAI image contract", () => {
           code: 200,
           data: {
             state: "success",
-            resultJson: JSON.stringify({ resultUrls: [`https://cdn.example/${taskId}.png`] }),
+            resultJson: JSON.stringify({
+              resultUrls: [`https://cdn.example/${taskId}.png`],
+            }),
           },
         });
       }
@@ -139,7 +148,7 @@ describe("KIE OpenAI image contract", () => {
     const body = await responseJson(response);
     expect(body.data).toEqual(
       ["task-0", "task-1", "task-2", "task-3", "task-4"].map((taskId) => ({
-          b64_json: Buffer.from(pngBytes(`png-${taskId}.png`)).toString("base64"),
+        b64_json: Buffer.from(pngBytes(`png-${taskId}.png`)).toString("base64"),
       })),
     );
     expect(activeCreates.maximum).toBe(2);
@@ -165,15 +174,23 @@ describe("KIE OpenAI image contract", () => {
     jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === `${providerBaseUrl}/jobs/createTask`) {
-        createdBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-        return jsonResponse({ code: 200, msg: "success", data: { taskId: `gpt-${taskId++}` } });
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({
+          code: 200,
+          msg: "success",
+          data: { taskId: `gpt-${taskId++}` },
+        });
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
         return jsonResponse({
           code: 200,
           data: {
             state: "success",
-            resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/gpt.png"] }),
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/gpt.png"],
+            }),
           },
         });
       }
@@ -199,7 +216,10 @@ describe("KIE OpenAI image contract", () => {
 
     const valid = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "gpt-valid" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "gpt-valid",
+      },
       body: JSON.stringify({
         model: "kie-gpt-image-2",
         prompt: "A blue kite",
@@ -216,11 +236,16 @@ describe("KIE OpenAI image contract", () => {
 
     const invalid = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "gpt-invalid" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "gpt-invalid",
+      },
       body: JSON.stringify({ model: "gpt-image-2", prompt: "wrong alias" }),
     });
     expect(invalid.status).toBe(422);
-    expect((await responseJson(invalid)).error).toMatchObject({ code: "unsupported_model" });
+    expect((await responseJson(invalid)).error).toMatchObject({
+      code: "unsupported_model",
+    });
     expect(createdBodies).toHaveLength(1);
 
     await rm(dataDir, { recursive: true, force: true });
@@ -229,7 +254,9 @@ describe("KIE OpenAI image contract", () => {
   test("rejects validation and masks before reservation or provider work", async () => {
     const dataDir = await makeDataDir();
     const providerFetch = jest.spyOn(globalThis, "fetch");
-    providerFetch.mockImplementation(async (input, init) => originalFetch(input, init));
+    providerFetch.mockImplementation(async (input, init) =>
+      originalFetch(input, init),
+    );
     const baseUrl = await serve(
       express().use(
         createKieOpenAiRouter({
@@ -243,7 +270,10 @@ describe("KIE OpenAI image contract", () => {
 
     const invalid = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "invalid-size" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "invalid-size",
+      },
       body: JSON.stringify({
         model: "kie-nano-banana-image",
         prompt: "bad ratio",
@@ -252,13 +282,19 @@ describe("KIE OpenAI image contract", () => {
       }),
     });
     expect(invalid.status).toBe(422);
-    expect((await responseJson(invalid)).error).toMatchObject({ code: "unsupported_setting" });
+    expect((await responseJson(invalid)).error).toMatchObject({
+      code: "unsupported_setting",
+    });
 
     const form = new FormData();
     form.set("model", "kie-gpt-image-2");
     form.set("prompt", "masked edit");
     form.set("response_format", "b64_json");
-    form.append("image", new Blob(["source"], { type: "image/png" }), "source.png");
+    form.append(
+      "image",
+      new Blob(["source"], { type: "image/png" }),
+      "source.png",
+    );
     form.append("mask", new Blob(["mask"], { type: "image/png" }), "mask.png");
     const masked = await fetch(`${baseUrl}/v1/images/edits`, {
       method: "POST",
@@ -349,24 +385,35 @@ describe("KIE OpenAI image contract", () => {
         uploads.push(init?.body);
         return jsonResponse({
           code: 200,
-          data: { fileUrl: `https://uploaded.example/ref-${uploads.length}.png` },
+          data: {
+            fileUrl: `https://uploaded.example/ref-${uploads.length}.png`,
+          },
         });
       }
       if (url === `${providerBaseUrl}/jobs/createTask`) {
-        createdBodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-        return jsonResponse({ code: 200, data: { taskId: `edit-${taskId++}` } });
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `edit-${taskId++}` },
+        });
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
         return jsonResponse({
           code: 200,
           data: {
             state: "success",
-            resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/edit.png"] }),
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/edit.png"],
+            }),
           },
         });
       }
       if (url === "https://cdn.example/edit.png") {
-        return new Response(pngBytes("edit-png"), { headers: { "content-type": "image/png" } });
+        return new Response(pngBytes("edit-png"), {
+          headers: { "content-type": "image/png" },
+        });
       }
       return originalFetch(input, init);
     });
@@ -390,8 +437,16 @@ describe("KIE OpenAI image contract", () => {
     form.set("quality", "standard");
     form.set("size", "1024x1024");
     form.set("response_format", "b64_json");
-    form.append("image[]", new Blob([pngBytes("one")], { type: "image/png" }), "one.png");
-    form.append("image[]", new Blob([jpegBytes("two")], { type: "image/jpeg" }), "two.jpg");
+    form.append(
+      "image[]",
+      new Blob([pngBytes("one")], { type: "image/png" }),
+      "one.png",
+    );
+    form.append(
+      "image[]",
+      new Blob([jpegBytes("two")], { type: "image/jpeg" }),
+      "two.jpg",
+    );
 
     const response = await fetch(`${baseUrl}/v1/images/edits`, {
       method: "POST",
@@ -417,8 +472,16 @@ describe("KIE OpenAI image contract", () => {
     retryForm.set("quality", "standard");
     retryForm.set("size", "1024x1024");
     retryForm.set("response_format", "b64_json");
-    retryForm.append("image[]", new Blob([pngBytes("one")], { type: "image/png" }), "one.png");
-    retryForm.append("image[]", new Blob([jpegBytes("two")], { type: "image/jpeg" }), "two.jpg");
+    retryForm.append(
+      "image[]",
+      new Blob([pngBytes("one")], { type: "image/png" }),
+      "one.png",
+    );
+    retryForm.append(
+      "image[]",
+      new Blob([jpegBytes("two")], { type: "image/jpeg" }),
+      "two.jpg",
+    );
     const retry = await fetch(`${baseUrl}/v1/images/edits`, {
       method: "POST",
       headers: { "Idempotency-Key": "edit-once" },
@@ -435,8 +498,16 @@ describe("KIE OpenAI image contract", () => {
     mismatchForm.set("quality", "standard");
     mismatchForm.set("size", "1024x1024");
     mismatchForm.set("response_format", "b64_json");
-    mismatchForm.append("image[]", new Blob([pngBytes("different")], { type: "image/png" }), "one.png");
-    mismatchForm.append("image[]", new Blob([jpegBytes("two")], { type: "image/jpeg" }), "two.jpg");
+    mismatchForm.append(
+      "image[]",
+      new Blob([pngBytes("different")], { type: "image/png" }),
+      "one.png",
+    );
+    mismatchForm.append(
+      "image[]",
+      new Blob([jpegBytes("two")], { type: "image/jpeg" }),
+      "two.jpg",
+    );
     const mismatch = await fetch(`${baseUrl}/v1/images/edits`, {
       method: "POST",
       headers: { "Idempotency-Key": "edit-once" },
@@ -470,12 +541,16 @@ describe("KIE OpenAI image contract", () => {
               ? { state: "waiting" }
               : {
                   state: "success",
-                  resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/resume.png"] }),
+                  resultJson: JSON.stringify({
+                    resultUrls: ["https://cdn.example/resume.png"],
+                  }),
                 },
         });
       }
       if (url === "https://cdn.example/resume.png") {
-        return new Response(pngBytes("resume-png"), { headers: { "content-type": "image/png" } });
+        return new Response(pngBytes("resume-png"), {
+          headers: { "content-type": "image/png" },
+        });
       }
       return originalFetch(input, init);
     });
@@ -498,15 +573,23 @@ describe("KIE OpenAI image contract", () => {
     };
     const first = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "resume-id" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "resume-id",
+      },
       body: JSON.stringify(request),
     });
     expect(first.status).toBe(504);
-    expect((await responseJson(first)).error).toMatchObject({ code: "kie_timeout" });
+    expect((await responseJson(first)).error).toMatchObject({
+      code: "kie_timeout",
+    });
 
     const second = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "resume-id" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "resume-id",
+      },
       body: JSON.stringify(request),
     });
     expect(second.status).toBe(200);
@@ -537,12 +620,16 @@ describe("KIE OpenAI image contract", () => {
           code: 200,
           data: {
             state: "success",
-            resultJson: JSON.stringify({ resultUrls: ["https://cdn.example/only.png"] }),
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/only.png"],
+            }),
           },
         });
       }
       if (url === "https://cdn.example/only.png") {
-        return new Response(pngBytes("only-png"), { headers: { "content-type": "image/png" } });
+        return new Response(pngBytes("only-png"), {
+          headers: { "content-type": "image/png" },
+        });
       }
       return originalFetch(input, init);
     });
@@ -558,8 +645,14 @@ describe("KIE OpenAI image contract", () => {
         }),
       ),
     );
-    const body = JSON.stringify({ model: "kie-gpt-image-2", prompt: "same request" });
-    const headers = { "Content-Type": "application/json", "Idempotency-Key": "same-id" };
+    const body = JSON.stringify({
+      model: "kie-gpt-image-2",
+      prompt: "same request",
+    });
+    const headers = {
+      "Content-Type": "application/json",
+      "Idempotency-Key": "same-id",
+    };
     const firstPromise = fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
       headers,
@@ -572,7 +665,9 @@ describe("KIE OpenAI image contract", () => {
       body,
     });
     expect(second.status).toBe(409);
-    expect((await responseJson(second)).error).toMatchObject({ code: "ambiguous_submission" });
+    expect((await responseJson(second)).error).toMatchObject({
+      code: "ambiguous_submission",
+    });
     releaseCreate();
     expect((await (await firstPromise).json()).data).toBeDefined();
     expect(createCalls).toBe(1);
@@ -585,19 +680,32 @@ describe("KIE OpenAI image contract", () => {
     jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === `${providerBaseUrl}/jobs/createTask`) {
-        return jsonResponse({ code: 401, msg: "secret internal path and header" }, 401);
+        return jsonResponse(
+          { code: 401, msg: "secret internal path and header" },
+          401,
+        );
       }
       return originalFetch(input, init);
     });
     const baseUrl = await serve(
       express().use(
-        createKieOpenAiRouter({ apiKey: "provider-key", baseUrl: providerBaseUrl, dataDir }),
+        createKieOpenAiRouter({
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+        }),
       ),
     );
     const response = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "auth-failure" },
-      body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "auth failure" }),
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "auth-failure",
+      },
+      body: JSON.stringify({
+        model: "kie-gpt-image-2",
+        prompt: "auth failure",
+      }),
     });
     const body = await responseJson(response);
     expect(response.status).toBe(502);
@@ -634,7 +742,10 @@ describe("KIE OpenAI image contract", () => {
 
     const response = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "fanout-failure" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "fanout-failure",
+      },
       body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "stop", n: 5 }),
     });
 
@@ -643,9 +754,13 @@ describe("KIE OpenAI image contract", () => {
       code: "ambiguous_submission",
     });
     expect(createCalls).toBe(2);
-    const records = (await readdir(dataDir)).filter((name) => name.endsWith(".json"));
+    const records = (await readdir(dataDir)).filter((name) =>
+      name.endsWith(".json"),
+    );
     expect(records).toHaveLength(1);
-    const record = JSON.parse(await readFile(`${dataDir}/${records[0]}`, "utf8")) as {
+    const record = JSON.parse(
+      await readFile(`${dataDir}/${records[0]}`, "utf8"),
+    ) as {
       state: string;
     };
     expect(record.state).toBe("reserved");
@@ -679,7 +794,10 @@ describe("KIE OpenAI image contract", () => {
 
     const response = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "create-body-408" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "create-body-408",
+      },
       body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "wait" }),
     });
 
@@ -689,7 +807,10 @@ describe("KIE OpenAI image contract", () => {
     });
     const second = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "create-body-504" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "create-body-504",
+      },
       body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "wait" }),
     });
     expect(second.status).toBe(409);
@@ -727,7 +848,10 @@ describe("KIE OpenAI image contract", () => {
 
     const response = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "poll-408" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "poll-408",
+      },
       body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "wait" }),
     });
 
@@ -761,7 +885,11 @@ describe("KIE OpenAI image contract", () => {
     const form = new FormData();
     form.set("model", "kie-gpt-image-2");
     form.set("prompt", "upload timeout");
-    form.append("image", new Blob([pngBytes("source")], { type: "image/png" }), "source.png");
+    form.append(
+      "image",
+      new Blob([pngBytes("source")], { type: "image/png" }),
+      "source.png",
+    );
 
     const response = await fetch(`${baseUrl}/v1/images/edits`, {
       method: "POST",
@@ -773,7 +901,9 @@ describe("KIE OpenAI image contract", () => {
     expect((await responseJson(response)).error).toMatchObject({
       code: "kie_timeout",
     });
-    expect((await readdir(dataDir)).filter((name) => name.endsWith(".json"))).toHaveLength(0);
+    expect(
+      (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
+    ).toHaveLength(0);
     await rm(dataDir, { recursive: true, force: true });
   });
 
@@ -783,7 +913,10 @@ describe("KIE OpenAI image contract", () => {
     jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
       if (url === `${providerBaseUrl}/jobs/createTask`) {
-        return jsonResponse({ code: 200, data: { taskId: `result-${taskNumber++}` } });
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `result-${taskNumber++}` },
+        });
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
         const taskId = new URL(url).searchParams.get("taskId");
@@ -822,7 +955,10 @@ describe("KIE OpenAI image contract", () => {
 
     const unsafe = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "unsafe-result" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "unsafe-result",
+      },
       body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "unsafe" }),
     });
     expect(unsafe.status).toBe(502);
@@ -832,7 +968,10 @@ describe("KIE OpenAI image contract", () => {
 
     const invalid = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": "invalid-result" },
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "invalid-result",
+      },
       body: JSON.stringify({ model: "kie-gpt-image-2", prompt: "invalid" }),
     });
     expect(invalid.status).toBe(502);

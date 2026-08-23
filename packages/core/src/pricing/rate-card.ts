@@ -31,7 +31,10 @@ export const RATE_CARD: RateCardEntry[] = [
     sourceUrl: "https://kie.ai/pricing",
     sourceFingerprint: "kie-pricing-2026-08-17:nano-banana-2-lite:4-per-image",
     verifiedAt: "2026-08-17",
-    matches: (args, model, mode) => mode === "text-to-image" && model === "nano-banana-2-lite" && Number(args.outputCount ?? 1) === 1,
+    matches: (args, model, mode) =>
+      mode === "text-to-image" &&
+      model === "nano-banana-2-lite" &&
+      Number(args.outputCount ?? 1) === 1,
     credits: () => 4,
   },
   {
@@ -39,18 +42,32 @@ export const RATE_CARD: RateCardEntry[] = [
     scope: "reference-to-video",
     name: "MiniMax H3 reference-to-video at 768p",
     sourceUrl: "https://kie.ai/pricing",
-    sourceFingerprint: "kie-pricing-2026-08-17:minimax-h3-reference-768p:16-per-second",
+    sourceFingerprint:
+      "kie-pricing-2026-08-17:minimax-h3-reference-768p:16-per-second",
     verifiedAt: "2026-08-17",
-    matches: (args, _model, mode) => mode === "reference-to-video" && args.resolution === "768p" && typeof args.duration === "number",
-    credits: (args) => typeof args.duration === "number" ? args.duration * 16 : undefined,
+    matches: (args, _model, mode) =>
+      mode === "reference-to-video" &&
+      args.resolution === "768p" &&
+      typeof args.duration === "number",
+    credits: (args) =>
+      typeof args.duration === "number" ? args.duration * 16 : undefined,
   },
 ];
 
-export function priceRequest(toolName: string, args: Record<string, unknown>, model: string, mode: string): PriceState {
-  const entry = RATE_CARD.find((candidate) => candidate.toolName === toolName && candidate.matches(args, model, mode));
+export function priceRequest(
+  toolName: string,
+  args: Record<string, unknown>,
+  model: string,
+  mode: string,
+): PriceState {
+  const entry = RATE_CARD.find(
+    (candidate) =>
+      candidate.toolName === toolName && candidate.matches(args, model, mode),
+  );
   if (!entry) return { status: "unknown", rateCardVersion: RATE_CARD_VERSION };
   const credits = entry.credits(args);
-  if (credits === undefined) return { status: "unknown", rateCardVersion: RATE_CARD_VERSION };
+  if (credits === undefined)
+    return { status: "unknown", rateCardVersion: RATE_CARD_VERSION };
   return {
     status: "exact",
     credits,

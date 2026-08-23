@@ -15,6 +15,10 @@
     "bundle": "npm run build -w @felores/kie-ai-core && npm run build -w @felores/kie-ai-openai-server && npm run bundle -w @felores/kie-ai-mcp-server && npm run bundle -w @felores/kie-cli",
     "test": "npm run test -w @felores/kie-ai-core && npm run test -w @felores/kie-ai-openai-server && npm run test -w @felores/kie-ai-mcp-server && npm run test -w @felores/kie-cli && npm run pricing:refresh:test",
     "typecheck": "npm run typecheck -w @felores/kie-ai-core && npm run typecheck -w @felores/kie-ai-openai-server && npm run typecheck -w @felores/kie-ai-mcp-server && npm run typecheck -w @felores/kie-cli",
+    "check": "biome check .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
     "add-tool": "node scripts/add-tool.mjs",
     "docs": "npm run build -w @felores/kie-ai-core && node scripts/gen-docs.mjs",
     "pricing:audit": "npm run build -w @felores/kie-ai-core && node scripts/audit-pricing.mjs",
@@ -32,6 +36,7 @@
     "url": "https://github.com/felores/kie-cli-mcp/issues"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.10",
     "@types/node": "^20.10.0",
     "esbuild": "^0.24.0",
     "typescript": "^5.3.0"

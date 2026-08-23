@@ -1,35 +1,35 @@
 import { createHash, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
-import type { Request, Response } from "express";
 import {
-  GptImage2Schema,
-  NanoBananaImageSchema,
   type GptImage2Request,
+  GptImage2Schema,
   type NanoBananaImageRequest,
+  NanoBananaImageSchema,
 } from "@felores/kie-ai-core";
 import {
-  KieAiClient,
+  type KieAiClient,
   KieAiRequestError,
 } from "@felores/kie-ai-core/client";
+import type { Request, Response } from "express";
 import { OpenAiHttpError } from "./errors.js";
+import {
+  hashRequestId,
+  type JournalError,
+  type RequestJournal,
+  RequestJournalConflictError,
+  type RequestJournalRecord,
+} from "./request-journal.js";
 import {
   KieAiResponseError,
   MAX_REFERENCE_TOTAL_BYTES,
   MAX_RESULT_FILE_BYTES,
-  MultipartImageFile,
+  type MultipartImageFile,
   MultipartParseError,
   parseMultipartForm,
   uploadReferenceImages,
   validateImageBytes,
   validateImageFile,
 } from "./uploads.js";
-import {
-  RequestJournal,
-  RequestJournalConflictError,
-  hashRequestId,
-  type JournalError,
-  type RequestJournalRecord,
-} from "./request-journal.js";
 
 export const KIE_IMAGE_MODELS = [
   "kie-nano-banana-image",
@@ -133,7 +133,10 @@ function isAbortLike(value: unknown): boolean {
   );
 }
 
-function invalidSetting(message: string, param: string | null = null): OpenAiHttpError {
+function invalidSetting(
+  message: string,
+  param: string | null = null,
+): OpenAiHttpError {
   return new OpenAiHttpError(422, "unsupported_setting", message, param);
 }
 
@@ -153,7 +156,9 @@ function unknownModel(value: unknown): never {
   );
 }
 
-function assertObjectBody(value: unknown): asserts value is Record<string, unknown> {
+function assertObjectBody(
+  value: unknown,
+): asserts value is Record<string, unknown> {
   if (!isRecord(value)) {
     throw invalidSetting("The image request body must be a JSON object.");
   }
@@ -162,16 +167,16 @@ function assertObjectBody(value: unknown): asserts value is Record<string, unkno
 function assertAllowedFields(value: Record<string, unknown>): void {
   for (const field of Object.keys(value)) {
     if (!ALLOWED_FIELDS.has(field)) {
-      throw invalidSetting(`The image setting '${field}' is not supported.`, field);
+      throw invalidSetting(
+        `The image setting '${field}' is not supported.`,
+        field,
+      );
     }
   }
 }
 
 function readModel(value: unknown): KieImageModel {
-  if (
-    value === "kie-nano-banana-image" ||
-    value === "kie-gpt-image-2"
-  ) {
+  if (value === "kie-nano-banana-image" || value === "kie-gpt-image-2") {
     return value;
   }
   unknownModel(value);
@@ -243,14 +248,20 @@ function readAspectRatio(value: unknown, model: KieImageModel): string {
     const width = Number(dimensionMatch[1]);
     const height = Number(dimensionMatch[2]);
     if (width < 1 || height < 1) {
-      throw invalidSetting("The size setting must have positive dimensions.", "size");
+      throw invalidSetting(
+        "The size setting must have positive dimensions.",
+        "size",
+      );
     }
     ratio = reduceRatio(width, height);
   } else if (ratioMatch) {
     const width = Number(ratioMatch[1]);
     const height = Number(ratioMatch[2]);
     if (width < 1 || height < 1) {
-      throw invalidSetting("The size setting must have positive dimensions.", "size");
+      throw invalidSetting(
+        "The size setting must have positive dimensions.",
+        "size",
+      );
     }
     ratio = reduceRatio(width, height);
   } else {
@@ -260,7 +271,8 @@ function readAspectRatio(value: unknown, model: KieImageModel): string {
     );
   }
 
-  const supported = model === "kie-nano-banana-image" ? NANO_RATIOS : GPT_RATIOS;
+  const supported =
+    model === "kie-nano-banana-image" ? NANO_RATIOS : GPT_RATIOS;
   if (!(supported as readonly string[]).includes(ratio)) {
     throw invalidSetting(
       `The size ratio ${ratio} is not supported for ${model}.`,
@@ -302,7 +314,10 @@ function validateCoreRequest(
         });
   if (!result.success) {
     const issue = result.error.issues[0];
-    throw invalidSetting(issue?.message ?? "The image request is invalid.", String(issue?.path[0] ?? "prompt"));
+    throw invalidSetting(
+      issue?.message ?? "The image request is invalid.",
+      String(issue?.path[0] ?? "prompt"),
+    );
   }
 }
 
@@ -324,7 +339,10 @@ function normalizeJsonRequest(body: unknown): NormalizedImageRequest {
   return normalized;
 }
 
-function formValue(fields: Map<string, string[]>, field: string): string | undefined {
+function formValue(
+  fields: Map<string, string[]>,
+  field: string,
+): string | undefined {
   const values = fields.get(field);
   return values?.length === 1 ? values[0] : values?.[0];
 }
@@ -332,7 +350,10 @@ function formValue(fields: Map<string, string[]>, field: string): string | undef
 function assertMultipartFields(fields: Map<string, string[]>): void {
   for (const field of fields.keys()) {
     if (!ALLOWED_FIELDS.has(field) && field !== "mask" && field !== "mask[]") {
-      throw invalidSetting(`The image setting '${field}' is not supported.`, field);
+      throw invalidSetting(
+        `The image setting '${field}' is not supported.`,
+        field,
+      );
     }
   }
 }
@@ -351,17 +372,25 @@ function validateReferences(
     (file) => file.fieldName === "mask" || file.fieldName === "mask[]",
   );
   if (maskFile) {
-    throw invalidSetting("Mask editing is not supported by the KIE transport.", "mask");
+    throw invalidSetting(
+      "Mask editing is not supported by the KIE transport.",
+      "mask",
+    );
   }
   if (unexpectedFile) {
-    throw invalidReference("Only image and image[] reference fields are supported.", unexpectedFile.fieldName);
+    throw invalidReference(
+      "Only image and image[] reference fields are supported.",
+      unexpectedFile.fieldName,
+    );
   }
   const max = model === "kie-nano-banana-image" ? 14 : 16;
   if (references.length === 0) {
     throw invalidReference("At least one image reference is required.");
   }
   if (references.length > max) {
-    throw invalidReference(`This model accepts at most ${max} image references.`);
+    throw invalidReference(
+      `This model accepts at most ${max} image references.`,
+    );
   }
   let totalBytes = 0;
   for (const file of references) {
@@ -386,7 +415,10 @@ async function normalizeMultipartRequest(
 ): Promise<NormalizedImageRequest> {
   const parsed = await parseMultipartForm(request, maxBytes);
   if (parsed.fields.has("mask") || parsed.fields.has("mask[]")) {
-    throw invalidSetting("Mask editing is not supported by the KIE transport.", "mask");
+    throw invalidSetting(
+      "Mask editing is not supported by the KIE transport.",
+      "mask",
+    );
   }
   assertMultipartFields(parsed.fields);
   const model = readModel(formValue(parsed.fields, "model"));
@@ -400,10 +432,15 @@ async function normalizeMultipartRequest(
     count: readCount(formValue(parsed.fields, "n")),
     resolution: readQuality(formValue(parsed.fields, "quality")),
     aspectRatio: readAspectRatio(formValue(parsed.fields, "size"), model),
-    responseFormat: readResponseFormat(formValue(parsed.fields, "response_format")),
+    responseFormat: readResponseFormat(
+      formValue(parsed.fields, "response_format"),
+    ),
     references: files,
   };
-  validateCoreRequest(normalized, files.map(() => "https://placeholder.invalid/image"));
+  validateCoreRequest(
+    normalized,
+    files.map(() => "https://placeholder.invalid/image"),
+  );
   return normalized;
 }
 
@@ -514,7 +551,11 @@ function isPrivateHost(hostname: string): boolean {
   return false;
 }
 
-function providerError(message: string, status: number, code: string): OpenAiHttpError {
+function providerError(
+  message: string,
+  status: number,
+  code: string,
+): OpenAiHttpError {
   return new OpenAiHttpError(status, code, message, null, "api_error");
 }
 
@@ -522,7 +563,10 @@ function classifyProviderError(error: unknown): {
   httpError: OpenAiHttpError;
   unknownAcceptance: boolean;
 } {
-  if (error instanceof UnsafeResultUrlError || error instanceof InvalidProviderResultError) {
+  if (
+    error instanceof UnsafeResultUrlError ||
+    error instanceof InvalidProviderResultError
+  ) {
     return {
       httpError: providerError(
         "KIE returned an invalid image result.",
@@ -536,7 +580,11 @@ function classifyProviderError(error: unknown): {
     return classifyProviderCode(error.providerCode);
   }
   if (error instanceof KieAiRequestError) {
-    if (error.status === 408 || error.status === 504 || error.name === "AbortError") {
+    if (
+      error.status === 408 ||
+      error.status === 504 ||
+      error.name === "AbortError"
+    ) {
       return {
         httpError: providerError(
           "KIE did not finish before the local timeout.",
@@ -576,7 +624,11 @@ function classifyProviderError(error: unknown): {
         unknownAcceptance: false,
       };
     }
-    if (error.status !== undefined && error.status >= 400 && error.status < 500) {
+    if (
+      error.status !== undefined &&
+      error.status >= 400 &&
+      error.status < 500
+    ) {
       return {
         httpError: providerError(
           "KIE rejected the request.",
@@ -663,7 +715,11 @@ function classifyProviderCode(code: number): {
   }
   if (code >= 400 && code < 500) {
     return {
-      httpError: providerError("KIE rejected the request.", 422, "kie_request_rejected"),
+      httpError: providerError(
+        "KIE rejected the request.",
+        422,
+        "kie_request_rejected",
+      ),
       unknownAcceptance: false,
     };
   }
@@ -686,8 +742,12 @@ function journalError(error: OpenAiHttpError): JournalError {
   };
 }
 
-function responseFor(record: RequestJournalRecord): { created: number; data: Array<{ b64_json: string }> } {
-  if (!record.outputs) throw new Error("The request journal has no image outputs.");
+function responseFor(record: RequestJournalRecord): {
+  created: number;
+  data: Array<{ b64_json: string }>;
+} {
+  if (!record.outputs)
+    throw new Error("The request journal has no image outputs.");
   return {
     created: record.created,
     data: record.outputs.map((b64_json) => ({ b64_json })),
@@ -698,7 +758,10 @@ function responseCodeIsSuccessful(code: number): boolean {
   return code === 200 || code === 0;
 }
 
-function taskIdFromResponse(response: { code: number; data?: { taskId?: string } }): string {
+function taskIdFromResponse(response: {
+  code: number;
+  data?: { taskId?: string };
+}): string {
   if (!responseCodeIsSuccessful(response.code) || !response.data?.taskId) {
     throw new KieAiResponseError(
       response.code,
@@ -708,8 +771,12 @@ function taskIdFromResponse(response: { code: number; data?: { taskId?: string }
   return response.data.taskId;
 }
 
-function providerTaskType(model: KieImageModel): "nano-banana-image" | "gpt-image-2" {
-  return model === "kie-nano-banana-image" ? "nano-banana-image" : "gpt-image-2";
+function providerTaskType(
+  model: KieImageModel,
+): "nano-banana-image" | "gpt-image-2" {
+  return model === "kie-nano-banana-image"
+    ? "nano-banana-image"
+    : "gpt-image-2";
 }
 
 async function runBounded<T>(
@@ -779,7 +846,11 @@ function readResultUrls(data: Record<string, unknown>): string[] {
   }
   const resultRecord = isRecord(result) ? result : undefined;
   const urls = resultRecord?.resultUrls ?? data.resultUrls;
-  if (!Array.isArray(urls) || !urls.every((url) => typeof url === "string") || urls.length === 0) {
+  if (
+    !Array.isArray(urls) ||
+    !urls.every((url) => typeof url === "string") ||
+    urls.length === 0
+  ) {
     throw new Error("The provider returned no image results.");
   }
   return urls as string[];
@@ -804,9 +875,15 @@ async function pollAndDownload(
       throw new ProviderTimeoutError();
     }
     firstPoll = false;
-    const response = await client.getTaskStatus(taskId, providerTaskType(model));
+    const response = await client.getTaskStatus(
+      taskId,
+      providerTaskType(model),
+    );
     if (!responseCodeIsSuccessful(response.code) || !isRecord(response.data)) {
-      throw new KieAiResponseError(response.code, "The provider status response is invalid.");
+      throw new KieAiResponseError(
+        response.code,
+        "The provider status response is invalid.",
+      );
     }
     const state = response.data.state;
     if (state === "fail") throw new ProviderTaskFailedError();
@@ -900,7 +977,10 @@ async function submitTasks(
     await markFailed(context.journal, requestIdHash, failure.httpError);
     throw failure.httpError;
   }
-  if (current.state !== "submitted" || current.taskIds.some((taskId) => taskId === null)) {
+  if (
+    current.state !== "submitted" ||
+    current.taskIds.some((taskId) => taskId === null)
+  ) {
     throw ambiguousSubmission();
   }
   return current;
@@ -920,7 +1000,12 @@ async function resumeSubmitted(
   }
   try {
     const outputs = await runBounded(record.taskIds.length, 2, (index) =>
-      pollAndDownload(context.client, input.model, record.taskIds[index]!, context),
+      pollAndDownload(
+        context.client,
+        input.model,
+        record.taskIds[index]!,
+        context,
+      ),
     );
     const completed = await context.journal.updateCurrent(requestIdHash, {
       state: "succeeded",
@@ -976,7 +1061,11 @@ async function resumeExistingRecord(
         failure.param,
       );
     }
-    throw providerError("The previous KIE request failed.", 502, "kie_upstream_error");
+    throw providerError(
+      "The previous KIE request failed.",
+      502,
+      "kie_upstream_error",
+    );
   }
   if (record.state === "reserved") throw ambiguousSubmission();
   return resumeSubmitted(record, input, context, requestIdHash);
@@ -1089,7 +1178,10 @@ export async function handleImageEdit(
   }
   let input: NormalizedImageRequest;
   try {
-    input = await normalizeMultipartRequest(request, context.multipartLimitBytes);
+    input = await normalizeMultipartRequest(
+      request,
+      context.multipartLimitBytes,
+    );
   } catch (error) {
     if (error instanceof MultipartParseError) {
       throw invalidReference(error.message);

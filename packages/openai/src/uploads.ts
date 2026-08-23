@@ -1,5 +1,5 @@
 import type { IncomingMessage } from "node:http";
-import { KieAiClient } from "@felores/kie-ai-core/client";
+import type { KieAiClient } from "@felores/kie-ai-core/client";
 
 export const SUPPORTED_IMAGE_MIME_TYPES = [
   "image/jpeg",
@@ -63,8 +63,13 @@ export async function parseMultipartForm(
   maxBytes: number,
 ): Promise<ParsedMultipartForm> {
   const contentType = request.headers["content-type"];
-  if (typeof contentType !== "string" || !contentType.startsWith("multipart/form-data")) {
-    throw new MultipartParseError("Image edits require a multipart/form-data request.");
+  if (
+    typeof contentType !== "string" ||
+    !contentType.startsWith("multipart/form-data")
+  ) {
+    throw new MultipartParseError(
+      "Image edits require a multipart/form-data request.",
+    );
   }
 
   const chunks: Buffer[] = [];
@@ -113,7 +118,11 @@ export async function parseMultipartForm(
 
 export function validateImageFile(file: MultipartImageFile): void {
   const contentType = file.contentType.toLowerCase().split(";", 1)[0];
-  if (!SUPPORTED_IMAGE_MIME_TYPES.includes(contentType as (typeof SUPPORTED_IMAGE_MIME_TYPES)[number])) {
+  if (
+    !SUPPORTED_IMAGE_MIME_TYPES.includes(
+      contentType as (typeof SUPPORTED_IMAGE_MIME_TYPES)[number],
+    )
+  ) {
     throw new MultipartParseError(
       `Unsupported image MIME type for ${file.fieldName}.`,
     );
@@ -139,7 +148,8 @@ export function validateImageBytes(
   const valid =
     (normalizedType === "image/png" &&
       startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ||
-    (normalizedType === "image/jpeg" && startsWith(bytes, [0xff, 0xd8, 0xff])) ||
+    (normalizedType === "image/jpeg" &&
+      startsWith(bytes, [0xff, 0xd8, 0xff])) ||
     (normalizedType === "image/webp" &&
       startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) &&
       startsWith(bytes.subarray(8), [0x57, 0x45, 0x42, 0x50]));
@@ -158,7 +168,9 @@ export async function uploadReferenceImages(
     validateImageFile(file);
     totalBytes += file.bytes.length;
     if (totalBytes > MAX_REFERENCE_TOTAL_BYTES) {
-      throw new MultipartParseError("The total reference image size is too large.");
+      throw new MultipartParseError(
+        "The total reference image size is too large.",
+      );
     }
     const response = await client.uploadFile({
       bytes: file.bytes,
@@ -182,12 +194,19 @@ export async function uploadReferenceImages(
 
 export function validateVideoFile(file: MultipartImageFile): void {
   const contentType = file.contentType.toLowerCase().split(";", 1)[0];
-  if (!SUPPORTED_VIDEO_MIME_TYPES.includes(contentType as (typeof SUPPORTED_VIDEO_MIME_TYPES)[number])) {
+  if (
+    !SUPPORTED_VIDEO_MIME_TYPES.includes(
+      contentType as (typeof SUPPORTED_VIDEO_MIME_TYPES)[number],
+    )
+  ) {
     throw new MultipartParseError(
       `Unsupported video MIME type for ${file.fieldName}.`,
     );
   }
-  if (file.bytes.length === 0 || file.bytes.length > MAX_VIDEO_REFERENCE_FILE_BYTES) {
+  if (
+    file.bytes.length === 0 ||
+    file.bytes.length > MAX_VIDEO_REFERENCE_FILE_BYTES
+  ) {
     throw new MultipartParseError(
       `Video ${file.filename} exceeds the supported size limit.`,
     );
@@ -196,12 +215,19 @@ export function validateVideoFile(file: MultipartImageFile): void {
 
 export function validateAudioFile(file: MultipartImageFile): void {
   const contentType = file.contentType.toLowerCase().split(";", 1)[0];
-  if (!SUPPORTED_AUDIO_MIME_TYPES.includes(contentType as (typeof SUPPORTED_AUDIO_MIME_TYPES)[number])) {
+  if (
+    !SUPPORTED_AUDIO_MIME_TYPES.includes(
+      contentType as (typeof SUPPORTED_AUDIO_MIME_TYPES)[number],
+    )
+  ) {
     throw new MultipartParseError(
       `Unsupported audio MIME type for ${file.fieldName}.`,
     );
   }
-  if (file.bytes.length === 0 || file.bytes.length > MAX_AUDIO_REFERENCE_FILE_BYTES) {
+  if (
+    file.bytes.length === 0 ||
+    file.bytes.length > MAX_AUDIO_REFERENCE_FILE_BYTES
+  ) {
     throw new MultipartParseError(
       `Audio ${file.filename} exceeds the supported size limit.`,
     );

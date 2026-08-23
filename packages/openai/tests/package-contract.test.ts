@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -32,7 +32,10 @@ test("bundle is self-contained and importable without a core package import", as
     ]),
   );
 
-  const bundle = await readFile(new URL("../dist/index.js", import.meta.url), "utf8");
+  const bundle = await readFile(
+    new URL("../dist/index.js", import.meta.url),
+    "utf8",
+  );
   expect(bundle).not.toContain("@felores/kie-ai-core");
 
   const imported = spawnSync(

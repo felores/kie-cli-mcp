@@ -4,7 +4,10 @@ export default {
   roots: ["<rootDir>/src"],
   testMatch: ["**/__tests__/**/*.test.ts"],
   transform: {
-    "^.+\\.tsx?$": ["ts-jest", { useESM: true, tsconfig: "tsconfig.test.json" }],
+    "^.+\\.tsx?$": [
+      "ts-jest",
+      { useESM: true, tsconfig: "tsconfig.test.json" },
+    ],
   },
   extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {

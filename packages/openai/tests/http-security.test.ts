@@ -2,8 +2,8 @@ import { once } from "node:events";
 import { mkdtemp, readdir, rm } from "node:fs/promises";
 import {
   createServer,
-  request,
   type IncomingMessage,
+  request,
   type Server,
 } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -28,7 +28,9 @@ async function serve(app: express.Express): Promise<string> {
   return `http://127.0.0.1:${address.port}`;
 }
 
-async function responseJson(response: Response): Promise<Record<string, unknown>> {
+async function responseJson(
+  response: Response,
+): Promise<Record<string, unknown>> {
   return (await response.json()) as Record<string, unknown>;
 }
 
@@ -202,10 +204,7 @@ describe("embedded router contract", () => {
     const originalToken = process.env.KIE_OPENAI_TOKEN;
     process.env.KIE_OPENAI_TOKEN = "must-not-be-read";
     const router = createKieOpenAiRouter({ apiKey: "provider-secret" });
-    const app = express().use(
-      "/kie",
-      router,
-    );
+    const app = express().use("/kie", router);
 
     try {
       const baseUrl = await serve(app);
@@ -221,10 +220,7 @@ describe("embedded router contract", () => {
 
   test("rejects client credentials and remote output URLs", async () => {
     const router = createKieOpenAiRouter({ apiKey: "provider-secret" });
-    const app = express().use(
-      "/kie",
-      router,
-    );
+    const app = express().use("/kie", router);
     const baseUrl = await serve(app);
 
     try {

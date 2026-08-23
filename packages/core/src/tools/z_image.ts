@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { ZImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const zImageTool: ToolDef<typeof ZImageSchema> = {
   name: "z_image",
-  description: "Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), and strong semantic understanding.",
+  description:
+    "Generate photorealistic images using Tongyi-MAI Z-Image model. Ultra-fast Turbo performance, accurate bilingual text rendering (Chinese/English), and strong semantic understanding.",
   category: "image",
   schema: ZImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

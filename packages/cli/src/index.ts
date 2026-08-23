@@ -1,16 +1,16 @@
 #!/usr/bin/env node
+import {
+  createToolContext,
+  TOOL_REGISTRY,
+  type ToolContext,
+  type ToolDef,
+  toInputJsonSchema,
+} from "@felores/kie-ai-core";
 // Standalone Kie.ai CLI. Every command and its flags are derived from
 // @felores/kie-ai-core's TOOL_REGISTRY, so the CLI and the MCP server always
 // expose the exact same tools. Run `kie-cli --help` to list them.
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import {
-  TOOL_REGISTRY,
-  toInputJsonSchema,
-  createToolContext,
-  type ToolDef,
-  type ToolContext,
-} from "@felores/kie-ai-core";
 import { approvePlanForSubmission } from "./submission-approval.js";
 
 interface JsonProp {
@@ -128,7 +128,8 @@ function build() {
           y.option("approve", {
             type: "string",
             demandOption: true,
-            describe: "Explicitly approve this prepared plan ID for this submission",
+            describe:
+              "Explicitly approve this prepared plan ID for this submission",
           });
         }
         return y;
@@ -137,10 +138,13 @@ function build() {
         // The CLI's stable context keeps --approve usable across separate processes.
         const ctx = createToolContext("cli");
         if (tool.name === "submit_media_generation") {
-          await approvePlanForSubmission(ctx.db, argv as unknown as {
-            planId?: unknown;
-            approve?: unknown;
-          });
+          await approvePlanForSubmission(
+            ctx.db,
+            argv as unknown as {
+              planId?: unknown;
+              approve?: unknown;
+            },
+          );
         }
         await runTool(tool, props, argv as Record<string, unknown>, ctx);
       },

@@ -1,10 +1,13 @@
 import { z } from "zod";
 import { ByteDanceSeedreamImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
-export const bytedanceSeedreamImageTool: ToolDef<typeof ByteDanceSeedreamImageSchema> = {
+export const bytedanceSeedreamImageTool: ToolDef<
+  typeof ByteDanceSeedreamImageSchema
+> = {
   name: "bytedance_seedream_image",
-  description: "Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.",
+  description:
+    "Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.",
   category: "image",
   schema: ByteDanceSeedreamImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -14,8 +17,7 @@ export const bytedanceSeedreamImageTool: ToolDef<typeof ByteDanceSeedreamImageSc
       // Use intelligent callback URL fallback
       request.callBackUrl = ctx.getCallbackUrl(request.callBackUrl);
 
-      const response =
-        await ctx.client.generateByteDanceSeedreamImage(request);
+      const response = await ctx.client.generateByteDanceSeedreamImage(request);
 
       if (response.code === 200 && response.data?.taskId) {
         // Determine mode for user feedback

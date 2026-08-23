@@ -1,5 +1,5 @@
 import { ListTasksSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const listTasksTool: ToolDef<typeof ListTasksSchema> = {
   name: "list_tasks",
@@ -10,12 +10,9 @@ export const listTasksTool: ToolDef<typeof ListTasksSchema> = {
     try {
       const { limit = 20, status } = ListTasksSchema.parse(args);
 
-      let tasks;
-      if (status) {
-        tasks = await ctx.db.getTasksByStatus(status, limit);
-      } else {
-        tasks = await ctx.db.getAllTasks(limit);
-      }
+      const tasks = status
+        ? await ctx.db.getTasksByStatus(status, limit)
+        : await ctx.db.getAllTasks(limit);
 
       return {
         content: [

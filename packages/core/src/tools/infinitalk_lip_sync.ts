@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { InfiniTalkSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const infinitalkLipSyncTool: ToolDef<typeof InfiniTalkSchema> = {
   name: "infinitalk_lip_sync",
-  description: "Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image and audio into a natural talking avatar with synchronized lips, facial expressions, and head movements.",
+  description:
+    "Generate AI lip-sync talking videos using MeiGen-AI InfiniTalk. Transforms portrait image and audio into a natural talking avatar with synchronized lips, facial expressions, and head movements.",
   category: "video",
   schema: InfiniTalkSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

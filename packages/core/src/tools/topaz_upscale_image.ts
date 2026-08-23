@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { TopazUpscaleImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const topazUpscaleImageTool: ToolDef<typeof TopazUpscaleImageSchema> = {
   name: "topaz_upscale_image",
-  description: "Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution with high-fidelity detail restoration, natural texture reconstruction, and improved clarity. Supports 1x-8x upscaling (max output 20,000px per side). Pricing: 10 credits (≤2K), 20 credits (4K), 40 credits (8K).",
+  description:
+    "Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution with high-fidelity detail restoration, natural texture reconstruction, and improved clarity. Supports 1x-8x upscaling (max output 20,000px per side). Pricing: 10 credits (≤2K), 20 credits (4K), 40 credits (8K).",
   category: "image",
   schema: TopazUpscaleImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

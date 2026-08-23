@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { GptImage2Schema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
   name: "gpt_image_2",
-  description: "Generate images using GPT Image 2 (text-to-image and image-to-image with up to 16 reference images)",
+  description:
+    "Generate images using GPT Image 2 (text-to-image and image-to-image with up to 16 reference images)",
   category: "image",
   schema: GptImage2Schema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

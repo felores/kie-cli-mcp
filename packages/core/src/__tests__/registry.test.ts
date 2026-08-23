@@ -1,5 +1,5 @@
-import { TOOL_REGISTRY, getTool } from "../tools/index.js";
 import { toInputJsonSchema } from "../json-schema.js";
+import { getTool, TOOL_REGISTRY } from "../tools/index.js";
 
 // Parity is structural: both the MCP server (listTools/callTool) and the CLI
 // iterate this same TOOL_REGISTRY, so a tool added here appears in both surfaces

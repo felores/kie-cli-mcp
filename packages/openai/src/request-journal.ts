@@ -156,7 +156,10 @@ function isJournalState(value: unknown): value is JournalState {
   );
 }
 
-function validateRecord(value: unknown, expectedHash: string): RequestJournalRecord {
+function validateRecord(
+  value: unknown,
+  expectedHash: string,
+): RequestJournalRecord {
   if (typeof value !== "object" || value === null) {
     throw new RequestJournalError("The request journal record is invalid.");
   }
@@ -175,14 +178,20 @@ function validateRecord(value: unknown, expectedHash: string): RequestJournalRec
     record.revision < 0 ||
     !Array.isArray(record.taskIds) ||
     record.taskIds.length !== record.count ||
-    !record.taskIds.every((taskId) => taskId === null || typeof taskId === "string") ||
+    !record.taskIds.every(
+      (taskId) => taskId === null || typeof taskId === "string",
+    ) ||
     typeof record.created !== "number" ||
     typeof record.createdAt !== "string" ||
     typeof record.updatedAt !== "string"
   ) {
     throw new RequestJournalError("The request journal record is invalid.");
   }
-  if (record.outputs && (!Array.isArray(record.outputs) || !record.outputs.every((output) => typeof output === "string"))) {
+  if (
+    record.outputs &&
+    (!Array.isArray(record.outputs) ||
+      !record.outputs.every((output) => typeof output === "string"))
+  ) {
     throw new RequestJournalError("The request journal record is invalid.");
   }
   return record as RequestJournalRecord;
@@ -288,7 +297,10 @@ export class RequestJournal {
       } catch (error) {
         if (!isAlreadyExists(error)) throw error;
         const claimed = await this.read(requestIdHash);
-        if (!claimed) throw new RequestJournalError("The request journal claim is unavailable.");
+        if (!claimed)
+          throw new RequestJournalError(
+            "The request journal claim is unavailable.",
+          );
         return { created: false, record: claimed };
       }
     });
@@ -309,9 +321,9 @@ export class RequestJournal {
     requestIdHash: string,
     patchOrFactory:
       | RequestJournalPatch
-      | ((record: RequestJournalRecord) =>
-          | RequestJournalPatch
-          | Promise<RequestJournalPatch>),
+      | ((
+          record: RequestJournalRecord,
+        ) => RequestJournalPatch | Promise<RequestJournalPatch>),
   ): Promise<RequestJournalRecord> {
     return this.serialize(requestIdHash, async () => {
       const current = await this.require(requestIdHash);
@@ -325,7 +337,10 @@ export class RequestJournal {
 
   private async require(requestIdHash: string): Promise<RequestJournalRecord> {
     const record = await this.read(requestIdHash);
-    if (!record) throw new RequestJournalError("The request journal record does not exist.");
+    if (!record)
+      throw new RequestJournalError(
+        "The request journal record does not exist.",
+      );
     return record;
   }
 

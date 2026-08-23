@@ -212,7 +212,9 @@ export const SunoGenerateSchema = z
       .int()
       .positive()
       .optional()
-      .describe("Requested track duration in seconds (available only with V5_5)"),
+      .describe(
+        "Requested track duration in seconds (available only with V5_5)",
+      ),
     negativeTags: z
       .string()
       .max(200)
@@ -451,10 +453,7 @@ export const ElevenLabsSoundEffectsSchema = z.object({
 // ByteDance Seedance 2.5 video generation.
 export const ByteDanceSeedanceVideoSchema = z
   .object({
-    prompt: z
-      .string()
-      .min(1)
-      .describe("Text prompt for video generation"),
+    prompt: z.string().min(1).describe("Text prompt for video generation"),
     extension_task_id: z
       .string()
       .min(1)
@@ -863,11 +862,23 @@ export const OmniHumanVideoSchema = z.object({
 
 export const GeminiOmniSchema = z
   .object({
-    operation: z.enum(["video", "character", "audio"]).default("video").optional(),
+    operation: z
+      .enum(["video", "character", "audio"])
+      .default("video")
+      .optional(),
     prompt: z.string().max(20000).optional(),
     image_urls: z.array(z.string().url()).max(7).optional(),
     audio_ids: z.array(z.string()).max(3).optional(),
-    video_list: z.array(z.object({ url: z.string().url(), start: z.number().min(0), ends: z.number().min(0) })).max(1).optional(),
+    video_list: z
+      .array(
+        z.object({
+          url: z.string().url(),
+          start: z.number().min(0),
+          ends: z.number().min(0),
+        }),
+      )
+      .max(1)
+      .optional(),
     character_ids: z.array(z.string()).max(3).optional(),
     duration: z.enum(["4", "6", "8", "10"]).optional(),
     aspect_ratio: z.enum(["16:9", "9:16"]).optional(),
@@ -881,13 +892,25 @@ export const GeminiOmniSchema = z
     example_dialogue: z.string().max(120).optional(),
     callBackUrl: z.string().url().optional(),
   })
-  .refine((data) => {
-    if (data.operation === "audio") return !!data.audio_id && !!data.name;
-    if (data.operation === "character") return !!data.descriptions && data.image_urls?.length === 1;
-    const video = data.video_list?.[0];
-    const quota = (data.image_urls?.length || 0) + (video ? 2 : 0) + (data.character_ids?.length || 0);
-    return !!data.prompt && (!video || video.ends > video.start) && quota <= 7;
-  }, { message: "Invalid Gemini Omni operation inputs or video quota", path: [] });
+  .refine(
+    (data) => {
+      if (data.operation === "audio") return !!data.audio_id && !!data.name;
+      if (data.operation === "character")
+        return !!data.descriptions && data.image_urls?.length === 1;
+      const video = data.video_list?.[0];
+      const quota =
+        (data.image_urls?.length || 0) +
+        (video ? 2 : 0) +
+        (data.character_ids?.length || 0);
+      return (
+        !!data.prompt && (!video || video.ends > video.start) && quota <= 7
+      );
+    },
+    {
+      message: "Invalid Gemini Omni operation inputs or video quota",
+      path: [],
+    },
+  );
 
 // Z-Image - Tongyi-MAI fast text-to-image with bilingual text rendering
 export const ZImageSchema = z.object({
@@ -998,36 +1021,64 @@ export const GrokImagineSchema = z
 
     switch (effectiveMode) {
       case "text-to-image":
-        if (!data.prompt) addIssue("prompt is required for text-to-image", ["prompt"]);
-        if (data.aspect_ratio && !imageRatios.includes(data.aspect_ratio)) addIssue("text-to-image aspect_ratio must be 1:1, 2:3, 3:2, 16:9, or 9:16", ["aspect_ratio"]);
+        if (!data.prompt)
+          addIssue("prompt is required for text-to-image", ["prompt"]);
+        if (data.aspect_ratio && !imageRatios.includes(data.aspect_ratio))
+          addIssue(
+            "text-to-image aspect_ratio must be 1:1, 2:3, 3:2, 16:9, or 9:16",
+            ["aspect_ratio"],
+          );
         reject("image_urls", "image_urls is not supported for text-to-image");
         reject("task_id", "task_id is not supported for text-to-image");
         reject("index", "index is not supported for text-to-image");
         reject("mode", "mode is not supported for text-to-image");
         break;
       case "image-to-image":
-        if (!data.prompt) addIssue("prompt is required for image-to-image", ["prompt"]);
-        if (!hasImages) addIssue("image_urls with one to five URLs is required for image-to-image", ["image_urls"]);
+        if (!data.prompt)
+          addIssue("prompt is required for image-to-image", ["prompt"]);
+        if (!hasImages)
+          addIssue(
+            "image_urls with one to five URLs is required for image-to-image",
+            ["image_urls"],
+          );
         reject("task_id", "task_id is not supported for image-to-image");
         reject("index", "index is not supported for image-to-image");
         reject("mode", "mode is not supported for image-to-image");
         break;
       case "text-to-video":
-        if (!data.prompt) addIssue("prompt is required for text-to-video", ["prompt"]);
-        if (data.aspect_ratio && !videoRatios.includes(data.aspect_ratio)) addIssue("text-to-video aspect_ratio must be 1:1, 2:3, or 3:2", ["aspect_ratio"]);
+        if (!data.prompt)
+          addIssue("prompt is required for text-to-video", ["prompt"]);
+        if (data.aspect_ratio && !videoRatios.includes(data.aspect_ratio))
+          addIssue("text-to-video aspect_ratio must be 1:1, 2:3, or 3:2", [
+            "aspect_ratio",
+          ]);
         reject("image_urls", "image_urls is not supported for text-to-video");
         reject("task_id", "task_id is not supported for text-to-video");
         reject("index", "index is not supported for text-to-video");
         break;
       case "image-to-video":
-        if (!hasImages && !data.task_id) addIssue("image_urls or task_id is required for image-to-video", ["image_urls"]);
-        if (hasImages && data.image_urls?.length !== 1) addIssue("image-to-video accepts exactly one image URL", ["image_urls"]);
-        if (hasImages && data.task_id) addIssue("image-to-video accepts image_urls or task_id, not both", ["task_id"]);
-        if (data.index !== undefined && !data.task_id) addIssue("index requires task_id", ["index"]);
-        if (data.mode === "spicy" && hasImages) addIssue("mode spicy is not available with external images", ["mode"]);
+        if (!hasImages && !data.task_id)
+          addIssue("image_urls or task_id is required for image-to-video", [
+            "image_urls",
+          ]);
+        if (hasImages && data.image_urls?.length !== 1)
+          addIssue("image-to-video accepts exactly one image URL", [
+            "image_urls",
+          ]);
+        if (hasImages && data.task_id)
+          addIssue("image-to-video accepts image_urls or task_id, not both", [
+            "task_id",
+          ]);
+        if (data.index !== undefined && !data.task_id)
+          addIssue("index requires task_id", ["index"]);
+        if (data.mode === "spicy" && hasImages)
+          addIssue("mode spicy is not available with external images", [
+            "mode",
+          ]);
         break;
       case "upscale":
-        if (!data.task_id) addIssue("task_id is required for upscale", ["task_id"]);
+        if (!data.task_id)
+          addIssue("task_id is required for upscale", ["task_id"]);
         reject("prompt", "prompt is not supported for upscale");
         reject("image_urls", "image_urls is not supported for upscale");
         reject("index", "index is not supported for upscale");
@@ -1935,7 +1986,9 @@ export const HailuoVideoSchema = z
     resolution: z
       .enum(["768p"])
       .optional()
-      .describe("Reference-to-video output resolution. 768p has a verified rate-card formula."),
+      .describe(
+        "Reference-to-video output resolution. 768p has a verified rate-card formula.",
+      ),
     callBackUrl: z
       .string()
       .url()
@@ -1981,7 +2034,8 @@ export const HailuoVideoSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["resolution"],
-        message: "resolution is currently supported only for reference-to-video mode.",
+        message:
+          "resolution is currently supported only for reference-to-video mode.",
       });
     }
 
@@ -1996,7 +2050,8 @@ export const HailuoVideoSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["aspectRatio"],
-          message: "adaptive aspectRatio is only supported for reference-to-video mode.",
+          message:
+            "adaptive aspectRatio is only supported for reference-to-video mode.",
         });
       }
     }
@@ -2086,7 +2141,7 @@ export const WanAnimateSchema = z.object({
     .enum(["480p", "580p", "720p"])
     .default("480p")
     .optional()
-      .describe("Output resolution: 480p, 580p, or 720p"),
+    .describe("Output resolution: 480p, 580p, or 720p"),
   callBackUrl: z
     .string()
     .url()
@@ -2175,11 +2230,27 @@ export const ListTasksSchema = z.object({
 });
 export type ListTasksRequest = z.infer<typeof ListTasksSchema>;
 
+// Biome disallows control-character escapes in regex literals, so file-name
+// validation is an explicit code-point check instead. It also rejects a
+// trailing newline that the previous regex `$` anchor would have accepted.
+function isSafeFileName(value: string): boolean {
+  for (const ch of value) {
+    const code = ch.charCodeAt(0);
+    if (ch === "/" || ch === "\\" || code < 0x20 || code === 0x7f) {
+      return false;
+    }
+  }
+  return true;
+}
+
 const UploadFileNameSchema = z
   .string()
   .min(1)
   .max(160)
-  .regex(/^[^/\\\u0000-\u001f\u007f]+$/, "file_name must not contain path separators or control characters");
+  .refine(
+    isSafeFileName,
+    "file_name must not contain path separators or control characters",
+  );
 
 export const UploadFileSchema = z
   .object({
@@ -2208,7 +2279,9 @@ export const UploadFileSchema = z
       .describe("MIME type for raw Base64; data URLs provide it inline"),
   })
   .superRefine((data, ctx) => {
-    const sources = Number(data.file_path !== undefined) + Number(data.file_base64 !== undefined);
+    const sources =
+      Number(data.file_path !== undefined) +
+      Number(data.file_base64 !== undefined);
     if (sources !== 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -2229,7 +2302,9 @@ export type UploadFileRequest = z.infer<typeof UploadFileSchema>;
 
 export const GetUploadUrlSchema = z.object({
   app_grant: z.string().min(32).max(200).describe("Short-lived widget grant"),
-  filename: UploadFileNameSchema.describe("Original filename shown in download metadata"),
+  filename: UploadFileNameSchema.describe(
+    "Original filename shown in download metadata",
+  ),
   content_type: z
     .enum([
       "image/jpeg",
@@ -2258,7 +2333,10 @@ export type GetUploadUrlRequest = z.infer<typeof GetUploadUrlSchema>;
 
 export const FinalizeUploadSchema = z.object({
   app_grant: z.string().min(32).max(200).describe("Short-lived widget grant"),
-  media_id: z.string().uuid().describe("Opaque media ID returned after browser upload"),
+  media_id: z
+    .string()
+    .uuid()
+    .describe("Opaque media ID returned after browser upload"),
 });
 
 export type FinalizeUploadRequest = z.infer<typeof FinalizeUploadSchema>;
@@ -2289,7 +2367,9 @@ export const PrepareMediaGenerationSchema = z.object({
   defaultProfile: z
     .enum(["safe"])
     .optional()
-    .describe("Optional explicit safe default policy. The current catalog policy is safe."),
+    .describe(
+      "Optional explicit safe default policy. The current catalog policy is safe.",
+    ),
   maxConcurrency: z
     .number()
     .int()
@@ -2305,12 +2385,16 @@ export const PrepareMediaGenerationSchema = z.object({
     .optional()
     .describe("Plan expiry in seconds (60-3600, default 900)"),
 });
-export type PrepareMediaGenerationRequest = z.infer<typeof PrepareMediaGenerationSchema>;
+export type PrepareMediaGenerationRequest = z.infer<
+  typeof PrepareMediaGenerationSchema
+>;
 
 export const SubmitMediaGenerationSchema = z.object({
   planId: z.string().uuid().describe("Approved plan ID to submit exactly once"),
 });
-export type SubmitMediaGenerationRequest = z.infer<typeof SubmitMediaGenerationSchema>;
+export type SubmitMediaGenerationRequest = z.infer<
+  typeof SubmitMediaGenerationSchema
+>;
 
 export const WaitForTaskSchema = z.object({
   task_id: z

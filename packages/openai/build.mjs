@@ -1,5 +1,5 @@
-import { build } from "esbuild";
 import { chmod, readFile, rm } from "node:fs/promises";
+import { build } from "esbuild";
 
 const packageJson = JSON.parse(
   await readFile(new URL("./package.json", import.meta.url), "utf8"),

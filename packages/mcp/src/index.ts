@@ -1,41 +1,40 @@
 #!/usr/bin/env node
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { startHttpServer } from "./http-transport.js";
-import { TemporaryUploadStore } from "./upload-storage.js";
-import { UPLOAD_WIDGET_HTML, UPLOAD_WIDGET_MIME } from "./upload-widget.js";
-import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
-  ListResourcesRequestSchema,
-  ReadResourceRequestSchema,
-  ListPromptsRequestSchema,
-  GetPromptRequestSchema,
-  McpError,
-} from "@modelcontextprotocol/sdk/types.js";
-import { requestMcpPlanApproval } from "./plan-approval.js";
-import { isMcpToolCallable } from "./tool-access.js";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
 import {
-  KieAiClient,
-  KieAiConfig,
-  ToolContext,
-  ToolResult,
-  TOOL_REGISTRY,
-  getTool,
-  toInputJsonSchema,
-  toolToMarkdown,
   categoryPromptText,
   formatToolError,
-  uploadPathForMimeType,
+  getTool,
+  KieAiClient,
+  type KieAiConfig,
+  TOOL_REGISTRY,
+  type ToolContext,
+  ToolResult,
+  toInputJsonSchema,
+  toolToMarkdown,
   UPLOAD_WIDGET_URI,
+  uploadPathForMimeType,
 } from "@felores/kie-ai-core";
 import { TaskDatabase } from "@felores/kie-ai-core/database";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ErrorCode,
+  GetPromptRequestSchema,
+  ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
+  ListToolsRequestSchema,
+  McpError,
+  ReadResourceRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { startHttpServer } from "./http-transport.js";
+import { requestMcpPlanApproval } from "./plan-approval.js";
+import { isMcpToolCallable } from "./tool-access.js";
+import { TemporaryUploadStore } from "./upload-storage.js";
+import { UPLOAD_WIDGET_HTML, UPLOAD_WIDGET_MIME } from "./upload-widget.js";
 
 export class KieAiMcpServer {
   private server: Server;
@@ -119,7 +118,8 @@ export class KieAiMcpServer {
       formatError: formatToolError,
       // Plan utilities must resolve through the server's enabled-tool boundary,
       // not the unrestricted registry used to construct the server.
-      getTool: (name) => this.enabledTools.has(name) ? getTool(name) : undefined,
+      getTool: (name) =>
+        this.enabledTools.has(name) ? getTool(name) : undefined,
     };
 
     this.server = this.createServer();
@@ -314,9 +314,7 @@ export class KieAiMcpServer {
                   ...(t.ui.resourceUri
                     ? { resourceUri: t.ui.resourceUri }
                     : {}),
-                  ...(t.ui.visibility
-                    ? { visibility: t.ui.visibility }
-                    : {}),
+                  ...(t.ui.visibility ? { visibility: t.ui.visibility } : {}),
                 },
                 ...(t.ui.resourceUri
                   ? { "ui/resourceUri": t.ui.resourceUri }
@@ -397,9 +395,10 @@ export class KieAiMcpServer {
 
     // Resource Handlers
     server.setRequestHandler(ListResourcesRequestSchema, async () => {
-      const toolResources = TOOL_REGISTRY.filter((t) =>
-        isMcpToolCallable(t, this.enabledTools) &&
-        (!t.ui?.visibility || t.ui.visibility.includes("model")),
+      const toolResources = TOOL_REGISTRY.filter(
+        (t) =>
+          isMcpToolCallable(t, this.enabledTools) &&
+          (!t.ui?.visibility || t.ui.visibility.includes("model")),
       ).map((t) => ({
         uri: `kie://tools/${t.name}`,
         name: t.name,

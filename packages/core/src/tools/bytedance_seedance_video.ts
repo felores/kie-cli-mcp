@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { ByteDanceSeedanceVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
-export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSchema> = {
+export const bytedanceSeedanceVideoTool: ToolDef<
+  typeof ByteDanceSeedanceVideoSchema
+> = {
   name: "bytedance_seedance_video",
   description:
     "Generate videos with ByteDance Seedance 2.5 using text, experimental semantic task continuation, first/last frames, or multimodal image/video/audio references.",
@@ -15,8 +17,7 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
       // Use intelligent callback URL fallback
       request.callBackUrl = ctx.getCallbackUrl(request.callBackUrl);
 
-      const response =
-        await ctx.client.generateByteDanceSeedanceVideo(request);
+      const response = await ctx.client.generateByteDanceSeedanceVideo(request);
 
       if (response.code === 200 && response.data?.taskId) {
         // Store task in database
@@ -64,7 +65,9 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
                     ...(request.generate_audio !== undefined && {
                       generate_audio: request.generate_audio,
                     }),
-                    ...(request.resolution && { resolution: request.resolution }),
+                    ...(request.resolution && {
+                      resolution: request.resolution,
+                    }),
                     ...(request.aspect_ratio && {
                       aspect_ratio: request.aspect_ratio,
                     }),
@@ -92,8 +95,7 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
     } catch (error) {
       if (error instanceof z.ZodError) {
         return ctx.formatError("bytedance_seedance_video", error, {
-          prompt:
-            "Required: text prompt for Seedance 2.5 video generation",
+          prompt: "Required: text prompt for Seedance 2.5 video generation",
           extension_task_id:
             "Optional, experimental: previous Seedance task ID for semantic continuation; use first_frame_url for visual continuity",
           first_frame_url: "Optional: URL of image to use as the first frame",
@@ -120,7 +122,8 @@ export const bytedanceSeedanceVideoTool: ToolDef<typeof ByteDanceSeedanceVideoSc
         extension_task_id:
           "Optional, experimental: previous Seedance task ID for semantic continuation; use first_frame_url for visual continuity",
         first_frame_url: "Optional: first-frame image URL",
-        last_frame_url: "Optional: last-frame image URL (requires first_frame_url)",
+        last_frame_url:
+          "Optional: last-frame image URL (requires first_frame_url)",
         reference_image_urls: "Optional: multimodal reference image URLs",
         reference_video_urls: "Optional: multimodal reference video URLs",
         reference_audio_urls: "Optional: multimodal reference audio URLs",

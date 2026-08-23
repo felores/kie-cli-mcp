@@ -1,6 +1,6 @@
 import { WaitForTaskSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
 import { getTaskStatusTool } from "./get_task_status.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 /**
  * Resolve the rendezvous result base (e.g. https://host/kie/result) from, in

@@ -1,14 +1,17 @@
-import { UploadFileSchema } from "../types.js";
+import type { SupportedUploadMimeType } from "../media-validation.js";
 import {
   uploadPathForMimeType,
   validateUploadBytes,
 } from "../media-validation.js";
-import type { SupportedUploadMimeType } from "../media-validation.js";
+import { UploadFileSchema } from "../types.js";
 import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 const MAX_DECODED_BYTES = 10 * 1024 * 1024;
 
-function decodeBase64(value: string, declaredType?: string): {
+function decodeBase64(
+  value: string,
+  declaredType?: string,
+): {
   bytes: Uint8Array;
   providerValue: string;
   contentType: SupportedUploadMimeType;
@@ -16,7 +19,11 @@ function decodeBase64(value: string, declaredType?: string): {
   const match = value.match(/^data:([^;,]+);base64,(.*)$/s);
   const contentType = match?.[1] ?? declaredType;
   const encoded = (match?.[2] ?? value).replace(/\s+/g, "");
-  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+  if (
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+      encoded,
+    )
+  ) {
     throw new Error("file_base64 is not valid Base64.");
   }
   const bytes = Buffer.from(encoded, "base64");
@@ -107,7 +114,8 @@ export const uploadFileTool: ToolDef<typeof UploadFileSchema> = {
         file_path:
           "CLI-only local file under KIE_CLI_UPLOAD_ROOTS, maximum 25 MiB",
         file_name: "Optional filename without path separators",
-        content_type: "Required for raw Base64 when MIME cannot be inferred inline",
+        content_type:
+          "Required for raw Base64 when MIME cannot be inferred inline",
       });
     }
   },

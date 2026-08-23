@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Flux2ImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const flux2ImageTool: ToolDef<typeof Flux2ImageSchema> = {
   name: "flux2_image",

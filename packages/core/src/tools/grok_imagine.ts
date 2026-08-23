@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { GrokImagineSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const grokImagineTool: ToolDef<typeof GrokImagineSchema> = {
   name: "grok_imagine",
-  description: "Generate images and videos using xAI's Grok Imagine (5 modes: Image 2.0 text-to-image, Image 2.0 image-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.",
+  description:
+    "Generate images and videos using xAI's Grok Imagine (5 modes: Image 2.0 text-to-image, Image 2.0 image-to-image, text-to-video, image-to-video, upscale). Supports synchronized audio with video.",
   category: "video",
   schema: GrokImagineSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

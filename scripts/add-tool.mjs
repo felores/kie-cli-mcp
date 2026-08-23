@@ -14,12 +14,16 @@ const name = process.argv[2];
 const category = process.argv[3] || "image";
 
 if (!name || !/^[a-z][a-z0-9_]*$/.test(name)) {
-  console.error("Usage: npm run add-tool -- <tool_name> [image|video|audio|utility]");
+  console.error(
+    "Usage: npm run add-tool -- <tool_name> [image|video|audio|utility]",
+  );
   console.error("  tool_name must be snake_case, e.g. acme_new_video");
   process.exit(1);
 }
 if (!["image", "video", "audio", "utility"].includes(category)) {
-  console.error(`Invalid category "${category}". Use image | video | audio | utility.`);
+  console.error(
+    `Invalid category "${category}". Use image | video | audio | utility.`,
+  );
   process.exit(1);
 }
 
@@ -88,7 +92,8 @@ const importLine = `import { ${varName} } from "./${name}.js";`;
 // insert import after the last existing tool import
 const lastImport = index.lastIndexOf('Tool } from "./');
 const lineEnd = index.indexOf("\n", lastImport);
-index = index.slice(0, lineEnd + 1) + importLine + "\n" + index.slice(lineEnd + 1);
+index =
+  index.slice(0, lineEnd + 1) + importLine + "\n" + index.slice(lineEnd + 1);
 
 // insert entry before the closing "];" of TOOL_REGISTRY
 index = index.replace(/\n\];/, `\n  ${varName},\n];`);
@@ -98,8 +103,12 @@ fs.writeFileSync(indexPath, index);
 console.log(`✓ Created ${path.relative(ROOT, file)}`);
 console.log(`✓ Registered ${varName} in tools/index.ts`);
 console.log("\nNext steps:");
-console.log(`  1. Move the Zod schema into packages/core/src/types.ts (export const ${Schema}).`);
+console.log(
+  `  1. Move the Zod schema into packages/core/src/types.ts (export const ${Schema}).`,
+);
 console.log("  2. Add the API method in packages/core/src/kie-ai-client.ts.");
 console.log("  3. Fill in description, run() body and the db api_type.");
-console.log("  4. Update EXPECTED_TOOL_NAMES in packages/core/src/__tests__/registry.test.ts.");
+console.log(
+  "  4. Update EXPECTED_TOOL_NAMES in packages/core/src/__tests__/registry.test.ts.",
+);
 console.log("  5. npm run build && npm test");

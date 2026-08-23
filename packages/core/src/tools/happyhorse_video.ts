@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { HappyHorseVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const happyhorseVideoTool: ToolDef<typeof HappyHorseVideoSchema> = {
   name: "happyhorse_video",
-  description: "Generate videos using Alibaba HappyHorse 1.0 (text-to-video, image-to-video, reference-to-video with up to 9 images, video-edit with native audio)",
+  description:
+    "Generate videos using Alibaba HappyHorse 1.0 (text-to-video, image-to-video, reference-to-video with up to 9 images, video-edit with native audio)",
   category: "video",
   schema: HappyHorseVideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

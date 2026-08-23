@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { FluxKontextImageSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const fluxKontextImageTool: ToolDef<typeof FluxKontextImageSchema> = {
   name: "flux_kontext_image",
-  description: "Generate or edit images using Flux Kontext AI models (unified tool for text-to-image generation and image editing)",
+  description:
+    "Generate or edit images using Flux Kontext AI models (unified tool for text-to-image generation and image editing)",
   category: "image",
   schema: FluxKontextImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {

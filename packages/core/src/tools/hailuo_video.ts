@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { HailuoVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
   name: "hailuo_video",
@@ -36,7 +36,9 @@ export const hailuoVideoTool: ToolDef<typeof HailuoVideoSchema> = {
           status: "pending",
         });
       } else {
-        throw new Error(response.msg || "Failed to create MiniMax H3 video task");
+        throw new Error(
+          response.msg || "Failed to create MiniMax H3 video task",
+        );
       }
 
       return {

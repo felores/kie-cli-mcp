@@ -1,5 +1,5 @@
 import { Veo3Get1080pVideoSchema } from "../types.js";
-import type { ToolDef, ToolContext, ToolResult } from "./types.js";
+import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const veo3Get1080pVideoTool: ToolDef<typeof Veo3Get1080pVideoSchema> = {
   name: "veo3_get_1080p_video",

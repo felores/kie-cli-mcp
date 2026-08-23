@@ -1,14 +1,14 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { Server as HttpServer } from "node:http";
+import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import express, {
   type Express,
   type NextFunction,
   type Request,
   type Response,
 } from "express";
-import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import type { TemporaryUploadStore } from "./upload-storage.js";
 
 export interface HttpTransportOptions {
@@ -70,11 +70,17 @@ export function validateHttpTransportSecurity({
   const isLoopbackHost =
     host === "127.0.0.1" || host === "localhost" || host === "::1";
   const missing = [
-    ...(!isLoopbackHost && allowedHosts.length === 0 ? ["MCP_ALLOWED_HOSTS"] : []),
+    ...(!isLoopbackHost && allowedHosts.length === 0
+      ? ["MCP_ALLOWED_HOSTS"]
+      : []),
     ...(!isLoopbackHost && !token ? ["KIE_MCP_HTTP_TOKEN"] : []),
-    ...(uploadEnabled && allowedHosts.length === 0 ? ["MCP_ALLOWED_HOSTS"] : []),
+    ...(uploadEnabled && allowedHosts.length === 0
+      ? ["MCP_ALLOWED_HOSTS"]
+      : []),
     ...(uploadEnabled && !token ? ["KIE_MCP_HTTP_TOKEN"] : []),
-    ...(uploadEnabled && allowedOrigins.length === 0 ? ["MCP_ALLOWED_ORIGINS"] : []),
+    ...(uploadEnabled && allowedOrigins.length === 0
+      ? ["MCP_ALLOWED_ORIGINS"]
+      : []),
     ...(uploadEnabled && uploadAllowedOrigins.length === 0
       ? ["MCP_UPLOAD_ALLOWED_ORIGINS"]
       : []),
@@ -99,7 +105,10 @@ function normalizeHost(value: string): string {
   }
 }
 
-function isAllowedHost(value: string | undefined, allowedHosts: string[]): boolean {
+function isAllowedHost(
+  value: string | undefined,
+  allowedHosts: string[],
+): boolean {
   if (!value) return false;
   const normalized = normalizeHost(value);
   return allowedHosts.some(
@@ -135,7 +144,10 @@ export function createHttpApp(options: HttpTransportOptions): Express {
   // Host validation covers MCP and capability routes. Health stays exempt for
   // container probes. Public URLs are never derived from request headers.
   app.use((req: Request, res: Response, next) => {
-    if (opts.allowedHosts.length > 0 && !isAllowedHost(req.headers.host, opts.allowedHosts)) {
+    if (
+      opts.allowedHosts.length > 0 &&
+      !isAllowedHost(req.headers.host, opts.allowedHosts)
+    ) {
       res.status(403).json({ error: "Invalid Host header" });
       return;
     }
@@ -158,7 +170,10 @@ export function createHttpApp(options: HttpTransportOptions): Express {
     app.options("/upload/:token", (req: Request, res: Response) => {
       if (!allowUploadOrigin(req, res)) return;
       res.setHeader("Access-Control-Allow-Methods", "PUT, OPTIONS");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Content-Length");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Content-Length",
+      );
       res.setHeader("Access-Control-Max-Age", "600");
       res.status(204).end();
     });
@@ -239,50 +254,56 @@ export function createHttpApp(options: HttpTransportOptions): Express {
     }
   };
 
-  app.post("/mcp", authorizeMcpRequest, mcpJsonParser, async (req: Request, res: Response) => {
-    const sessionId = req.headers["mcp-session-id"] as string | undefined;
-    let transport: StreamableHTTPServerTransport | undefined = sessionId
-      ? transports.get(sessionId)
-      : undefined;
+  app.post(
+    "/mcp",
+    authorizeMcpRequest,
+    mcpJsonParser,
+    async (req: Request, res: Response) => {
+      const sessionId = req.headers["mcp-session-id"] as string | undefined;
+      let transport: StreamableHTTPServerTransport | undefined = sessionId
+        ? transports.get(sessionId)
+        : undefined;
 
-    try {
-      if (!transport) {
-        if (sessionId) {
-          res.status(404).json({
-            jsonrpc: "2.0",
-            error: { code: -32001, message: "Session not found" },
-            id: null,
-          });
-          return;
-        }
-        if (!isInitializeRequest(req.body)) {
-          res.status(400).json({
-            jsonrpc: "2.0",
-            error: {
-              code: -32000,
-              message: "Bad Request: missing session ID for a non-init request",
+      try {
+        if (!transport) {
+          if (sessionId) {
+            res.status(404).json({
+              jsonrpc: "2.0",
+              error: { code: -32001, message: "Session not found" },
+              id: null,
+            });
+            return;
+          }
+          if (!isInitializeRequest(req.body)) {
+            res.status(400).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32000,
+                message:
+                  "Bad Request: missing session ID for a non-init request",
+              },
+              id: null,
+            });
+            return;
+          }
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            onsessioninitialized: (id) => {
+              transports.set(id, transport!);
             },
-            id: null,
+            ...securityOpts,
           });
-          return;
+          transport.onclose = () => {
+            if (transport!.sessionId) transports.delete(transport!.sessionId);
+          };
+          await opts.createServer().connect(transport);
         }
-        transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (id) => {
-            transports.set(id, transport!);
-          },
-          ...securityOpts,
-        });
-        transport.onclose = () => {
-          if (transport!.sessionId) transports.delete(transport!.sessionId);
-        };
-        await opts.createServer().connect(transport);
+        await transport.handleRequest(req, res, req.body);
+      } catch (error) {
+        onError(res, error);
       }
-      await transport.handleRequest(req, res, req.body);
-    } catch (error) {
-      onError(res, error);
-    }
-  });
+    },
+  );
 
   const handleSessionRequest = async (req: Request, res: Response) => {
     if (!requireAuth(req, res)) return;
