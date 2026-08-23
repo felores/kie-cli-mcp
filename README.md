@@ -22,7 +22,34 @@
 >
 > This server fixes that: load **only the tools you actually use** with `KIE_AI_ENABLED_TOOLS` (or whole categories with `KIE_AI_TOOL_CATEGORIES`). Your context stays lean and you pay for exactly the surface you need, no more, no less.
 >
-> And the bundled **CLI (`kie-cli`) costs zero context tokens** until you call it: the agent discovers commands on demand with `kie-cli --help` instead of carrying schemas around. One registry, two surfaces, minimal footprint.
+## ✨ What's new in MCP 5.0.0
+
+Built on the **SDK v2 packages** (`@modelcontextprotocol/server`,
+`@modelcontextprotocol/node`) with **Node >= 20** and **zod v4**:
+
+- **Dual protocol era.** The server negotiates the protocol version per client:
+  2025-era clients keep working unchanged, while the 2026-07-28 vocabulary
+  (`server/discover`, cache hints, extensions, structured schemas, tasks) is
+  served as soon as the SDK lifts its negotiation cap.
+- **Structured results.** Failed tool calls arrive as `isError: true` with
+  structured error content; generation, upload and planning tools expose
+  `structuredContent` (`task_id`, `media_id`, `plan_id`) and advertise
+  `outputSchema` in `tools/list`.
+- **Modern input schemas.** Tool `inputSchema` is generated as JSON Schema
+  2020-12, the dialect MCP 2026-07-28 targets.
+- **MRTR plan approval.** On 2026-era hosts approval is a multi-round-trip
+  `input_required` flow; 2025-era hosts keep the push-style elicitation.
+- **`server/discover` + cache hints + extension negotiation.** The server
+  answers discovery with its supported versions, capabilities and
+  instructions, and advertises the MCP Apps extension that gates the upload
+  widget resource.
+- **Official MCP Tasks (opt-in).** `KIE_AI_MCP_TASKS=true` exposes the `tasks`
+  capability and task-mode `tools/call` runs backed by an in-process engine
+  mirrored to the local SQLite database; legacy `get_task_status` /
+  `list_tasks` / `wait_for_task` remain available in all modes.
+- **OAuth is designed, not yet implemented.** See
+  [docs/OAUTH.md](docs/OAUTH.md) for the deferred resource-server
+  architecture (it activates only with a public remote deployment).
 
 ## Two ways to use it (one shared core)
 
@@ -59,6 +86,8 @@ Version 4 makes cost control a server-side workflow instead of an agent instruct
 Preparation validates one to six requests, resolves model settings and policy defaults, records pricing as `exact` only for verified formulas and `unknown` otherwise, and creates no provider task. A plan is persistent, expires after 15 minutes by default, is bound to its MCP server session, and can be submitted only once. See [Media planning and approval](#media-planning-and-approval) for the complete flow.
 
 ## 🚀 Quick Start
+
+**Requires Node.js >= 20** to run the MCP server.
 
 Add Kie.ai to your MCP client. Pick how many tools you want loaded:
 
@@ -418,6 +447,7 @@ The server surfaces Kie.ai's response codes (it only treats `code === 200` as su
 - [docs/DATABASE.md](docs/DATABASE.md): database and task lifecycle
 - [docs/ADMIN.md](docs/ADMIN.md): deployment and environment setup
 - [docs/INTELLIGENCE.md](docs/INTELLIGENCE.md): smart mode detection and cost optimization
+- [docs/OAUTH.md](docs/OAUTH.md): deferred MCP OAuth design for future public remote deployments
 
 ## Support
 
