@@ -3,6 +3,9 @@
 ## Project Goal
 **Seamless integration with Kie.ai API** - Kie.ai provides access to the best AI models (Veo 3, Runway, Nano Banana, Suno, etc.) through one affordable, developer-friendly API. Our MCP server bridges these powerful AI capabilities to Claude Desktop and other MCP clients.
 
+## Authoritative MCP Documentation
+- Start with the official MCP documentation index at https://modelcontextprotocol.io/llms.txt for current protocol and MCP Apps contracts, then follow its relevant source links.
+
 ## Immediate Goals
 - **Simplify tool interfaces** - Reduce cognitive load for users
 - **Consolidate related tools** - Example: merge `generate_nano_banana`, `edit_nano_banana`, and `upscale_nano_banana` into a single unified `nano_banana` tool that auto-detects mode based on parameters (presence of `image_urls` = edit mode, presence of `scale` = upscale mode, etc.)
