@@ -9,10 +9,16 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import type { CallerPrincipal } from "./principal.js";
 import type { TemporaryUploadStore } from "./upload-storage.js";
 
 export interface HttpTransportOptions {
-  createServer: () => Server;
+  /**
+   * Builds one Server for a session, bound to the session's caller principal.
+   * The transport owns session ids; callers derive all per-caller state
+   * (approval owner, widget grants, plans, uploads) from the principal.
+   */
+  createServer: (principal: CallerPrincipal) => Server;
   version: string;
   uploadStore?: TemporaryUploadStore;
   host?: string;
@@ -286,17 +292,21 @@ export function createHttpApp(options: HttpTransportOptions): Express {
             });
             return;
           }
+          // The session id is decided before the transport and Server are
+          // created so both are bound to the same caller principal: a fresh
+          // Server for a resumed session resolves the same owner and state.
+          const newSessionId = randomUUID();
           transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => randomUUID(),
-            onsessioninitialized: (id) => {
-              transports.set(id, transport!);
+            sessionIdGenerator: () => newSessionId,
+            onsessioninitialized: () => {
+              transports.set(newSessionId, transport!);
             },
             ...securityOpts,
           });
           transport.onclose = () => {
             if (transport!.sessionId) transports.delete(transport!.sessionId);
           };
-          await opts.createServer().connect(transport);
+          await opts.createServer(newSessionId).connect(transport);
         }
         await transport.handleRequest(req, res, req.body);
       } catch (error) {
