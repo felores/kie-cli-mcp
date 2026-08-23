@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stable `tools/list` and `server/discover` results. Tools with guaranteed
   structured content (preparation, upload capabilities, and generation task
   results) now advertise `outputSchema`.
+- Official MCP Tasks (experimental, opt-in via `KIE_AI_MCP_TASKS=true`): a
+  durable in-process task engine backed by the local SQLite database, the
+  `tasks` capability, per-tool `execution.taskSupport`, and the task-mode
+  `tools/call` surface with `tasks/result`/`tasks/list`/`tasks/cancel`. The
+  published MCP SDK still negotiates at most 2025-11-25, so task-mode calls
+  are refused with a clear error until the SDK lifts negotiation to
+  2026-07-28; the legacy task-status tools remain available in all modes.
 - MCP Apps negotiation: the upload widget resource (`ui://kie/upload.html`) is
   exposed only to hosts that declare the Apps extension; other clients keep the
   widget tool's plain-text fallback.

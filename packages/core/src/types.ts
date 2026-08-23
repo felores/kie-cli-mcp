@@ -2200,7 +2200,8 @@ export interface TaskRecord {
     | "topaz-upscale"
     | "happyhorse-video"
     | "omnihuman-video"
-    | "gemini-omni-video";
+    | "gemini-omni-video"
+    | "mcp-task";
   status: "pending" | "processing" | "completed" | "failed";
   created_at: string;
   updated_at: string;
