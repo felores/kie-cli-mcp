@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Verify generated documentation
+        run: |
+          npm run docs
+          git diff --exit-code -- docs/TOOLS.md
+
+      - name: Verify publishable packages
+        run: |
+          npm pack -w @felores/kie-ai-openai-server --dry-run
+          npm pack -w @felores/kie-ai-mcp-server --dry-run
+          npm pack -w @felores/kie-cli --dry-run
+
+      - name: Verify patch formatting
+        run: git diff --check

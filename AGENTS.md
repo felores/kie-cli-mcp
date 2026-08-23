@@ -274,7 +274,7 @@ if (apiType === 'veo3') {
 
 1. Bump each affected public package independently: MCP changes require `packages/mcp/package.json` and `packages/mcp/src/index.ts`; CLI changes require `packages/cli/package.json`. Update `package-lock.json`, `CHANGELOG.md`, README model references, `docs/TOOLS.md` (`npm run docs`), and relevant `docs/kie/` contracts.
 2. Verify locally: `npm run typecheck`, `npm run build`, `npm test`, and `npm pack -w @felores/kie-ai-mcp-server --dry-run` plus `npm pack -w @felores/kie-cli --dry-run` for affected packages.
-3. Commit the release preparation, rebase, and push `main`. Create and push tag `vX.Y.Z`, then create the GitHub Release with notes from the changelog.
+3. Commit the release preparation on a branch, push it, open a pull request, and merge only after the required `Verify` check passes. Update local `main`, create and push tag `vX.Y.Z`, then create the GitHub Release with notes from the changelog.
 4. Publish affected packages to npm with a fresh OTP when manual publishing is required. The release workflow also publishes to npm and GitHub Packages (`https://npm.pkg.github.com/`); monitor its run to completion.
 5. A release is complete only when: commits and tag are pushed, the GitHub Release is visible, intended versions resolve from npm, both intended packages have successful GitHub Packages publish steps, and the working tree is clean.
 
@@ -657,26 +657,31 @@ This architecture ensures a clean, maintainable codebase while providing an exce
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until the change is merged through a verified pull request and local `main` matches `origin/main`.
 
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
 2. **Run quality gates** (if code changed) - Tests, linters, builds
 3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+4. **DELIVER THROUGH A PULL REQUEST** - Direct pushes to protected `main` are not allowed:
    ```bash
-   git pull --rebase
+   git switch -c <topic-branch>  # when work began on main
    bd sync
-   git push
-   git status  # MUST show "up to date with origin"
+   git push -u origin <topic-branch>
+   gh pr create
+   gh pr checks --watch
+   gh pr merge --squash --delete-branch
+   git switch main
+   git pull --ff-only
+   git status  # MUST show main up to date with origin/main
    ```
 5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
+6. **Verify** - Pull request merged, topic branch deleted, and local `main` synchronized
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+- Work is NOT complete until the pull request is merged and `main` is synchronized
+- Never push directly to `main` or bypass the required `Verify` check
+- Never say "ready to merge when you are"; complete the verified pull-request workflow
+- If CI or merge fails, resolve the failure on the topic branch and retry
