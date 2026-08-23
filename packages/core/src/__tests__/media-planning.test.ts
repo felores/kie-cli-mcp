@@ -715,4 +715,44 @@ describe("media planning", () => {
       await cleanup();
     }
   });
+
+  test("marks prepared plans input-required when modern approval waits for host input", async () => {
+    const { db, cleanup } = testDatabase();
+    const client = { generateNanoBananaImage: jest.fn() };
+    try {
+      const result = await prepareMediaGenerationTool.run(
+        {
+          items: [
+            { tool: "nano_banana_image", args: { prompt: "Modern approval" } },
+          ],
+        },
+        context(db, client, getTool, async () => ({
+          approved: false,
+          reason: "Host approval required for media generation plan.",
+          inputRequired: true,
+        })),
+      );
+      const text = readResult(result);
+      expect(text).toMatchObject({
+        success: true,
+        approved: false,
+        status: "prepared",
+        input_required: true,
+      });
+      expect(result.structuredContent).toMatchObject({
+        plan_id: expect.any(String),
+        input_required: true,
+      });
+      expect(result._meta?.["kie/approval-plan"]).toMatchObject({
+        id: text.planId,
+      });
+      // The plan row stays prepared until the host retries with a decision.
+      expect((await db.getGenerationPlan(String(text.planId)))?.status).toBe(
+        "prepared",
+      );
+      expect(client.generateNanoBananaImage).not.toHaveBeenCalled();
+    } finally {
+      await cleanup();
+    }
+  });
 });
