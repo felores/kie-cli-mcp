@@ -31,6 +31,11 @@ function pendingResult(
         ),
       },
     ],
+    structuredContent: {
+      plan_id: plan.id,
+      status: "prepared",
+      approved: false,
+    },
   };
 }
 
@@ -109,6 +114,11 @@ export const prepareMediaGenerationTool: ToolDef<
             ),
           },
         ],
+        structuredContent: {
+          plan_id: plan.id,
+          status: "approved",
+          approved: true,
+        },
       };
     } catch (error) {
       return ctx.formatError("prepare_media_generation", error, {

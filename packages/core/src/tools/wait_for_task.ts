@@ -142,6 +142,7 @@ export const waitForTaskTool: ToolDef<typeof WaitForTaskSchema> = {
               ),
             },
           ],
+          structuredContent: { task_id, status: "timed_out", error: "timeout" },
         };
       }
 
@@ -205,6 +206,11 @@ export const waitForTaskTool: ToolDef<typeof WaitForTaskSchema> = {
                 ),
               },
             ],
+            structuredContent: {
+              task_id,
+              status: "failed",
+              error: task.error_message ?? "Generation failed",
+            },
           };
         }
 
@@ -237,6 +243,7 @@ export const waitForTaskTool: ToolDef<typeof WaitForTaskSchema> = {
             ),
           },
         ],
+        structuredContent: { task_id, status: "timed_out", error: "timeout" },
       };
     } catch (error) {
       return ctx.formatError("wait_for_task", error, {

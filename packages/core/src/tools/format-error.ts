@@ -38,6 +38,10 @@ export function formatToolError(
     .join("\n");
 
   return {
+    // `isError` marks the tool call as failed for MCP clients (and future
+    // outputSchema validation releases tools whose structured content is
+    // absent on error). CLI adapters ignore it and keep printing the text.
+    isError: true,
     content: [
       {
         type: "text",
@@ -55,5 +59,10 @@ export function formatToolError(
         ),
       },
     ],
+    structuredContent: {
+      success: false,
+      tool: toolName,
+      error: errorMessage,
+    },
   };
 }
