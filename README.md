@@ -47,9 +47,6 @@ Built on the **SDK v2 packages** (`@modelcontextprotocol/server`,
   capability and task-mode `tools/call` runs backed by an in-process engine
   mirrored to the local SQLite database; legacy `get_task_status` /
   `list_tasks` / `wait_for_task` remain available in all modes.
-- **OAuth is designed, not yet implemented.** See
-  [docs/OAUTH.md](docs/OAUTH.md) for the deferred resource-server
-  architecture (it activates only with a public remote deployment).
 
 ## Two ways to use it (one shared core)
 
@@ -447,7 +444,6 @@ The server surfaces Kie.ai's response codes (it only treats `code === 200` as su
 - [docs/DATABASE.md](docs/DATABASE.md): database and task lifecycle
 - [docs/ADMIN.md](docs/ADMIN.md): deployment and environment setup
 - [docs/INTELLIGENCE.md](docs/INTELLIGENCE.md): smart mode detection and cost optimization
-- [docs/OAUTH.md](docs/OAUTH.md): deferred MCP OAuth design for future public remote deployments
 
 ## Support
 
