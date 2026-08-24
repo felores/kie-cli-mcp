@@ -22,6 +22,15 @@
 >
 > Esto lo resuelve: carga **solo las herramientas que realmente usas** con `KIE_AI_ENABLED_TOOLS` (o categorías completas con `KIE_AI_TOOL_CATEGORIES`). Tu contexto queda liviano y pagas exactamente la superficie que necesitas, ni más ni menos.
 >
+## Dos formas de usarlo (un núcleo compartido)
+
+El servidor MCP y el CLI se generan desde el mismo registro de herramientas, así que ambos exponen exactamente los mismos modelos y se instalan **de forma independiente**:
+
+- **Servidor MCP**: `@felores/kie-ai-mcp-server`, para Claude Desktop y otros clientes MCP. Ver **Inicio rápido** abajo.
+- **CLI**: `@felores/kie-cli` (binario `kie-cli`), para la terminal, sin cliente MCP: `npm i -g @felores/kie-cli`, luego `kie-cli --help`. Ver [`packages/cli/README.md`](packages/cli/README.md).
+
+El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
+
 ## ✨ Novedades en MCP 5.0.0
 
 Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
@@ -49,15 +58,6 @@ Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
   capacidad `tasks` y las llamadas `tools/call` en modo tarea respaldadas por
   un motor en proceso espejado en la base SQLite local; las herramientas de
   estado legacy siguen disponibles en todos los modos.
-
-## Dos formas de usarlo (un núcleo compartido)
-
-El servidor MCP y el CLI se generan desde el mismo registro de herramientas, así que ambos exponen exactamente los mismos modelos y se instalan **de forma independiente**:
-
-- **Servidor MCP**: `@felores/kie-ai-mcp-server`, para Claude Desktop y otros clientes MCP. Ver **Inicio rápido** abajo.
-- **CLI**: `@felores/kie-cli` (binario `kie-cli`), para la terminal, sin cliente MCP: `npm i -g @felores/kie-cli`, luego `kie-cli --help`. Ver [`packages/cli/README.md`](packages/cli/README.md).
-
-El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
 
 ## Carga segura de referencias
 
