@@ -22,6 +22,16 @@
 >
 > This server fixes that: load **only the tools you actually use** with `KIE_AI_ENABLED_TOOLS` (or whole categories with `KIE_AI_TOOL_CATEGORIES`). Your context stays lean and you pay for exactly the surface you need, no more, no less.
 >
+## Two ways to use it (one shared core)
+
+The MCP server and the CLI are generated from the same tool registry, so both expose the exact same models and install **independently**:
+
+- **MCP server**: `@felores/kie-ai-mcp-server`, for Claude Desktop and other MCP clients. See **Quick Start** below.
+- **CLI**: `@felores/kie-cli` (binary `kie-cli`), for the terminal, no MCP client needed: `npm i -g @felores/kie-cli`, then `kie-cli --help`. See [`packages/cli/README.md`](packages/cli/README.md).
+- **OpenAI transport**: `@felores/kie-ai-openai-server`, a loopback HTTP server that exposes selected image/video models through OpenAI-shaped routes. Designed for browser apps that already speak the OpenAI image/video contract. See [`docs/openai-transport.md`](docs/openai-transport.md).
+
+The MCP server runs locally over **stdio** by default, and can also run as a **remote HTTP service** (Streamable HTTP) so one shared instance serves many clients over the network. It ships with a **Dockerfile and a Coolify compose file** for one-step self-hosting ([deploy guide](docs/DEPLOY_HTTP.md)). See the **Remote / HTTP transport** section below.
+
 ## ✨ What's new in MCP 5.0.0
 
 Built on the **SDK v2 packages** (`@modelcontextprotocol/server`,
@@ -47,16 +57,6 @@ Built on the **SDK v2 packages** (`@modelcontextprotocol/server`,
   capability and task-mode `tools/call` runs backed by an in-process engine
   mirrored to the local SQLite database; legacy `get_task_status` /
   `list_tasks` / `wait_for_task` remain available in all modes.
-
-## Two ways to use it (one shared core)
-
-The MCP server and the CLI are generated from the same tool registry, so both expose the exact same models and install **independently**:
-
-- **MCP server**: `@felores/kie-ai-mcp-server`, for Claude Desktop and other MCP clients. See **Quick Start** below.
-- **CLI**: `@felores/kie-cli` (binary `kie-cli`), for the terminal, no MCP client needed: `npm i -g @felores/kie-cli`, then `kie-cli --help`. See [`packages/cli/README.md`](packages/cli/README.md).
-- **OpenAI transport**: `@felores/kie-ai-openai-server`, a loopback HTTP server that exposes selected image/video models through OpenAI-shaped routes. Designed for browser apps that already speak the OpenAI image/video contract. See [`docs/openai-transport.md`](docs/openai-transport.md).
-
-The MCP server runs locally over **stdio** by default, and can also run as a **remote HTTP service** (Streamable HTTP) so one shared instance serves many clients over the network. It ships with a **Dockerfile and a Coolify compose file** for one-step self-hosting ([deploy guide](docs/DEPLOY_HTTP.md)). See the **Remote / HTTP transport** section below.
 
 ## Secure reference uploads
 
