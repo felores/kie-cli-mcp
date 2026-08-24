@@ -1,13 +1,13 @@
 name: Release (npm publish with provenance)
 
-# Publishes both packages to npm with provenance (the signed attestation that
-# links each package to this repo + build, so they show in the repo's Packages
-# sidebar with a "verified" badge). The private @felores/kie-ai-core is never
-# published, it is bundled into each package by the prepack step.
+# Publishes all public packages to npm with provenance and to GitHub Packages.
+# The private @felores/kie-ai-core is never published; it is bundled into each
+# public package by the prepack step.
 #
 # Trigger: push a version tag (e.g. `git tag v4.0.0 && git push origin v4.0.0`)
 # or run manually from the Actions tab. Each package is published only if its
-# current package.json version isn't already on npm, so re-runs are safe.
+# current package.json version isn't already in the target registry, so re-runs
+# are safe.
 
 on:
   push:
@@ -70,6 +70,19 @@ jobs:
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @felores/kie-ai-openai-server to GitHub Packages
+        run: |
+          npm config set @felores:registry https://npm.pkg.github.com
+          npm config set //npm.pkg.github.com/:_authToken "$NODE_AUTH_TOKEN"
+          VER=$(node -p "require('./packages/openai/package.json').version")
+          if npm view "@felores/kie-ai-openai-server@$VER" version --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "@felores/kie-ai-openai-server@$VER already published to GitHub Packages, skipping."
+          else
+            npm publish -w @felores/kie-ai-openai-server --registry=https://npm.pkg.github.com --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
 
       - name: Publish @felores/kie-ai-mcp-server to GitHub Packages
         run: |
