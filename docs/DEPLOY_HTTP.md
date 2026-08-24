@@ -112,6 +112,6 @@ curl -s -X POST https://<host>/mcp -H "$H" -H "$A" -H "$AUTH" -H "Mcp-Session-Id
 - **Stateful sessions**: each `Mcp-Session-Id` maps to its own MCP `Server`; the
   Kie.ai client and task DB are shared across sessions. `DELETE /mcp` (or client
   disconnect) evicts the session.
-- **Not implemented yet**: OAuth 2.0 (RFC 9728) auth, and `eventStore`-based
-  stream resumability. The transport supports adding both later.
+- **Not implemented yet**: `eventStore`-based stream resumability. The
+  transport supports adding it later.
 - stdio remains the default and is unaffected; the CLI package is unaffected.

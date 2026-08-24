@@ -43,7 +43,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   published MCP SDK still negotiates at most 2025-11-25, so task-mode calls
   are refused with a clear error until the SDK lifts negotiation to
   2026-07-28; the legacy task-status tools remain available in all modes.
-- OAuth for public remote deployments is designed and documented but deferred by design (`docs/OAUTH.md`): it activates only with a public remote deployment plus per-owner tenant state. The current local/self-hosted bearer model is unchanged.
 - Fixed the MCP `start`/`dev` scripts' `.env` path: the env file lives at the repository root, so the scripts now load `../../.env` from the package directory; the Inspector instructions in `AGENTS.md` run from the repo root.
 - MCP Apps negotiation: the upload widget resource (`ui://kie/upload.html`) is
   exposed only to hosts that declare the Apps extension; other clients keep the
