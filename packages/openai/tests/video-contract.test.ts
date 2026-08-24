@@ -711,6 +711,103 @@ describe("KIE OpenAI video contract", () => {
     router.close();
   });
 
+  test("accepts Infinite Canvas preset=normal without forwarding it and treats omission as equivalent", async () => {
+    const dataDir = await makeDataDir();
+    const calls = mockProviderForTask("canvas-video", "submit");
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      uploadBaseUrl: "https://upload.example",
+      dataDir,
+      ...resultHosts,
+    });
+    const base = await serve(express().use(router));
+    const png = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    const makeForm = (preset?: string): FormData => {
+      const form = new FormData();
+      form.set("model", "kie-bytedance-video");
+      form.set("prompt", "A red kite flying over Medellin");
+      form.set("seconds", "5");
+      form.set("size", "1280x720");
+      form.set("resolution_name", "720p");
+      if (preset) form.set("preset", preset);
+      form.append(
+        "input_reference[]",
+        new Blob([png], { type: "image/png" }),
+        "first.png",
+      );
+      form.append(
+        "input_reference[]",
+        new Blob([png], { type: "image/png" }),
+        "second.png",
+      );
+      return form;
+    };
+
+    const withPreset = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "canvas-preset" },
+      body: makeForm("normal"),
+    });
+    expect(withPreset.status).toBe(200);
+    expect(calls.uploadBodies).toHaveLength(2);
+    expect(calls.createBodies).toHaveLength(1);
+    expect(calls.createBodies[0]).not.toHaveProperty("preset");
+    expect(calls.createBodies[0].input).not.toHaveProperty("preset");
+
+    const omittedPreset = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "canvas-preset" },
+      body: makeForm(),
+    });
+    expect(omittedPreset.status).toBe(200);
+    expect(calls.uploadBodies).toHaveLength(2);
+    expect(calls.createBodies).toHaveLength(1);
+    router.close();
+  });
+
+  test("rejects unsupported presets before uploads, journal reservation, or provider work", async () => {
+    const dataDir = await makeDataDir();
+    const calls = mockProviderForTask("unsupported-preset", "submit");
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      uploadBaseUrl: "https://upload.example",
+      dataDir,
+      ...resultHosts,
+    });
+    const base = await serve(express().use(router));
+    const form = new FormData();
+    form.set("model", "kie-bytedance-fast-video");
+    form.set("prompt", "Unsupported preset");
+    form.set("preset", "turbo");
+    form.append(
+      "input_reference[]",
+      new Blob(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        { type: "image/png" },
+      ),
+      "reference.png",
+    );
+    const response = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      body: form,
+    });
+    expect(response.status).toBe(422);
+    expect((await responseJson(response)).error).toMatchObject({
+      code: "unsupported_setting",
+      param: "preset",
+    });
+    expect(calls.uploadBodies).toHaveLength(0);
+    expect(calls.createBodies).toHaveLength(0);
+    expect(
+      (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
+    ).toHaveLength(0);
+    router.close();
+  });
+
   test("callback URL is registered when callbackBaseUrl is configured", async () => {
     const dataDir = await makeDataDir();
     const calls = mockProviderForTask("vid-11", "submit");

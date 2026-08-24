@@ -56,6 +56,7 @@ Environment variables:
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Readiness, contract version, and package version. No secrets. |
+| GET | `/v1/models` | Deterministic OpenAI-shaped discovery for the four implemented public models. |
 | POST | `/v1/images/generations` | Text-to-image generation. |
 | POST | `/v1/images/edits` | Image editing with server-side reference uploads (multipart). |
 | POST | `/v1/videos` | Create a video generation task. |
@@ -63,18 +64,44 @@ Environment variables:
 | GET | `/v1/videos/:id/content` | Stream completed video bytes. |
 | POST | `/v1/videos/:id/callback` | Authenticated callback reconciliation (no duplicate task). |
 
+`GET /v1/models` uses the local transport catalog, so it remains available when
+`KIE_AI_API_KEY` is absent. Standalone Host, Origin, and bearer-token checks still
+apply. Embedded deployments continue using the host application's authentication.
+
 ## Model matrix
 
-| Public model ID | KIE tool | Type | Accepted fields |
+| Public model ID | KIE mapping | Type | Transport compatibility |
 |---|---|---|---|
-| `kie-nano-banana-image` | `nano_banana_image` | image gen/edit | prompt, n, quality, size, up to 14 image references |
-| `kie-gpt-image-2` | `gpt_image_2` | image gen/edit | prompt, n, quality, size, up to 16 image references |
-| `kie-bytedance-video` | `bytedance_seedance_video` (Seedance 2.5) | video | prompt, optional seconds, size, resolution_name, and generate_audio |
-| `kie-bytedance-fast-video` | `bytedance_seedance_video` (Seedance 2.5) | video | Legacy alias. It uses the same Seedance 2.5 model and does not select a fast mode. |
+| `kie-nano-banana-image` | Nano Banana 2 | image gen/edit | `output_format=png`, `jpg`, or `jpeg`; `jpeg` maps to Kie `jpg`; up to 14 image references |
+| `kie-gpt-image-2` | GPT Image 2 text-to-image or image-to-image | image gen/edit | Fixed PNG output; omitted or explicit `output_format=png`; up to 16 image references |
+| `kie-bytedance-video` | Seedance 2.5 | video | Omitted `preset` or `preset=normal`; both select the same fixed provider route |
+| `kie-bytedance-fast-video` | Seedance 2.5 | video | Legacy alias with the same `normal` preset normalization; it does not select a fast mode |
 
 Video model IDs intentionally omit `seedance` so consumers use the generic video route, not an Ark-specific branch.
 
-Masks are rejected with `422 unsupported_setting` before any paid task is created.
+`output_format` is optional. An explicit format is checked against the downloaded
+result MIME type and file signature. Kie's GPT Image 2 request schema exposes no
+format selector, so the transport accepts only its fixed PNG contract and does not
+invent JPEG or WebP conversion. A real 1K smoke task through each GPT Image 2
+route on 2026-08-24 returned `image/png` with a valid PNG signature.
+
+`preset=normal` is a client compatibility value. It is not forwarded to Kie because
+the current Seedance 2.5 mapping has no provider preset field. Omitted and `normal`
+requests have equivalent idempotency semantics.
+
+Masks and `background=transparent` are rejected with `422 unsupported_setting`
+before reference upload, journal reservation, or paid provider submission.
+
+## Infinite Canvas setup
+
+Configure Infinite Canvas with:
+
+```text
+Base URL: http://127.0.0.1:51311
+API key:  the value of KIE_OPENAI_TOKEN
+```
+
+Do not append `/v1`; Infinite Canvas appends it.
 
 ## Error contract
 

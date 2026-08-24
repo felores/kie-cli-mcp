@@ -141,6 +141,7 @@ describe("KIE OpenAI image contract", () => {
         quality: "hd",
         size: "1024x1024",
         response_format: "b64_json",
+        output_format: "png",
       }),
     });
 
@@ -173,6 +174,12 @@ describe("KIE OpenAI image contract", () => {
     let taskId = 0;
     jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
+      if (url === "https://upload.example/api/file-stream-upload") {
+        return jsonResponse({
+          code: 200,
+          data: { fileUrl: "https://uploaded.example/gpt-source.png" },
+        });
+      }
       if (url === `${providerBaseUrl}/jobs/createTask`) {
         createdBodies.push(
           JSON.parse(String(init?.body)) as Record<string, unknown>,
@@ -207,6 +214,7 @@ describe("KIE OpenAI image contract", () => {
           ...resultOptions,
           apiKey: "provider-key",
           baseUrl: providerBaseUrl,
+          uploadBaseUrl: "https://upload.example",
           dataDir,
           pollIntervalMs: 1,
           pollTimeoutMs: 100,
@@ -225,13 +233,41 @@ describe("KIE OpenAI image contract", () => {
         prompt: "A blue kite",
         quality: "high",
         size: "16:9",
-        response_format: "b64_json",
+        output_format: "png",
       }),
     });
     expect(valid.status).toBe(200);
     expect(createdBodies[0]).toMatchObject({
       model: "gpt-image-2-text-to-image",
       input: { prompt: "A blue kite", aspect_ratio: "16:9", resolution: "4K" },
+    });
+
+    const editForm = new FormData();
+    editForm.set("model", "kie-gpt-image-2");
+    editForm.set("prompt", "Add a yellow tail");
+    editForm.set("n", "1");
+    editForm.set("quality", "standard");
+    editForm.set("size", "1024x1024");
+    editForm.set("output_format", "png");
+    editForm.append(
+      "image",
+      new Blob([pngBytes("gpt-source")], { type: "image/png" }),
+      "gpt-source.png",
+    );
+    const edit = await fetch(`${baseUrl}/v1/images/edits`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "gpt-edit" },
+      body: editForm,
+    });
+    expect(edit.status).toBe(200);
+    expect(createdBodies[1]).toMatchObject({
+      model: "gpt-image-2-image-to-image",
+      input: {
+        prompt: "Add a yellow tail",
+        input_urls: ["https://uploaded.example/gpt-source.png"],
+        aspect_ratio: "1:1",
+        resolution: "1K",
+      },
     });
 
     const invalid = await fetch(`${baseUrl}/v1/images/generations`, {
@@ -246,8 +282,192 @@ describe("KIE OpenAI image contract", () => {
     expect((await responseJson(invalid)).error).toMatchObject({
       code: "unsupported_model",
     });
-    expect(createdBodies).toHaveLength(1);
+    expect(createdBodies).toHaveLength(2);
 
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("normalizes Nano Banana jpeg to jpg and fingerprints the semantic format", async () => {
+    const dataDir = await makeDataDir();
+    const createdBodies: Record<string, unknown>[] = [];
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({ code: 200, data: { taskId: "jpg-task" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/result.jpg"],
+            }),
+          },
+        });
+      }
+      if (url === "https://cdn.example/result.jpg") {
+        return new Response(jpegBytes("jpg-result"), {
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+
+    const request = async (outputFormat: string) =>
+      fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "jpeg-alias",
+        },
+        body: JSON.stringify({
+          model: "kie-nano-banana-image",
+          prompt: "A photographic kite",
+          output_format: outputFormat,
+        }),
+      });
+    expect((await request("jpeg")).status).toBe(200);
+    expect((await request("jpg")).status).toBe(200);
+    expect(createdBodies).toHaveLength(1);
+    expect(createdBodies[0]).toMatchObject({
+      input: { output_format: "jpg" },
+    });
+
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("rejects model-specific output formats before provider work", async () => {
+    const dataDir = await makeDataDir();
+    const providerCalls: string[] = [];
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (
+        url.startsWith(providerBaseUrl) ||
+        url.startsWith("https://upload.example")
+      ) {
+        providerCalls.push(url);
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          uploadBaseUrl: "https://upload.example",
+          dataDir,
+        }),
+      ),
+    );
+
+    const unsupportedNano = await fetch(`${baseUrl}/v1/images/generations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "kie-nano-banana-image",
+        prompt: "A kite",
+        output_format: "webp",
+      }),
+    });
+    expect(unsupportedNano.status).toBe(422);
+    expect((await responseJson(unsupportedNano)).error).toMatchObject({
+      code: "unsupported_setting",
+      param: "output_format",
+    });
+
+    const gptForm = new FormData();
+    gptForm.set("model", "kie-gpt-image-2");
+    gptForm.set("prompt", "Edit the kite");
+    gptForm.set("output_format", "jpg");
+    gptForm.append(
+      "image",
+      new Blob([pngBytes("source")], { type: "image/png" }),
+      "source.png",
+    );
+    const unsupportedGpt = await fetch(`${baseUrl}/v1/images/edits`, {
+      method: "POST",
+      body: gptForm,
+    });
+    expect(unsupportedGpt.status).toBe(422);
+    expect((await responseJson(unsupportedGpt)).error).toMatchObject({
+      code: "unsupported_setting",
+      param: "output_format",
+    });
+    expect(providerCalls).toHaveLength(0);
+    expect(
+      (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
+    ).toHaveLength(0);
+
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("rejects a valid provider image that does not match requested output_format", async () => {
+    const dataDir = await makeDataDir();
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        return jsonResponse({ code: 200, data: { taskId: "wrong-format" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/wrong.png"],
+            }),
+          },
+        });
+      }
+      if (url === "https://cdn.example/wrong.png") {
+        return new Response(pngBytes("wrong-format"), {
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    const response = await fetch(`${baseUrl}/v1/images/generations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "kie-nano-banana-image",
+        prompt: "A kite",
+        output_format: "jpg",
+      }),
+    });
+    expect(response.status).toBe(502);
+    expect((await responseJson(response)).error).toMatchObject({
+      code: "kie_invalid_result",
+    });
     await rm(dataDir, { recursive: true, force: true });
   });
 
@@ -309,6 +529,21 @@ describe("KIE OpenAI image contract", () => {
     expect(
       (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
     ).toHaveLength(0);
+
+    const transparent = await fetch(`${baseUrl}/v1/images/generations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "kie-nano-banana-image",
+        prompt: "transparent kite",
+        background: "transparent",
+      }),
+    });
+    expect(transparent.status).toBe(422);
+    expect((await responseJson(transparent)).error).toMatchObject({
+      code: "unsupported_setting",
+      param: "background",
+    });
 
     await rm(dataDir, { recursive: true, force: true });
   });
@@ -437,6 +672,7 @@ describe("KIE OpenAI image contract", () => {
     form.set("quality", "standard");
     form.set("size", "1024x1024");
     form.set("response_format", "b64_json");
+    form.set("output_format", "png");
     form.append(
       "image[]",
       new Blob([pngBytes("one")], { type: "image/png" }),
@@ -472,6 +708,7 @@ describe("KIE OpenAI image contract", () => {
     retryForm.set("quality", "standard");
     retryForm.set("size", "1024x1024");
     retryForm.set("response_format", "b64_json");
+    retryForm.set("output_format", "png");
     retryForm.append(
       "image[]",
       new Blob([pngBytes("one")], { type: "image/png" }),
@@ -498,6 +735,7 @@ describe("KIE OpenAI image contract", () => {
     mismatchForm.set("quality", "standard");
     mismatchForm.set("size", "1024x1024");
     mismatchForm.set("response_format", "b64_json");
+    mismatchForm.set("output_format", "png");
     mismatchForm.append(
       "image[]",
       new Blob([pngBytes("different")], { type: "image/png" }),

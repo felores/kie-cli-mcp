@@ -12,6 +12,7 @@ import {
   handleImageGeneration,
   type ImageAdapterContext,
 } from "./image-adapters.js";
+import { openAiModelList } from "./model-catalog.js";
 import { RequestJournal } from "./request-journal.js";
 import {
   DEFAULT_JSON_LIMIT_BYTES,
@@ -131,6 +132,10 @@ export function createKieOpenAiRouter(
       contract_version: contractVersion,
       package_version: packageVersion,
     });
+  });
+
+  router.get("/v1/models", (_req: Request, res: Response) => {
+    res.json(openAiModelList());
   });
 
   if (journal || !client) {
