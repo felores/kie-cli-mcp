@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## OpenAI transport 0.2.0 - 2026-08-24
+
+### Added
+- Added authenticated `GET /v1/models` discovery for the four public image and
+  video model IDs, backed by one transport-owned model catalog.
+- Added Infinite Canvas request compatibility: model-aware image
+  `output_format` handling and Seedance `preset=normal` normalization.
+
+### Changed
+- Nano Banana accepts PNG, JPG, and the equivalent JPEG alias. GPT Image 2 keeps
+  its fixed PNG contract because Kie exposes no provider output-format setting.
+- Explicit image formats are verified against the downloaded MIME type and file
+  signature. Unsupported formats, presets, masks, and transparent backgrounds
+  fail before uploads, journal reservation, or provider submission.
+- Incremented the OpenAI transport contract version to 2.
+
 ## [5.0.0] - 2026-08-22
 
 ### Changed

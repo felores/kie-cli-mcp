@@ -8,11 +8,14 @@ export {
   type KieOpenAiRouter,
   type KieOpenAiRouterOptions,
 } from "./http-server.js";
+export { DEFAULT_RESULT_HOSTS } from "./image-adapters.js";
 export {
-  DEFAULT_RESULT_HOSTS,
   KIE_IMAGE_MODELS,
+  KIE_VIDEO_MODELS,
   type KieImageModel,
-} from "./image-adapters.js";
+  type KieVideoModel,
+  TRANSPORT_MODEL_CATALOG,
+} from "./model-catalog.js";
 export {
   hashRequestId,
   type JournalError,
@@ -29,8 +32,4 @@ export {
   startKieOpenAiStandaloneServer,
 } from "./standalone.js";
 export { CONTRACT_VERSION, PACKAGE_VERSION } from "./version.js";
-export {
-  DEFAULT_VIDEO_RESULT_HOSTS,
-  KIE_VIDEO_MODELS,
-  type KieVideoModel,
-} from "./video-adapters.js";
+export { DEFAULT_VIDEO_RESULT_HOSTS } from "./video-adapters.js";

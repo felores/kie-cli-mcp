@@ -119,6 +119,71 @@ describe("standalone security boundary", () => {
     expect(JSON.stringify(body)).not.toContain("local-token");
   });
 
+  test("protects deterministic model discovery and allows it without a KIE API key", async () => {
+    const baseUrl = await serve(
+      createKieOpenAiStandaloneApp({
+        token: "local-token",
+        apiKey: "",
+      }),
+    );
+
+    const missing = await fetch(`${baseUrl}/v1/models`);
+    expect(missing.status).toBe(401);
+    const invalid = await fetch(`${baseUrl}/v1/models`, {
+      headers: { Authorization: "Bearer wrong-token" },
+    });
+    expect(invalid.status).toBe(401);
+
+    const discovered = await fetch(`${baseUrl}/v1/models`, {
+      headers: {
+        Authorization: "Bearer local-token",
+        Origin: "http://127.0.0.1:4173",
+      },
+    });
+    expect(discovered.status).toBe(200);
+    expect(discovered.headers.get("access-control-allow-origin")).toBe(
+      "http://127.0.0.1:4173",
+    );
+    expect(await responseJson(discovered)).toEqual({
+      object: "list",
+      data: [
+        {
+          id: "kie-nano-banana-image",
+          object: "model",
+          created: 0,
+          owned_by: "kie.ai",
+        },
+        {
+          id: "kie-gpt-image-2",
+          object: "model",
+          created: 0,
+          owned_by: "kie.ai",
+        },
+        {
+          id: "kie-bytedance-video",
+          object: "model",
+          created: 0,
+          owned_by: "kie.ai",
+        },
+        {
+          id: "kie-bytedance-fast-video",
+          object: "model",
+          created: 0,
+          owned_by: "kie.ai",
+        },
+      ],
+    });
+    expect(
+      JSON.stringify(
+        await responseJson(
+          await fetch(`${baseUrl}/v1/models`, {
+            headers: { Authorization: "Bearer local-token" },
+          }),
+        ),
+      ),
+    ).not.toContain("local-token");
+  });
+
   test("rejects disallowed Host and Origin headers", async () => {
     const baseUrl = await serve(
       createKieOpenAiStandaloneApp({
@@ -215,6 +280,28 @@ describe("embedded router contract", () => {
       router.close();
       if (originalToken === undefined) delete process.env.KIE_OPENAI_TOKEN;
       else process.env.KIE_OPENAI_TOKEN = originalToken;
+    }
+  });
+
+  test("exposes model discovery while delegating embedded authorization", async () => {
+    const router = createKieOpenAiRouter({});
+    const app = express().use("/kie", router);
+    const baseUrl = await serve(app);
+    try {
+      const response = await fetch(`${baseUrl}/kie/v1/models`);
+      expect(response.status).toBe(200);
+      const body = await responseJson(response);
+      expect(body.object).toBe("list");
+      expect(
+        (body.data as Array<{ id: string }>).map((model) => model.id),
+      ).toEqual([
+        "kie-nano-banana-image",
+        "kie-gpt-image-2",
+        "kie-bytedance-video",
+        "kie-bytedance-fast-video",
+      ]);
+    } finally {
+      router.close();
     }
   });
 

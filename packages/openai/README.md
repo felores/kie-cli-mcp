@@ -21,6 +21,9 @@ app.use(
 
 `GET /kie/health` returns only readiness, contract version, and package version. The router never reads a local bearer token and never exposes the KIE API key.
 
+`GET /kie/v1/models` returns the local OpenAI-shaped model catalog. It remains
+available without a Kie API key because discovery does not contact the provider.
+
 ## Standalone server
 
 ```bash
@@ -40,3 +43,19 @@ The standalone server binds to `127.0.0.1:51311` by default and refuses non-loop
 - `KIE_AI_BASE_URL`: optional Kie.ai API base URL
 
 Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>`. Provider credentials, callback URLs, and remote output URLs are rejected in client request bodies.
+
+## Client compatibility
+
+| Model | Image format or video preset |
+|---|---|
+| `kie-nano-banana-image` | `output_format=png`, `jpg`, or `jpeg` (`jpeg` normalizes to `jpg`) |
+| `kie-gpt-image-2` | Fixed PNG; omit `output_format` or use `png` |
+| `kie-bytedance-video` | Omit `preset` or use `preset=normal` |
+| `kie-bytedance-fast-video` | Same fixed Seedance 2.5 route and preset behavior |
+
+Explicit image formats are verified against the result MIME type and file
+signature. Masks and `background=transparent` are unsupported and fail before
+provider work.
+
+For Infinite Canvas, use `http://127.0.0.1:51311` as the base URL and the value
+of `KIE_OPENAI_TOKEN` as the API key. Do not append `/v1`.

@@ -13,6 +13,12 @@ import {
 import type { Request, Response } from "express";
 import { OpenAiHttpError } from "./errors.js";
 import {
+  type ImageOutputFormatCapability,
+  imageModel,
+  KIE_IMAGE_MODELS,
+  type KieImageModel,
+} from "./model-catalog.js";
+import {
   hashRequestId,
   type JournalError,
   type RequestJournal,
@@ -30,13 +36,6 @@ import {
   validateImageBytes,
   validateImageFile,
 } from "./uploads.js";
-
-export const KIE_IMAGE_MODELS = [
-  "kie-nano-banana-image",
-  "kie-gpt-image-2",
-] as const;
-
-export type KieImageModel = (typeof KIE_IMAGE_MODELS)[number];
 
 export const DEFAULT_RESULT_HOSTS = [
   "file.aiquickdraw.com",
@@ -71,6 +70,7 @@ const ALLOWED_FIELDS = new Set([
   "quality",
   "size",
   "response_format",
+  "output_format",
 ]);
 
 interface NormalizedImageRequest {
@@ -80,6 +80,8 @@ interface NormalizedImageRequest {
   resolution: "1K" | "2K" | "4K";
   aspectRatio: string;
   responseFormat: "b64_json";
+  requestedOutputFormat?: ImageOutputFormatCapability;
+  effectiveOutputFormat: ImageOutputFormatCapability;
   references: MultipartImageFile[];
 }
 
@@ -176,10 +178,38 @@ function assertAllowedFields(value: Record<string, unknown>): void {
 }
 
 function readModel(value: unknown): KieImageModel {
-  if (value === "kie-nano-banana-image" || value === "kie-gpt-image-2") {
-    return value;
-  }
+  const model = imageModel(value);
+  if (model) return model.id as KieImageModel;
   unknownModel(value);
+}
+
+function readOutputFormat(
+  value: unknown,
+  modelId: KieImageModel,
+): {
+  requested?: ImageOutputFormatCapability;
+  effective: ImageOutputFormatCapability;
+} {
+  const model = imageModel(modelId);
+  if (!model) unknownModel(modelId);
+  if (value === undefined) return { effective: model.defaultOutputFormat };
+  if (typeof value !== "string") {
+    throw invalidSetting(
+      "The output_format setting is invalid.",
+      "output_format",
+    );
+  }
+  const normalizedValue = value.toLowerCase();
+  const requested = Object.hasOwn(model.outputFormats, normalizedValue)
+    ? model.outputFormats[normalizedValue]
+    : undefined;
+  if (!requested) {
+    throw invalidSetting(
+      `The output_format '${value}' is not supported for ${modelId}.`,
+      "output_format",
+    );
+  }
+  return { requested, effective: requested };
 }
 
 function readString(
@@ -301,7 +331,7 @@ function validateCoreRequest(
       ? NanoBananaImageSchema.safeParse({
           prompt: input.prompt,
           ...(imageUrls.length ? { image_input: imageUrls } : {}),
-          output_format: "png",
+          output_format: input.effectiveOutputFormat.providerFormat,
           aspect_ratio: input.aspectRatio,
           resolution: input.resolution,
           google_search: false,
@@ -326,6 +356,7 @@ function normalizeJsonRequest(body: unknown): NormalizedImageRequest {
   assertAllowedFields(body);
   const model = readModel(body.model);
   const prompt = readString(body.prompt, "prompt", true)!;
+  const outputFormat = readOutputFormat(body.output_format, model);
   const normalized: NormalizedImageRequest = {
     model,
     prompt,
@@ -333,6 +364,8 @@ function normalizeJsonRequest(body: unknown): NormalizedImageRequest {
     resolution: readQuality(body.quality),
     aspectRatio: readAspectRatio(body.size, model),
     responseFormat: readResponseFormat(body.response_format),
+    requestedOutputFormat: outputFormat.requested,
+    effectiveOutputFormat: outputFormat.effective,
     references: [],
   };
   validateCoreRequest(normalized, []);
@@ -422,6 +455,10 @@ async function normalizeMultipartRequest(
   }
   assertMultipartFields(parsed.fields);
   const model = readModel(formValue(parsed.fields, "model"));
+  const outputFormat = readOutputFormat(
+    formValue(parsed.fields, "output_format"),
+    model,
+  );
   const files = parsed.files.filter(
     (file) => file.fieldName === "image" || file.fieldName === "image[]",
   );
@@ -435,6 +472,8 @@ async function normalizeMultipartRequest(
     responseFormat: readResponseFormat(
       formValue(parsed.fields, "response_format"),
     ),
+    requestedOutputFormat: outputFormat.requested,
+    effectiveOutputFormat: outputFormat.effective,
     references: files,
   };
   validateCoreRequest(
@@ -459,6 +498,9 @@ function requestFingerprint(input: NormalizedImageRequest): string {
         resolution: input.resolution,
         aspectRatio: input.aspectRatio,
         responseFormat: input.responseFormat,
+        ...(input.requestedOutputFormat
+          ? { outputFormat: input.requestedOutputFormat.semanticFormat }
+          : {}),
         references: input.references.map((file) => ({
           fieldName: file.fieldName,
           filename: file.filename,
@@ -808,7 +850,7 @@ function providerRequest(
     return NanoBananaImageSchema.parse({
       prompt: input.prompt,
       ...(imageUrls.length ? { image_input: imageUrls } : {}),
-      output_format: "png",
+      output_format: input.effectiveOutputFormat.providerFormat,
       aspect_ratio: input.aspectRatio,
       resolution: input.resolution,
       google_search: false,
@@ -864,7 +906,7 @@ async function delay(milliseconds: number): Promise<void> {
 
 async function pollAndDownload(
   client: KieAiClient,
-  model: KieImageModel,
+  input: NormalizedImageRequest,
   taskId: string,
   context: ImageAdapterContext,
 ): Promise<string[]> {
@@ -877,7 +919,7 @@ async function pollAndDownload(
     firstPoll = false;
     const response = await client.getTaskStatus(
       taskId,
-      providerTaskType(model),
+      providerTaskType(input.model),
     );
     if (!responseCodeIsSuccessful(response.code) || !isRecord(response.data)) {
       throw new KieAiResponseError(
@@ -898,6 +940,15 @@ async function pollAndDownload(
         });
         try {
           validateImageBytes(downloaded.bytes, downloaded.contentType);
+          if (
+            input.requestedOutputFormat &&
+            downloaded.contentType?.toLowerCase().split(";", 1)[0] !==
+              input.requestedOutputFormat.mimeType
+          ) {
+            throw new MultipartParseError(
+              "The result format does not match output_format.",
+            );
+          }
         } catch (error) {
           if (error instanceof MultipartParseError) {
             throw new InvalidProviderResultError();
@@ -1000,12 +1051,7 @@ async function resumeSubmitted(
   }
   try {
     const outputs = await runBounded(record.taskIds.length, 2, (index) =>
-      pollAndDownload(
-        context.client,
-        input.model,
-        record.taskIds[index]!,
-        context,
-      ),
+      pollAndDownload(context.client, input, record.taskIds[index]!, context),
     );
     const completed = await context.journal.updateCurrent(requestIdHash, {
       state: "succeeded",

@@ -7,6 +7,11 @@ import {
 import type { Request, Response } from "express";
 import { OpenAiHttpError } from "./errors.js";
 import {
+  KIE_VIDEO_MODELS,
+  type KieVideoModel,
+  videoModel,
+} from "./model-catalog.js";
+import {
   hashRequestId,
   type JournalError,
   type RequestJournal,
@@ -42,13 +47,6 @@ import {
   validateVideoFile,
 } from "./uploads.js";
 
-export const KIE_VIDEO_MODELS = [
-  "kie-bytedance-video",
-  "kie-bytedance-fast-video",
-] as const;
-
-export type KieVideoModel = (typeof KIE_VIDEO_MODELS)[number];
-
 const SIZE_TO_RATIO: Record<string, string> = {
   "1280x720": "16:9",
   "720x1280": "9:16",
@@ -61,6 +59,7 @@ const ALLOWED_JSON_FIELDS = new Set([
   "size",
   "resolution_name",
   "generate_audio",
+  "preset",
 ]);
 
 const ALLOWED_MULTIPART_FIELDS = new Set([
@@ -70,6 +69,7 @@ const ALLOWED_MULTIPART_FIELDS = new Set([
   "size",
   "resolution_name",
   "generate_audio",
+  "preset",
 ]);
 
 const ALLOWED_MULTIPART_FILE_FIELDS = new Set([
@@ -133,10 +133,21 @@ function unknownModel(value: unknown): never {
 }
 
 function readModel(value: unknown): KieVideoModel {
-  if (value === "kie-bytedance-video" || value === "kie-bytedance-fast-video") {
-    return value;
-  }
+  const model = videoModel(value);
+  if (model) return model.id as KieVideoModel;
   unknownModel(value);
+}
+
+function validatePreset(value: unknown, modelId: KieVideoModel): void {
+  if (value === undefined) return;
+  const model = videoModel(modelId);
+  if (!model) unknownModel(modelId);
+  if (typeof value !== "string" || !Object.hasOwn(model.presets, value)) {
+    throw invalidSetting(
+      `The preset '${String(value)}' is not supported for ${modelId}.`,
+      "preset",
+    );
+  }
 }
 
 function readString(
@@ -227,6 +238,7 @@ function normalizeJsonVideoRequest(body: unknown): NormalizedVideoRequest {
   }
   assertAllowedJsonFields(body);
   const model = readModel(body.model);
+  validatePreset(body.preset, model);
   return {
     model,
     prompt: readPrompt(body.prompt),
@@ -329,6 +341,7 @@ async function normalizeMultipartVideoRequest(
   const parsed = await parseMultipartForm(request, maxBytes);
   assertMultipartFields(parsed.fields);
   const model = readModel(formValue(parsed.fields, "model"));
+  validatePreset(formValue(parsed.fields, "preset"), model);
   const partitioned = partitionMultipartFiles(parsed.files);
   for (const file of partitioned.images) validateImageFile(file);
   for (const file of partitioned.videos) validateVideoFile(file);
