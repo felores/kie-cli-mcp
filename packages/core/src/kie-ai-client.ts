@@ -477,7 +477,8 @@ export class KieAiClient {
       apiType === "happyhorse-video" ||
       apiType === "omnihuman-video" ||
       apiType === "gemini-omni-video" ||
-      apiType === "gpt-image-2"
+      apiType === "gpt-image-2" ||
+      apiType === "z-image"
     ) {
       return this.makeRequest<any>(`/jobs/recordInfo?taskId=${taskId}`, "GET");
     } else if (apiType === "runway-aleph-video") {

@@ -1,6 +1,6 @@
 # OpenAI-Compatible Transport
 
-`@felores/kie-ai-openai-server` exposes selected Kie.ai image and video models through OpenAI-shaped HTTP routes. It is designed to be mounted behind an existing loopback security boundary (such as Infini's Canvas Agent) or run as a standalone loopback binary.
+`@felores/kie-ai-openai-server` exposes selected Kie.ai image and video models through OpenAI-shaped HTTP routes. Its model discovery is derived from explicit OpenAI adapters resolved against the core catalog and tool registry. Active media tools without a compatible adapter are explicitly excluded. It is designed to be mounted behind an existing loopback security boundary (such as Infini's Canvas Agent) or run as a standalone loopback binary.
 
 The transport reuses the private `@felores/kie-ai-core` at build time and bundles it into the published package. The core package is never published and never appears in the public dependency list.
 
@@ -56,7 +56,7 @@ Environment variables:
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Readiness, contract version, and package version. No secrets. |
-| GET | `/v1/models` | Deterministic OpenAI-shaped discovery for the four implemented public models. |
+| GET | `/v1/models` | Deterministic OpenAI-shaped discovery for the resolved public models. |
 | POST | `/v1/images/generations` | Text-to-image generation. |
 | POST | `/v1/images/edits` | Image editing with server-side reference uploads (multipart). |
 | POST | `/v1/videos` | Create a video generation task. |
@@ -74,6 +74,7 @@ apply. Embedded deployments continue using the host application's authentication
 |---|---|---|---|
 | `kie-nano-banana-image` | Nano Banana 2 | image gen/edit | `output_format=png`, `jpg`, or `jpeg`; `jpeg` maps to Kie `jpg`; up to 14 image references |
 | `kie-gpt-image-2` | GPT Image 2 text-to-image or image-to-image | image gen/edit | Fixed PNG output; omitted or explicit `output_format=png`; up to 16 image references |
+| `kie-z-image` | Z-Image | image generation | Standard image ratios; `n`, `quality`, and explicit `output_format` are not supported |
 | `kie-bytedance-video` | Seedance 2.5 | video | Omitted `preset` or `preset=normal`; both select the same fixed provider route |
 | `kie-bytedance-fast-video` | Seedance 2.5 | video | Legacy alias with the same `normal` preset normalization; it does not select a fast mode |
 
@@ -148,3 +149,19 @@ services:
 ```
 
 Bind to loopback only. Do not expose the transport to remote clients; it is designed as a local-sidecar for a browser application.
+
+## Adapter registry and host trust
+
+Discovery and dispatch use the same resolved adapter registry. An adapter joins one active core catalog entry to its registered tool, core Zod parsing, Kie client submission method, status strategy, exact result-host policy, and paid-task cardinality. An active core image or video tool is either represented by an adapter or listed in the explicit exclusion map with a non-empty reason. This prevents unsupported utilities, avatar workflows, and mixed-media tools from appearing as standard OpenAI models.
+
+| Public model ID | Core tool | Operations | Cardinality |
+|---|---|---|---|
+| `kie-nano-banana-image` | `nano_banana_image` | generation, edit | one Kie task and exactly one image result per requested `n` item |
+| `kie-gpt-image-2` | `gpt_image_2` | generation, edit | one Kie task and exactly one image result per requested `n` item |
+| `kie-z-image` | `z_image` | generation | one task and one PNG result; `n`, `quality`, and `output_format` are rejected |
+| `kie-bytedance-video` | `bytedance_seedance_video` | create video | one task and exactly one video result |
+| `kie-bytedance-fast-video` | `bytedance_seedance_video` | create video | legacy alias of `kie-bytedance-video` |
+
+To add a model, add a source-backed core catalog and tool entry first, then an explicit adapter with model-specific normalization, core schema parsing, Kie client submission, status strategy, cardinality, operations, and evidence-backed exact result hosts. Add deterministic request, polling, result, idempotency, and pre-submission rejection tests. Do not add a separate model list.
+
+`allowedResultHostsByModel` replaces result hosts for one canonical public model and all of its aliases. Alias keys are rejected so trust cannot diverge within one adapter. Unknown IDs and non-public, wildcard, path, credential, loopback, private, link-local, or reserved hosts are rejected during router creation. The legacy `allowedResultHosts` option remains a compatibility replacement only for the four contract-2 public IDs and cannot authorize a newer adapter such as Z-Image.

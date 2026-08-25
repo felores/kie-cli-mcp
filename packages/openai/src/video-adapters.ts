@@ -1,5 +1,4 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import type { ByteDanceSeedanceVideoRequest } from "@felores/kie-ai-core";
 import {
   type KieAiClient,
   KieAiRequestError,
@@ -12,8 +11,12 @@ import {
   videoModel,
 } from "./model-catalog.js";
 import {
+  canonicalModelId,
+  type OpenAiVideoAdapter,
+  pollOpenAiAdapterStatus,
+} from "./registry/index.js";
+import {
   hashRequestId,
-  type JournalError,
   type RequestJournal,
   RequestJournalConflictError,
   type RequestJournalRecord,
@@ -83,8 +86,6 @@ const ALLOWED_MULTIPART_FILE_FIELDS = new Set([
   "last_frame",
 ]);
 
-const VIDEO_PROVIDER_TYPE = "bytedance-seedance-video";
-
 export interface VideoAdapterContext {
   client: KieAiClient;
   journal: RequestJournal;
@@ -92,10 +93,11 @@ export interface VideoAdapterContext {
   pollTimeoutMs: number;
   multipartLimitBytes: number;
   allowedResultHosts: ReadonlySet<string>;
+  allowedResultHostsByModel?: ReadonlyMap<string, ReadonlySet<string>>;
   callbackBaseUrl?: string;
 }
 
-interface NormalizedVideoRequest {
+export interface NormalizedVideoRequest {
   model: KieVideoModel;
   prompt: string;
   duration?: number;
@@ -123,7 +125,7 @@ function invalidReference(
   return new OpenAiHttpError(422, "unsupported_reference", message, param);
 }
 
-function unknownModel(value: unknown): never {
+function unknownModel(_value: unknown): never {
   throw new OpenAiHttpError(
     422,
     "unsupported_model",
@@ -134,7 +136,7 @@ function unknownModel(value: unknown): never {
 
 function readModel(value: unknown): KieVideoModel {
   const model = videoModel(value);
-  if (model) return model.id as KieVideoModel;
+  if (model) return model.publicModelId as KieVideoModel;
   unknownModel(value);
 }
 
@@ -367,7 +369,7 @@ async function normalizeMultipartVideoRequest(
   };
 }
 
-function videoRequestFingerprint(input: NormalizedVideoRequest): string {
+export function videoRequestFingerprint(input: NormalizedVideoRequest): string {
   const fileHash = (file: MultipartImageFile): unknown => ({
     fieldName: file.fieldName,
     filename: file.filename,
@@ -378,7 +380,7 @@ function videoRequestFingerprint(input: NormalizedVideoRequest): string {
   return createHash("sha256")
     .update(
       JSON.stringify({
-        model: input.model,
+        model: canonicalModelId(input.model),
         prompt: input.prompt,
         duration: input.duration,
         aspectRatio: input.aspectRatio,
@@ -394,45 +396,10 @@ function videoRequestFingerprint(input: NormalizedVideoRequest): string {
     .digest("hex");
 }
 
-function buildSeedanceRequest(
-  input: NormalizedVideoRequest,
-  uploaded: {
-    imageUrls: string[];
-    videoUrls: string[];
-    audioUrls: string[];
-    firstFrameUrl?: string;
-    lastFrameUrl?: string;
-  },
-  callbackUrl?: string,
-): ByteDanceSeedanceVideoRequest {
-  const payload: Record<string, unknown> = {
-    prompt: input.prompt,
-  };
-  if (input.aspectRatio) payload.aspect_ratio = input.aspectRatio;
-  if (input.resolution) payload.resolution = input.resolution;
-  if (input.duration !== undefined) payload.duration = input.duration;
-  if (input.generateAudio !== undefined) {
-    payload.generate_audio = input.generateAudio;
-  }
-  if (uploaded.imageUrls.length > 0) {
-    payload.reference_image_urls = uploaded.imageUrls;
-  }
-  if (uploaded.videoUrls.length > 0) {
-    payload.reference_video_urls = uploaded.videoUrls;
-  }
-  if (uploaded.audioUrls.length > 0) {
-    payload.reference_audio_urls = uploaded.audioUrls;
-  }
-  if (uploaded.firstFrameUrl) {
-    payload.first_frame_url = uploaded.firstFrameUrl;
-  }
-  if (uploaded.lastFrameUrl) {
-    payload.last_frame_url = uploaded.lastFrameUrl;
-  }
-  if (callbackUrl) {
-    payload.callBackUrl = callbackUrl;
-  }
-  return payload as ByteDanceSeedanceVideoRequest;
+function videoDescriptor(model: KieVideoModel): OpenAiVideoAdapter {
+  const descriptor = videoModel(model);
+  if (!descriptor) unknownModel(model);
+  return descriptor;
 }
 
 async function uploadAllReferences(
@@ -524,6 +491,7 @@ function delay(milliseconds: number): Promise<void> {
 async function pollVideoStatus(
   client: KieAiClient,
   taskId: string,
+  model: KieVideoModel,
   context: VideoAdapterContext,
 ): Promise<{ resultUrl: string; contentType: string | null }> {
   const deadline = Date.now() + context.pollTimeoutMs;
@@ -533,7 +501,9 @@ async function pollVideoStatus(
       throw new Error("Provider task timed out.");
     }
     firstPoll = false;
-    const response = await client.getTaskStatus(taskId, VIDEO_PROVIDER_TYPE);
+    const descriptor = videoModel(model);
+    if (!descriptor) unknownModel(model);
+    const response = await pollOpenAiAdapterStatus(descriptor, client, taskId);
     if (!responseCodeIsSuccessful(response.code) || !isRecord(response.data)) {
       throw new KieAiResponseError(
         response.code,
@@ -546,12 +516,17 @@ async function pollVideoStatus(
     }
     if (state === "success") {
       const urls = readResultUrls(response.data);
-      if (urls.length !== 1) {
+      if (urls.length !== descriptor.cardinality.expectedResultsPerTask) {
         throw new Error(
           "The provider returned multiple video results where one was expected.",
         );
       }
-      assertSafeResultUrl(urls[0], undefined, context.allowedResultHosts);
+      assertSafeResultUrl(
+        urls[0],
+        undefined,
+        context.allowedResultHostsByModel?.get(model) ??
+          context.allowedResultHosts,
+      );
       const contentType = extractVideoContentType(response.data, urls[0]);
       return { resultUrl: urls[0], contentType };
     }
@@ -562,7 +537,7 @@ async function pollVideoStatus(
 }
 
 function extractVideoContentType(
-  data: Record<string, unknown>,
+  _data: Record<string, unknown>,
   url: string,
 ): string | null {
   const ext = url.split("?")[0]?.split(".").pop()?.toLowerCase();
@@ -681,9 +656,24 @@ export async function handleVideoCreate(
   }
 
   try {
-    const seedanceRequest = buildSeedanceRequest(input, uploaded, callbackUrl);
-    const providerResponse =
-      await context.client.generateByteDanceSeedanceVideo(seedanceRequest);
+    const descriptor = videoDescriptor(input.model);
+    const providerRequest = descriptor.normalizeSubmission({
+      prompt: input.prompt,
+      duration: input.duration,
+      aspectRatio: input.aspectRatio,
+      resolution: input.resolution,
+      generateAudio: input.generateAudio,
+      imageUrls: uploaded.imageUrls,
+      videoUrls: uploaded.videoUrls,
+      audioUrls: uploaded.audioUrls,
+      firstFrameUrl: uploaded.firstFrameUrl,
+      lastFrameUrl: uploaded.lastFrameUrl,
+      callbackUrl,
+    });
+    const providerResponse = await descriptor.submit(
+      context.client,
+      providerRequest,
+    );
     const taskId = taskIdFromResponse(providerResponse);
     await context.journal.updateCurrent(requestIdHash, {
       state: "submitted",
@@ -744,6 +734,7 @@ export async function handleVideoStatus(
       const result = await pollVideoStatus(
         context.client,
         record.taskIds[0],
+        record.model,
         context,
       );
       await context.journal.updateCurrent(requestIdHash, {
@@ -861,7 +852,8 @@ export async function handleVideoContent(
     const downloaded = await downloadResultBytes(
       context.client,
       record.resultUrl,
-      context.allowedResultHosts,
+      context.allowedResultHostsByModel?.get(record.model) ??
+        context.allowedResultHosts,
     );
     validateVideoBytes(downloaded.bytes, downloaded.contentType);
     const contentType =
@@ -949,6 +941,7 @@ export async function handleVideoCallback(
     const result = await pollVideoStatus(
       context.client,
       record.taskIds[0],
+      record.model,
       context,
     );
     await context.journal.updateCurrent(requestIdHash, {

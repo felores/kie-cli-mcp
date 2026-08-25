@@ -1227,4 +1227,109 @@ describe("KIE OpenAI image contract", () => {
     });
     await rm(dataDir, { recursive: true, force: true });
   });
+
+  test("maps Z-Image through its descriptor, enforces one result, and rejects unsupported settings before provider work", async () => {
+    const dataDir = await makeDataDir();
+    const createdBodies: Record<string, unknown>[] = [];
+    let resultUrls = ["https://cdn.example/z.png"];
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({ code: 200, data: { taskId: "z-1" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`))
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls,
+            }),
+          },
+        });
+      if (url === "https://cdn.example/z.png")
+        return new Response(pngBytes("z"), {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        });
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          allowedResultHostsByModel: { "kie-z-image": ["cdn.example"] },
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    const request = {
+      model: "kie-z-image",
+      prompt: "A bright red kite",
+      size: "1024x1024",
+    };
+    const response = await fetch(`${baseUrl}/v1/images/generations`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "z-image-1",
+      },
+      body: JSON.stringify(request),
+    });
+    expect(response.status).toBe(200);
+    expect(createdBodies).toEqual([
+      {
+        model: "z-image",
+        input: { prompt: "A bright red kite", aspect_ratio: "1:1" },
+      },
+    ]);
+    const retry = await fetch(`${baseUrl}/v1/images/generations`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "z-image-1",
+      },
+      body: JSON.stringify(request),
+    });
+    expect(retry.status).toBe(200);
+    expect(createdBodies).toHaveLength(1);
+    for (const invalid of [
+      { quality: "hd" },
+      { n: 1 },
+      { output_format: "png" },
+    ]) {
+      const rejected = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...request, ...invalid }),
+      });
+      expect(rejected.status).toBe(422);
+    }
+    expect(createdBodies).toHaveLength(1);
+    resultUrls = [
+      "https://cdn.example/z.png",
+      "https://cdn.example/z-duplicate.png",
+    ];
+    const multiplied = await fetch(`${baseUrl}/v1/images/generations`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "z-image-multiple-results",
+      },
+      body: JSON.stringify(request),
+    });
+    expect(multiplied.status).toBe(502);
+    expect((await responseJson(multiplied)).error).toMatchObject({
+      code: "kie_invalid_result",
+    });
+    expect(createdBodies).toHaveLength(2);
+    await rm(dataDir, { recursive: true, force: true });
+  });
 });

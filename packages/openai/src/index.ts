@@ -17,6 +17,17 @@ export {
   TRANSPORT_MODEL_CATALOG,
 } from "./model-catalog.js";
 export {
+  activeCoreMediaTools,
+  OPENAI_ADAPTER_REGISTRY,
+  OPENAI_EXCLUSIONS,
+  OPENAI_STATUS_STRATEGIES,
+  openAiAdapter,
+  pollOpenAiAdapterStatus,
+  RESOLVED_OPENAI_ADAPTERS,
+  registrySummary,
+  unaccountedCoreMediaTools,
+} from "./registry/index.js";
+export {
   hashRequestId,
   type JournalError,
   type JournalState,

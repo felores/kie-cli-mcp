@@ -49,6 +49,7 @@ Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>
 | Model | Image format or video preset |
 |---|---|
 | `kie-nano-banana-image` | `output_format=png`, `jpg`, or `jpeg` (`jpeg` normalizes to `jpg`) |
+| `kie-z-image` | generation only; PNG output and standard ratios |
 | `kie-gpt-image-2` | Fixed PNG; omit `output_format` or use `png` |
 | `kie-bytedance-video` | Omit `preset` or use `preset=normal` |
 | `kie-bytedance-fast-video` | Same fixed Seedance 2.5 route and preset behavior |

@@ -11,8 +11,14 @@ import {
   handleImageEdit,
   handleImageGeneration,
   type ImageAdapterContext,
+  isPrivateHost,
 } from "./image-adapters.js";
 import { openAiModelList } from "./model-catalog.js";
+import {
+  canonicalModelId,
+  OPENAI_ADAPTER_REGISTRY,
+  RESOLVED_OPENAI_ADAPTERS,
+} from "./registry/index.js";
 import { RequestJournal } from "./request-journal.js";
 import {
   DEFAULT_JSON_LIMIT_BYTES,
@@ -41,7 +47,10 @@ export interface KieOpenAiRouterOptions {
   uploadBaseUrl?: string;
   pollIntervalMs?: number;
   pollTimeoutMs?: number;
+  /** Legacy replacement host set for the four contract-2 public IDs only. */
   allowedResultHosts?: string[];
+  /** Exact replacement host set by canonical public model ID. */
+  allowedResultHostsByModel?: Record<string, string[]>;
   videoMultipartLimitBytes?: number;
   callbackBaseUrl?: string;
 }
@@ -49,13 +58,57 @@ export interface KieOpenAiRouterOptions {
 export type KieOpenAiRouter = Router & { close: () => void };
 
 function resultHosts(value: string[] | undefined): Set<string> {
-  return new Set(
-    (value ?? [...DEFAULT_RESULT_HOSTS])
-      .map((host) => host.trim().toLowerCase().replace(/\.$/, ""))
-      .filter(
-        (host) => host.length > 0 && !host.includes("/") && !host.includes("*"),
-      ),
+  const hosts = value ?? [...DEFAULT_RESULT_HOSTS];
+  const normalized = hosts.map((host) =>
+    host.trim().toLowerCase().replace(/\.$/, ""),
   );
+  if (
+    normalized.length === 0 ||
+    normalized.some(
+      (host) =>
+        !/^[a-z0-9.-]+$/i.test(host) ||
+        host.includes("..") ||
+        host.includes("localhost") ||
+        host.includes(":") ||
+        isPrivateHost(host),
+    )
+  ) {
+    throw new Error("allowed result hosts must be exact public hostnames.");
+  }
+  return new Set(normalized);
+}
+export function resolvedResultHosts(
+  options: KieOpenAiRouterOptions,
+): Map<string, ReadonlySet<string>> {
+  const map = new Map<string, ReadonlySet<string>>();
+  const legacyIds = new Set([
+    "kie-nano-banana-image",
+    "kie-gpt-image-2",
+    "kie-bytedance-video",
+    "kie-bytedance-fast-video",
+  ]);
+  for (const adapter of RESOLVED_OPENAI_ADAPTERS) {
+    const canonicalId = canonicalModelId(adapter.publicModelId);
+    const override = options.allowedResultHostsByModel?.[canonicalId];
+    map.set(
+      adapter.publicModelId,
+      resultHosts(
+        override ??
+          (options.allowedResultHosts && legacyIds.has(adapter.publicModelId)
+            ? options.allowedResultHosts
+            : [...adapter.allowedResultHosts]),
+      ),
+    );
+  }
+  for (const id of Object.keys(options.allowedResultHostsByModel ?? {})) {
+    if (
+      !OPENAI_ADAPTER_REGISTRY.some((adapter) => adapter.publicModelId === id)
+    )
+      throw new Error(
+        `Unknown or non-canonical OpenAI model in allowedResultHostsByModel: ${id}`,
+      );
+  }
+  return map;
 }
 
 export function createKieOpenAiRouter(
@@ -81,6 +134,7 @@ export function createKieOpenAiRouter(
       if ((error as NodeJS.ErrnoException).code !== "EACCES") throw error;
     }
   }
+  const hostsByModel = resolvedResultHosts(options);
   const imageContext: ImageAdapterContext = {
     client: client as KieAiClient,
     journal: journal as RequestJournal,
@@ -89,6 +143,7 @@ export function createKieOpenAiRouter(
     multipartLimitBytes:
       options.multipartLimitBytes ?? DEFAULT_MULTIPART_LIMIT_BYTES,
     allowedResultHosts: resultHosts(options.allowedResultHosts),
+    allowedResultHostsByModel: hostsByModel,
   };
   const videoContext: VideoAdapterContext = {
     client: client as KieAiClient,
@@ -102,6 +157,7 @@ export function createKieOpenAiRouter(
     allowedResultHosts: resultHosts(
       options.allowedResultHosts ?? [...DEFAULT_VIDEO_RESULT_HOSTS],
     ),
+    allowedResultHostsByModel: hostsByModel,
     callbackBaseUrl: options.callbackBaseUrl,
   };
   const router = express.Router() as KieOpenAiRouter;

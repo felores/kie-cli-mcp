@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { mkdtemp, readdir } from "node:fs/promises";
 import type { Server } from "node:http";
@@ -8,6 +7,7 @@ import { join } from "node:path";
 import { jest } from "@jest/globals";
 import express from "express";
 import { createKieOpenAiRouter } from "../src/http-server.js";
+import { videoRequestFingerprint } from "../src/video-adapters.js";
 
 const providerBaseUrl = "https://provider.example/api/v1";
 const resultHosts = { allowedResultHosts: ["cdn.example"] };
@@ -90,6 +90,26 @@ function mockProviderForTask(taskId: string, state = "submit") {
 }
 
 describe("KIE OpenAI video contract", () => {
+  test("canonical and fast aliases share the same semantic fingerprint", () => {
+    const request = {
+      prompt: "Alias compatibility",
+      imageRefs: [],
+      videoRefs: [],
+      audioRefs: [],
+    };
+    expect(
+      videoRequestFingerprint({
+        ...request,
+        model: "kie-bytedance-video",
+      }),
+    ).toBe(
+      videoRequestFingerprint({
+        ...request,
+        model: "kie-bytedance-fast-video",
+      }),
+    );
+  });
+
   test("video creation maps documented Seedance 2.5 inputs", async () => {
     const dataDir = await makeDataDir();
     const calls = mockProviderForTask("vid-1", "submit");
