@@ -110,7 +110,7 @@ export class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "5.0.0";
+  static readonly VERSION = "6.0.0";
 
   constructor() {
     // Initialize client with config from environment
@@ -1083,7 +1083,7 @@ export class KieAiMcpServer {
 ## 🎯 Cost-Effective Defaults
 
 ### **Standard Default Settings**
-- **Resolution**: 720p (cost-effective, good quality)
+- **Resolution**: Use each model's 720 tier with its exact enum spelling (\`720P\` for Wan, \`720p\` where documented elsewhere)
 - **Quality**: Lite/Pro models based on user intent detection
 - **Duration**: 5 seconds (optimal for most content)
 - **Format**: Standard output formats
@@ -1093,17 +1093,17 @@ The system automatically detects user intent:
 
 #### **High Quality Indicators**
 - Keywords: "high quality", "professional", "premium", "cinematic", "best"
-- Action: Upgrade to pro models + 1080p resolution
+- Action: Upgrade to pro models and each model's documented 1080 tier
 - Cost Impact: ~2-4x higher than defaults
 
 #### **Speed Indicators**  
 - Keywords: "fast", "quick", "rapid", "social media", "draft"
-- Action: Use lite/fast models + 720p resolution
+- Action: Use lite/fast models and each model's documented 720 tier
 - Cost Impact: Standard (cost-effective)
 
 #### **Standard Requests**
 - No quality keywords mentioned
-- Action: Use default settings (lite + 720p)
+- Action: Use default settings with model-specific resolution values
 - Cost Impact: Lowest possible
 
 ## 💰 Cost Management Strategy
@@ -1145,8 +1145,9 @@ The system automatically detects user intent:
   - High Quality: \`model: "veo3"\`
 
 - **Wan Video**:
-  - Default: \`resolution: "720p"\`
-  - High Quality: \`resolution: "1080p"\`
+  - Default: \`resolution: "1080P"\`, \`aspect_ratio: "adaptive"\`
+  - Lower Resolution: \`resolution: "720P"\` or \`"480P"\`
+  - Duration: 2-30 seconds, or \`-1\` for smart duration
 
 ### **Image Parameters**
 - **Nano Banana Pro**: Automatic mode detection, cost-effective by default
@@ -1160,7 +1161,7 @@ The system automatically detects user intent:
 ## 🎯 Use Case Optimization
 
 ### **Social Media Content**
-- **Video**: Wan Video, 720p, 5 seconds
+- **Video**: Wan Video, 720P, 5 seconds
 - **Images**: Nano Banana Pro, lite quality
 - **Audio**: ElevenLabs Turbo for voiceovers
 - **Cost Strategy**: Lowest cost, fast generation
@@ -1178,7 +1179,7 @@ The system automatically detects user intent:
 - **Cost Strategy**: Quality prioritized over cost
 
 ### **Internal Prototyping**
-- **Video**: Wan Video or ByteDance Lite, 720p
+- **Video**: Wan Video at 720P or ByteDance Seedance at 720p
 - **Images**: Nano Banana Pro, fast generation
 - **Audio**: ElevenLabs Turbo
 - **Cost Strategy**: Maximum cost efficiency
@@ -1186,15 +1187,15 @@ The system automatically detects user intent:
 ## ⚠️ Cost Prevention Measures
 
 ### **Automatic Safeguards**
-- **Resolution Control**: Explicit 720p default prevents accidental 1080p
+- **Resolution Control**: Explicit 720 tier prevents accidental 1080 output; use 720P for Wan and 720p for Seedance
 - **Quality Defaults**: Lite models prevent accidental pro usage
 - **Duration Limits**: 5-second default prevents excessive generation
 - **Parameter Validation**: Prevents invalid expensive combinations
 
 ### **User Intent Confirmation**
 - **High Quality Detection**: Requires explicit keywords
-- **Specific Requests**: "high quality in 720p" prevents unnecessary 1080p
-- **Professional Context**: "professional" triggers pro models but maintains 720p
+- **Specific Requests**: A requested 720 tier prevents unnecessary 1080-tier output
+- **Professional Context**: "professional" triggers pro models but maintains the model-specific 720 tier
 
 ### **Budget Monitoring**
 - **Task Tracking**: Database tracks all generation costs
@@ -1206,19 +1207,19 @@ The system automatically detects user intent:
 ### **For Cost-Conscious Projects**
 1. Use default settings whenever possible
 2. Prefer lite models for iterative work
-3. Use 720p resolution unless 1080p is essential
+3. Use each model's documented 720 tier unless its 1080 tier is essential
 4. Limit video duration to 5 seconds
 5. Batch similar requests for efficiency
 
 ### **For Quality-Critical Projects**
 1. Upgrade to pro models selectively
-2. Use 1080p only for final deliverables
+2. Use each model's documented 1080 tier only for final deliverables
 3. Test with lite models before pro generation
 4. Use consistent parameters for batch work
 5. Plan generation costs in project budget
 
 ### **For Balanced Projects**
-1. Use pro models with 720p resolution
+1. Use pro models with their documented 720 tier
 2. Upgrade specific elements rather than entire project
 3. Mix lite and pro models strategically
 4. Monitor costs through task database
@@ -1289,13 +1290,13 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 |-------|---------------|---------------|----------|-------|---------------|
 | **Google Veo3** | 1080p | veo3/veo3_fast | Default | Medium | Premium cinematic quality, 1080p support |
 | **ByteDance Seedance 2.5** | Example: 720p | Single model | Example: 15s | Medium | Text, first/last frames, or multimodal refs |
-| **Wan Video 2.5** | 1080p | Single | 5-10s | Fast | Quick generation, social media |
+| **Wan Video 3.0** | 480P-1080P | Multimodal | 2-30s | Flexible | References, keyframes, documents, webpages |
 | **Runway Aleph** | 1080p | Single | Source | Medium | Video-to-video editing, style transfer |
 
 ## Quality & Cost Trade-offs
 
 ### Default Settings (Cost-Effective)
-- **Resolution**: 720p (unless user requests high quality)
+- **Resolution**: Use the selected model's documented 720 tier unless the user requests high quality
 - **Quality Mode**: standard/fast (unless user requests "fast" explicitly)
 - **Model**: ByteDance Seedance 2.5
 
@@ -1308,7 +1309,7 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 
 - **Cinematic/Premium Content**: Veo3 (model: "veo3")
 - **Professional/Commercial**: ByteDance Seedance 2.5
-- **Social Media/Fast**: Wan Video 2.5
+- **Multimodal/Long-form**: Wan Video 3.0
 - **Multimodal (refs + audio)**: ByteDance Seedance 2.5 with reference URLs
 - **Video Editing**: Runway Aleph (existing video transformation)
 
@@ -1316,9 +1317,9 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 
 ### Input Methods
 - **Text-to-Video**: All models (prompt only)
-- **Image-to-Video**: Veo3 (imageUrls), Seedance (first_frame_url), Wan (image_url)
+- **Image-to-Video**: Veo3 (imageUrls), Seedance (first_frame_url), Wan (first_frame_url and optional last_frame_url)
 - **Video-to-Video**: Runway Aleph (videoUrl)
-- **Multimodal Refs**: Seedance 2.5 (reference_image_urls, reference_video_urls, reference_audio_urls)
+- **Multimodal Refs**: Seedance 2.5 and Wan 3.0 (reference_image_urls, reference_video_urls, reference_audio_urls)
 
 ### Quality Control
 - **Veo3**: model selection (veo3 vs veo3_fast)
@@ -1329,7 +1330,7 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 ### Aspect Ratios
 - **Veo3**: 16:9, 9:16, Auto
 - **ByteDance**: 16:9, 9:16, 1:1, 4:3, 3:4, 21:9, 9:21
-- **Wan**: 16:9, 9:16, 1:1
+- **Wan**: adaptive, 16:9, 4:3, 1:1, 3:4, 9:16
 - **Runway**: 16:9, 9:16, 1:1, 4:3, 3:4, 21:9
 `;
   }
@@ -1340,25 +1341,26 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 ## 🎯 Default Settings (Cost-Effective)
 
 ### **CRITICAL COST CONTROL RULES**
-- **Resolution**: ALWAYS use \`"720p"\` unless user explicitly requests high quality
+- **Resolution**: Use the model's 720 tier unless the user requests high quality: \`"720p"\` for Seedance and \`"720P"\` for Wan
 - **Quality Level**: ALWAYS use **lite/fast** versions unless user requests "high quality"
 - **Model Selection**: bytedance_seedance_video uses the fixed Seedance 2.5 model
 
 ### **Quality Upgrade Logic**
 
 #### **When User Says "high quality"**
-- Upgrade to: Pro versions + 1080p resolution
-- ByteDance: \`quality: "pro"\` + \`"resolution": "1080p"\`
-- Wan Video: \`"resolution": "1080p"\`
+- Upgrade to: Pro versions plus each model's documented 1080 tier
+- ByteDance: \`"resolution": "1080p"\`
+- Wan Video: \`"resolution": "1080P"\`
 - Veo3: \`model: "veo3"\`
 
 #### **When User Says "high quality in 720p"**
-- Upgrade to: Pro versions + keep 720p resolution
-- ByteDance: \`quality: "pro"\` + \`"resolution": "720p"\`
+- Upgrade to: Pro versions while keeping each model's documented 720 tier
+- ByteDance: \`"resolution": "720p"\`
+- Wan Video: \`"resolution": "720P"\`
 - Veo3: \`model: "veo3"\`
 
 #### **When User Says "fast" or "quick"**
-- Keep: Lite versions + 720p resolution (already default)
+- Keep: Lite versions with each model's documented 720 tier
 - ByteDance: \`quality: "lite"\` + \`"resolution": "720p"\`
 - Veo3: \`model: "veo3_fast"\` + \`"resolution": "720p"\`
 
@@ -1384,19 +1386,19 @@ These guidelines ensure optimal balance between quality requirements and cost ma
 ## 🎯 Parameter Selection Strategy
 
 ### **For Cost-Sensitive Projects**
-1. Use lite models with 720p resolution (default)
-2. Avoid 1080p unless explicitly needed
+1. Use lite models with their documented 720 tier
+2. Avoid each model's 1080 tier unless explicitly needed
 3. Use batch processing when possible
 4. Monitor costs through task database
 
 ### **For Quality-Focused Projects**
-1. Use pro models with 1080p resolution
+1. Use pro models with their documented 1080 tier
 2. Accept 2-4x cost increase
 3. Use professional models (Veo3, Flux Kontext Max)
 4. Optimize selectively (not all content needs max quality)
 
 ### **For Balanced Projects**
-1. Use pro models with 720p resolution
+1. Use pro models with their documented 720 tier
 2. Upgrade specific elements rather than entire project
 3. Mix lite and pro models strategically
 4. Monitor costs through task database

@@ -21,7 +21,7 @@ This guide provides information about available video generation and editing mod
 ### Specialized Models
 - **midjourney**: Image-to-video with motion control
 - **runway_aleph**: Video editing and enhancement
-- **wan**: Fast generation with prompt optimization
+- **wan**: Wan 3.0 multimodal generation with keyframes, media, documents, and webpage references
 - **hailuo**: Quick generation with built-in prompt optimizer
 
 ## Model Capabilities Overview
@@ -36,7 +36,7 @@ This guide provides information about available video generation and editing mod
 | sora_2_pro | ✅ | ✅ | ✅ | ✅ | 10/15/25s | 480p/1080p | Premium |
 | midjourney | ❌ | ✅ | ❌ | ❌ | Auto | Fixed | Very Good |
 | runway_aleph | ❌ | ❌ | ❌ | ✅ | Auto | Fixed | High |
-| wan | ✅ | ✅ | ❌ | ❌ | 5s | 480-1080p | Good |
+| wan | ✅ | ✅ | ✅ | ✅ | 2-30s or smart | 480P-1080P | Multimodal |
 | hailuo | ✅ | ✅ | ❌ | ❌ | 5-6s | Fixed | Good/High |
 
 ## Input Types and Modes

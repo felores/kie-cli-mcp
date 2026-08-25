@@ -166,6 +166,7 @@ describe("standalone security boundary", () => {
         "kie-minimax-h3-video",
         "kie-veo3-video",
         "kie-wan-2-7-video",
+        "kie-wan-3-0-video",
       ].map((id) => ({ id, object: "model", created: 0, owned_by: "kie.ai" })),
     });
     expect(
@@ -306,6 +307,7 @@ describe("embedded router contract", () => {
         "kie-minimax-h3-video",
         "kie-veo3-video",
         "kie-wan-2-7-video",
+        "kie-wan-3-0-video",
       ]);
     } finally {
       router.close();

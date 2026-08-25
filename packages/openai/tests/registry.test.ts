@@ -27,6 +27,7 @@ describe("OpenAI adapter registry", () => {
       "kie-kling-3-video",
       "kie-minimax-h3-video",
       "kie-veo3-video",
+      "kie-wan-3-0-video",
       "kie-wan-2-7-video",
       "kie-happyhorse-1-0-video",
       "kie-midjourney-video",
@@ -185,6 +186,7 @@ describe("OpenAI adapter registry", () => {
     expect(openAiAdapter("kie-bytedance-fast-video")?.toolName).toBe(
       "bytedance_seedance_video",
     );
+    expect(openAiAdapter("kie-wan-2-7-video")?.toolName).toBe("wan_video");
     expect(openAiAdapter("kie-midjourney-video")?.mixedMediaReason).toContain(
       "image-to-video",
     );

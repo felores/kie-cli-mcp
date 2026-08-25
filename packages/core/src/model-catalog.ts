@@ -147,16 +147,18 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
   },
   {
     toolName: "wan_video",
-    model: "wan-2.7",
+    model: "wan-3.0",
     capabilities: [
       "text to video",
       "image to video",
       "reference to video",
-      "video editing",
+      "file to video",
+      "link to video",
+      "audio",
     ],
     description: "Wan video generation and editing.",
     status: "active",
-    evidenceUrl: marketDocs,
+    evidenceUrl: "https://docs.kie.ai/market/wan/3-0-video",
   },
   {
     toolName: "wan_animate",

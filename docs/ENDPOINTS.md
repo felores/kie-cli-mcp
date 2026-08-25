@@ -84,7 +84,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `veo3_get_1080p_video` | Veo 3 1080p retrieval | ✅ |
 | `bytedance_seedance_video` | Seedance 2.5 (text, frame, or multimodal reference-to-video) | ✅ |
 | `runway_aleph_video` | Runway Aleph (video-to-video) | ✅ |
-| `wan_video` | Wan 2.7 (T2V/I2V/R2V/video-edit) | ✅ |
+| `wan_video` | Wan 3.0 (text/keyframes/images/video/audio/file/link-to-video) | ✅ |
 | `wan_animate` | Wan Animate (animation/character replace) | ✅ |
 | `happyhorse_video` | HappyHorse 1.0 (T2V/I2V/R2V/video-edit) | ✅ |
 | `hailuo_video` | MiniMax H3 (Hailuo 03: text/image/reference-to-video) | ✅ |
@@ -129,7 +129,7 @@ image only                   -> upscale / transform
 video_url + image_url        -> animation / character replace
 ```
 
-Examples: `nano_banana_image` (generate/edit), `wan_video` (T2V/I2V/R2V/video-edit), `kling_video` (text/image-to-video, multi-shot).
+Examples: `nano_banana_image` (generate/edit), `wan_video` (text/keyframe/multimodal/file/link-to-video), `kling_video` (text/image-to-video, multi-shot).
 
 To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + client method. Add source-backed metadata to `model-catalog.ts`; add a rate-card formula only when every price dimension is officially verified. Both surfaces and [TOOLS.md](./TOOLS.md) (`npm run docs`) pick it up.
 

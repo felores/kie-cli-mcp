@@ -84,7 +84,7 @@ apply. Embedded deployments continue using the host application's authentication
 | `kie-kling-3-video` | Kling 3.0 | video | Text/image-to-video; `std` or `pro`; image references and native audio |
 | `kie-minimax-h3-video` | MiniMax H3 | video | Text, image, or reference-to-video; `text-to-video`, `image-to-video`, and `reference-to-video` presets |
 | `kie-veo3-video` | Veo 3 | video | Text/image-to-video; `veo3` or `veo3_fast`; Veo status polling |
-| `kie-wan-2-7-video` | Wan 2.7 | video | Text, image, or reference-to-video; editing modes are excluded |
+| `kie-wan-3-0-video` | Wan 3.0 | video | Text, keyframe, or multimodal reference-to-video; `kie-wan-2-7-video` is an alias |
 | `kie-happyhorse-1-0-video` | HappyHorse 1.0 | video | Text, image, or reference-to-video; editing modes are excluded |
 | `kie-midjourney-video` | Midjourney | video | Image-to-video only; one uploaded image; Midjourney status normalization |
 | `kie-grok-video` | Grok Imagine | video | Text/image-to-video; `preset=normal`; one uploaded image for image mode |
@@ -188,7 +188,7 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-kling-3-video` | `kling_video` | text/image-to-video | one task and exactly one video result |
 | `kie-minimax-h3-video` | `hailuo_video` | text/image/reference-to-video | one task and exactly one video result |
 | `kie-veo3-video` | `veo3_generate_video` | text/image-to-video | one task and exactly one video result; Veo status route |
-| `kie-wan-2-7-video` | `wan_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
+| `kie-wan-3-0-video` | `wan_video` | text/keyframe/multimodal reference-to-video | one task and exactly one video result |
 | `kie-happyhorse-1-0-video` | `happyhorse_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
 | `kie-midjourney-video` | `midjourney_generate` | image-to-video | one task and exactly one video result; image modes remain operation exclusions |
 | `kie-grok-video` | `grok_imagine` | text/image-to-video | one task and exactly one video result; image and upscale modes remain operation exclusions |

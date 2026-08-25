@@ -390,8 +390,7 @@ describe("media planning", () => {
           tool: "wan_video",
           args: {
             prompt: "A fox",
-            mode: "video-edit",
-            video_url_edit: "https://example.com/source.mp4",
+            reference_video_urls: ["https://example.com/source.mp4"],
           },
         },
         {
@@ -409,7 +408,7 @@ describe("media planning", () => {
       "text-to-video",
       "image-to-video",
       "text-to-video",
-      "video-edit",
+      "reference-to-video",
       "image-to-image",
     ]);
   });

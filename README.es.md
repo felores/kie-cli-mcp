@@ -28,11 +28,20 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 
 - **Servidor MCP**: `@felores/kie-ai-mcp-server`, para Claude Desktop y otros clientes MCP. Ver **Inicio rápido** abajo.
 - **CLI**: `@felores/kie-cli` (binario `kie-cli`), para la terminal, sin cliente MCP: `npm i -g @felores/kie-cli`, luego `kie-cli --help`. Ver [`packages/cli/README.md`](packages/cli/README.md).
-- **Transporte OpenAI**: `@felores/kie-ai-openai-server`, un servidor HTTP local que expone modelos seleccionados de imagen y video mediante rutas con formato OpenAI. La versión 0.6 agrega generación de video de Midjourney y Grok mediante el registro, sin cambiar el contrato de rutas existente. Ver [`docs/openai-transport.md`](docs/openai-transport.md).
+- **Transporte OpenAI**: `@felores/kie-ai-openai-server`, un servidor HTTP local que expone modelos seleccionados de imagen y video mediante rutas con formato OpenAI. La versión 1.0 agrega Wan 3.0 y conserva el ID de Wan 2.7 como alias de compatibilidad. Ver [`docs/openai-transport.md`](docs/openai-transport.md).
 
 El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
 
-## ✨ Novedades en MCP 5.0.0
+## ✨ Novedades en MCP 6.0.0
+
+- **Wan 3.0.** `wan_video` ahora usa el modelo unificado `wan/3-0-video` con
+  texto, fotogramas inicial/final, hasta 10 imágenes, 5 videos, 5 audios,
+  documentos, páginas web, audio nativo y clips de 2 a 30 segundos.
+- **Release compartido.** El mismo contrato de Wan 3.0 está en CLI 1.0 y en el
+  transporte OpenAI 1.0. La ruta OpenAI acepta `kie-wan-3-0-video` y conserva
+  `kie-wan-2-7-video` como alias de compatibilidad.
+
+### Base de MCP 5.0
 
 Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
 `@modelcontextprotocol/node`) con **Node >= 20** y **zod v4**:
@@ -197,7 +206,7 @@ Un catálogo unificado y siempre actualizado, organizado por trabajo:
 | **Google Veo 3 / 3.1** | Generación cinematográfica con audio sincronizado y salida 1080p | `veo3_generate_video` |
 | **Gemini Omni** | Videos con personajes y voces reutilizables | `gemini_omni` |
 | **MiniMax H3 (Hailuo 03)** | Texto, primer o último fotograma y referencias multimodales a video | `hailuo_video` |
-| **Wan 2.7** y **HappyHorse** | Generación rápida, referencias y edición de video | `wan_video`, `happyhorse_video` |
+| **Wan 3.0** y **HappyHorse** | Referencias multimodales, generación larga y flujos de video | `wan_video`, `happyhorse_video` |
 
 ### Edición de video y avatares
 

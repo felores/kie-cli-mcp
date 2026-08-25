@@ -255,6 +255,79 @@ describe("KieAiClient MiniMax H3 routing", () => {
   });
 });
 
+describe("KieAiClient Wan 3.0 routing", () => {
+  test("sends the exact unified model and multimodal payload", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ code: 200, data: { taskId: "task-wan" } }),
+        {
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+
+    await new KieAiClient(config).generateWanVideo({
+      prompt: "Video 1 carries Image 1 through the scene",
+      reference_image_urls: ["https://example.com/character.png"],
+      reference_video_urls: ["https://example.com/motion.mp4"],
+      reference_audio_urls: ["https://example.com/voice.mp3"],
+      resolution: "720P",
+      aspect_ratio: "adaptive",
+      duration: 12,
+      audio: true,
+      seed: 42,
+      nsfw_checker: false,
+      callBackUrl: "https://example.com/callback",
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://provider.example/api/v1/jobs/createTask",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      model: "wan/3-0-video",
+      input: {
+        prompt: "Video 1 carries Image 1 through the scene",
+        reference_image_urls: ["https://example.com/character.png"],
+        reference_video_urls: ["https://example.com/motion.mp4"],
+        reference_audio_urls: ["https://example.com/voice.mp3"],
+        seed: 42,
+        nsfw_checker: false,
+        resolution: "720P",
+        aspect_ratio: "adaptive",
+        duration: 12,
+        audio: true,
+      },
+      callBackUrl: "https://example.com/callback",
+    });
+  });
+
+  test("uses Wan 3.0 documented defaults", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ code: 200, data: { taskId: "task-wan" } }),
+        {
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    );
+
+    await new KieAiClient(config).generateWanVideo({
+      prompt: "A moonlit roof",
+    });
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      model: "wan/3-0-video",
+      input: {
+        prompt: "A moonlit roof",
+        resolution: "1080P",
+        aspect_ratio: "adaptive",
+        duration: 5,
+        audio: true,
+      },
+    });
+  });
+});
+
 describe("KieAiClient Seedance 2.5 routing", () => {
   test("sends the exact 2.5 model and documented payload", async () => {
     const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(

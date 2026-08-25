@@ -28,11 +28,20 @@ The MCP server and the CLI are generated from the same tool registry, so both ex
 
 - **MCP server**: `@felores/kie-ai-mcp-server`, for Claude Desktop and other MCP clients. See **Quick Start** below.
 - **CLI**: `@felores/kie-cli` (binary `kie-cli`), for the terminal, no MCP client needed: `npm i -g @felores/kie-cli`, then `kie-cli --help`. See [`packages/cli/README.md`](packages/cli/README.md).
-- **OpenAI transport**: `@felores/kie-ai-openai-server`, a loopback HTTP server that exposes selected image/video models through OpenAI-shaped routes. Version 0.6 adds registry-driven Midjourney and Grok video generation while preserving the existing route contract. See [`docs/openai-transport.md`](docs/openai-transport.md).
+- **OpenAI transport**: `@felores/kie-ai-openai-server`, a loopback HTTP server that exposes selected image/video models through OpenAI-shaped routes. Version 1.0 adds Wan 3.0 while preserving the Wan 2.7 model ID as a compatibility alias. See [`docs/openai-transport.md`](docs/openai-transport.md).
 
 The MCP server runs locally over **stdio** by default, and can also run as a **remote HTTP service** (Streamable HTTP) so one shared instance serves many clients over the network. It ships with a **Dockerfile and a Coolify compose file** for one-step self-hosting ([deploy guide](docs/DEPLOY_HTTP.md)). See the **Remote / HTTP transport** section below.
 
-## ✨ What's new in MCP 5.0.0
+## ✨ What's new in MCP 6.0.0
+
+- **Wan 3.0.** `wan_video` now uses the unified `wan/3-0-video` model with
+  text, first/last frames, up to 10 image references, 5 video references,
+  5 audio references, documents, webpages, native audio, and 2-30 second clips.
+- **Shared release.** The same Wan 3.0 contract ships in CLI 1.0 and OpenAI
+  transport 1.0. The OpenAI route accepts `kie-wan-3-0-video` and keeps
+  `kie-wan-2-7-video` as a compatibility alias.
+
+### MCP 5.0 foundation
 
 Built on the **SDK v2 packages** (`@modelcontextprotocol/server`,
 `@modelcontextprotocol/node`) with **Node >= 20** and **zod v4**:
@@ -211,7 +220,7 @@ A unified, always-current catalog organized by job:
 | **Google Veo 3 / 3.1** | Cinematic generation with synchronized audio and 1080p output | `veo3_generate_video` |
 | **Gemini Omni** | Videos with reusable characters and voices | `gemini_omni` |
 | **MiniMax H3 (Hailuo 03)** | Text, first/last-frame, and multimodal reference-to-video | `hailuo_video` |
-| **Wan 2.7** and **HappyHorse** | Fast generation, references, and video editing workflows | `wan_video`, `happyhorse_video` |
+| **Wan 3.0** and **HappyHorse** | Multimodal references, long-form generation, and video workflows | `wan_video`, `happyhorse_video` |
 
 ### Video editing and avatars
 
@@ -384,7 +393,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.0.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"6.0.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via

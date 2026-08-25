@@ -2393,161 +2393,130 @@
   },
   {
     "name": "wan_video",
-    "description": "Generate videos using Alibaba Wan 2.7 (text-to-video, image-to-video, reference-to-video, video-edit with native audio support)",
+    "description": "Generate videos using Alibaba Wan 3.0 with text, first/last frames, images, videos, audio, documents, or webpage references",
     "inputSchema": {
       "type": "object",
       "properties": {
-        "mode": {
-          "type": "string",
-          "enum": [
-            "text-to-video",
-            "image-to-video",
-            "reference-to-video",
-            "video-edit"
-          ],
-          "description": "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted."
-        },
         "prompt": {
+          "description": "Text prompt for video generation (max 20000 characters). Required when no media reference is provided.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 5000,
-          "description": "Text prompt for video generation (max 5000 characters)"
-        },
-        "negative_prompt": {
-          "type": "string",
-          "maxLength": 500,
-          "description": "Negative prompt to describe content to avoid (max 500 characters)"
-        },
-        "audio_url": {
-          "type": "string",
-          "format": "uri",
-          "description": "Audio URL for text-to-video with audio (T2V mode only)"
+          "maxLength": 20000
         },
         "first_frame_url": {
+          "description": "URL of the first-frame image (cannot be mixed with reference_*_urls)",
           "type": "string",
-          "format": "uri",
-          "description": "URL of first frame image for image-to-video mode"
+          "format": "uri"
         },
         "last_frame_url": {
+          "description": "URL of the last-frame image; requires first_frame_url",
           "type": "string",
-          "format": "uri",
-          "description": "URL of last frame image for image-to-video mode"
+          "format": "uri"
         },
-        "first_clip_url": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of first video clip for image-to-video mode"
-        },
-        "driving_audio_url": {
-          "type": "string",
-          "format": "uri",
-          "description": "Audio URL to drive facial expressions (I2V mode)"
-        },
-        "reference_image": {
+        "reference_image_urls": {
+          "description": "Reference image URLs mapped to Image1, Image2, and so on (up to 10)",
+          "maxItems": 10,
           "type": "array",
           "items": {
             "type": "string",
             "format": "uri"
-          },
-          "maxItems": 5,
-          "description": "Reference images for reference-to-video mode (up to 5)"
+          }
         },
-        "reference_video": {
+        "reference_video_urls": {
+          "description": "Reference video URLs mapped to Video1, Video2, and so on (up to 5)",
+          "maxItems": 5,
           "type": "array",
           "items": {
             "type": "string",
             "format": "uri"
-          },
+          }
+        },
+        "reference_audio_urls": {
+          "description": "Reference audio URLs mapped to Audio1, Audio2, and so on (up to 5)",
           "maxItems": 5,
-          "description": "Reference videos for reference-to-video mode (up to 5)"
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         },
-        "reference_voice": {
-          "type": "string",
-          "format": "uri",
-          "description": "Voice reference URL for R2V mode"
+        "reference_file_urls": {
+          "description": "Public document URL for file-to-video generation (maximum 1)",
+          "maxItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         },
-        "first_frame": {
-          "type": "string",
-          "format": "uri",
-          "description": "First frame image URL for R2V mode"
-        },
-        "video_url_edit": {
-          "type": "string",
-          "format": "uri",
-          "description": "Video URL to edit (video-edit mode)"
-        },
-        "reference_image_edit": {
-          "type": "string",
-          "format": "uri",
-          "description": "Reference image URL for video-edit mode"
-        },
-        "audio_setting": {
-          "type": "string",
-          "enum": [
-            "auto",
-            "origin"
-          ],
-          "description": "Audio handling for video-edit: auto or origin"
+        "reference_link_urls": {
+          "description": "Public webpage URL for link-to-video generation (maximum 1)",
+          "maxItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         },
         "resolution": {
+          "description": "Video resolution",
+          "default": "1080P",
           "type": "string",
           "enum": [
-            "720p",
-            "1080p"
-          ],
-          "default": "1080p",
-          "description": "Video resolution"
+            "480P",
+            "720P",
+            "1080P"
+          ]
         },
-        "ratio": {
+        "aspect_ratio": {
+          "description": "Aspect ratio of the generated video",
+          "default": "adaptive",
           "type": "string",
           "enum": [
+            "adaptive",
             "16:9",
-            "9:16",
-            "1:1",
             "4:3",
-            "3:4"
-          ],
-          "default": "16:9",
-          "description": "Aspect ratio of the generated video"
+            "1:1",
+            "3:4",
+            "9:16"
+          ]
         },
         "duration": {
-          "type": "integer",
-          "minimum": 2,
-          "maximum": 15,
+          "description": "Duration in seconds (2-30), or -1 for smart duration",
           "default": 5,
-          "description": "Duration in seconds (2-15)"
+          "anyOf": [
+            {
+              "type": "number",
+              "const": -1
+            },
+            {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 30
+            }
+          ]
         },
-        "prompt_extend": {
-          "type": "boolean",
+        "audio": {
+          "description": "Whether the generated video includes an audio track",
           "default": true,
-          "description": "Enable prompt rewriting using LLM for better results"
-        },
-        "watermark": {
-          "type": "boolean",
-          "default": false,
-          "description": "Add watermark to generated video"
+          "type": "boolean"
         },
         "seed": {
+          "description": "Random seed for reproducible results (0-2147483647)",
           "type": "integer",
           "minimum": 0,
-          "maximum": 2147483647,
-          "description": "Random seed for reproducible results (0-2147483647)"
+          "maximum": 2147483647
         },
         "nsfw_checker": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable NSFW content filter"
+          "description": "Enable NSFW content filter",
+          "type": "boolean"
         },
         "callBackUrl": {
+          "description": "Optional: URL for task completion notifications",
           "type": "string",
-          "format": "uri",
-          "description": "Optional: URL for task completion notifications"
+          "format": "uri"
         }
-      },
-      "required": [
-        "prompt"
-      ],
-      "additionalProperties": false
+      }
     }
   },
   {

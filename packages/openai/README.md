@@ -60,7 +60,7 @@ Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>
 | `kie-kling-3-video` | Text/image-to-video; `preset=std` or `pro`; native audio via `generate_audio` |
 | `kie-minimax-h3-video` | Text/image/reference-to-video; use the matching `preset` for ambiguous image references |
 | `kie-veo3-video` | Text/image-to-video; `preset=veo3` or `veo3_fast`; fixed provider duration |
-| `kie-wan-2-7-video` | Text/image/reference-to-video; video editing is not exposed |
+| `kie-wan-3-0-video` | Text, keyframe, and multimodal reference-to-video; `kie-wan-2-7-video` remains an alias |
 | `kie-happyhorse-1-0-video` | Text/image/reference-to-video; video editing is not exposed |
 | `kie-midjourney-video` | Image-to-video only; exactly one image reference; standard motion mode |
 | `kie-grok-video` | Text/image-to-video; `preset=normal`; one image reference for image mode |

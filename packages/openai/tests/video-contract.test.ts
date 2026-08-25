@@ -15,7 +15,7 @@ const phase3Models = [
   "kie-kling-3-video",
   "kie-minimax-h3-video",
   "kie-veo3-video",
-  "kie-wan-2-7-video",
+  "kie-wan-3-0-video",
   "kie-happyhorse-1-0-video",
 ] as const;
 const phase3ResultHosts = {
@@ -977,9 +977,9 @@ describe("KIE OpenAI video contract", () => {
       expectedModel: "veo3_fast",
     },
     {
-      model: "kie-wan-2-7-video",
+      model: "kie-wan-3-0-video",
       body: {
-        model: "kie-wan-2-7-video",
+        model: "kie-wan-3-0-video",
         prompt: "A cinematic test shot",
         seconds: 5,
         size: "1280x720",
@@ -987,7 +987,20 @@ describe("KIE OpenAI video contract", () => {
         preset: "text-to-video",
       },
       providerPath: "/jobs/createTask",
-      expectedModel: "wan/2-7-text-to-video",
+      expectedModel: "wan/3-0-video",
+    },
+    {
+      model: "kie-wan-2-7-video",
+      body: {
+        model: "kie-wan-2-7-video",
+        prompt: "A compatibility alias test shot",
+        seconds: 5,
+        size: "1280x720",
+        resolution_name: "1080p",
+        preset: "text-to-video",
+      },
+      providerPath: "/jobs/createTask",
+      expectedModel: "wan/3-0-video",
     },
     {
       model: "kie-happyhorse-1-0-video",
@@ -1658,7 +1671,7 @@ describe("KIE OpenAI video contract", () => {
     },
     { model: "kie-veo3-video", preset: undefined, field: "first_frame" },
     {
-      model: "kie-wan-2-7-video",
+      model: "kie-wan-3-0-video",
       preset: "reference-to-video",
       field: "input_reference",
     },
@@ -1742,7 +1755,7 @@ describe("KIE OpenAI video contract", () => {
       new Blob([image], { type: "image/png" }),
       "ref.png",
     );
-    if (fixture.model === "kie-wan-2-7-video") {
+    if (fixture.model === "kie-wan-3-0-video") {
       const video = new Uint8Array([
         0x00,
         0x00,
