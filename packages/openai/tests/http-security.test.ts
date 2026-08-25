@@ -159,6 +159,11 @@ describe("standalone security boundary", () => {
         "kie-z-image",
         "kie-bytedance-fast-video",
         "kie-bytedance-video",
+        "kie-happyhorse-1-0-video",
+        "kie-kling-3-video",
+        "kie-minimax-h3-video",
+        "kie-veo3-video",
+        "kie-wan-2-7-video",
       ].map((id) => ({ id, object: "model", created: 0, owned_by: "kie.ai" })),
     });
     expect(
@@ -292,6 +297,11 @@ describe("embedded router contract", () => {
         "kie-z-image",
         "kie-bytedance-fast-video",
         "kie-bytedance-video",
+        "kie-happyhorse-1-0-video",
+        "kie-kling-3-video",
+        "kie-minimax-h3-video",
+        "kie-veo3-video",
+        "kie-wan-2-7-video",
       ]);
     } finally {
       router.close();

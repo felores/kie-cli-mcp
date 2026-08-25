@@ -6,11 +6,12 @@
 - Baseline reviewed: `main` at `e14ae99`
 - Affected package: `@felores/kie-ai-openai-server`
 - Baseline OpenAI package version: `0.2.0`
-- Implemented feature version: `0.3.0`
+- Implemented feature version: `0.5.0`
 - Baseline OpenAI contract version: `2`
 - Implemented contract version: `3`
 - Implementation status: completed 2026-08-24
 - Phase 2 image expansion: completed in OpenAI transport `0.4.0`
+- Phase 3 video expansion: completed in OpenAI transport `0.5.0`
 
 ## Objective
 
@@ -551,7 +552,7 @@ Document:
 
 ## Versioning
 
-Release as `@felores/kie-ai-openai-server@0.3.0` with contract version `3` after the registry foundation and at least one new model adapter are complete.
+Release Phase 1 as `@felores/kie-ai-openai-server@0.3.0` with contract version `3` after the registry foundation and at least one new model adapter are complete. Phase 2 shipped as `0.4.0`; Phase 3 ships as `0.5.0` without changing the contract version.
 
 Update:
 

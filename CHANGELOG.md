@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## OpenAI transport 0.5.0 - 2026-08-24
+
+### Added
+- Added registry-driven video adapters for Kling 3.0, MiniMax H3, Veo 3, Wan 2.7, and HappyHorse 1.0.
+- Added exact create, reference upload, polling, content download, idempotency, and early-rejection coverage for every new video model.
+
+### Changed
+- Expanded `/v1/models` from the resolved registry with five additional video IDs.
+- Kept Wan and HappyHorse video editing, and other specialized inputs, out of the standard create-video contract.
+- Added the named Veo status strategy while keeping provider polling behind `KieAiClient`.
+
 ## OpenAI transport 0.4.0 - 2026-08-24
 
 ### Added

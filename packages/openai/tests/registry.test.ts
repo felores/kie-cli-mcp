@@ -23,6 +23,11 @@ describe("OpenAI adapter registry", () => {
       "kie-flux-kontext-pro-image",
       "kie-bytedance-video",
       "kie-bytedance-fast-video",
+      "kie-kling-3-video",
+      "kie-minimax-h3-video",
+      "kie-veo3-video",
+      "kie-wan-2-7-video",
+      "kie-happyhorse-1-0-video",
     ]);
     expect(
       new Set(RESOLVED_OPENAI_ADAPTERS.map((adapter) => adapter.publicModelId))
@@ -94,6 +99,11 @@ describe("OpenAI adapter registry", () => {
       "qwen_image",
       "flux2_image",
       "flux_kontext_image",
+      "kling_video",
+      "hailuo_video",
+      "veo3_generate_video",
+      "wan_video",
+      "happyhorse_video",
     ]) {
       expect(OPENAI_EXCLUSIONS).not.toHaveProperty(adapted);
     }
@@ -140,6 +150,13 @@ describe("OpenAI adapter registry", () => {
       if (adapter.mediaType === "image") {
         expect(adapter.normalizeSubmission).toBeDefined();
         expect(adapter.submit).toBeDefined();
+      } else {
+        expect(Object.keys(adapter.presets).length).toBeGreaterThan(0);
+        if (adapter.defaultPreset !== undefined) {
+          expect(Object.hasOwn(adapter.presets, adapter.defaultPreset)).toBe(
+            true,
+          );
+        }
       }
     }
     expect(openAiAdapter("kie-bytedance-fast-video")?.toolName).toBe(
