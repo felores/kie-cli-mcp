@@ -670,62 +670,33 @@ export class KieAiClient {
   async generateWanVideo(
     request: WanVideoRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
-    const mode =
-      request.mode ||
-      (request.video_url_edit
-        ? "video-edit"
-        : request.reference_image?.length || request.reference_video?.length
-          ? "reference-to-video"
-          : request.first_frame_url ||
-              request.last_frame_url ||
-              request.first_clip_url
-            ? "image-to-video"
-            : "text-to-video");
+    const input: Record<string, unknown> = {};
 
-    const modelMap: Record<string, string> = {
-      "text-to-video": "wan/2-7-text-to-video",
-      "image-to-video": "wan/2-7-image-to-video",
-      "reference-to-video": "wan/2-7-r2v",
-      "video-edit": "wan/2-7-videoedit",
-    };
-    const model = modelMap[mode];
-
-    const input: any = {
-      prompt: request.prompt,
-    };
-
-    // Add optional fields only when provided
-    if (request.negative_prompt)
-      input.negative_prompt = request.negative_prompt;
-    if (request.audio_url) input.audio_url = request.audio_url;
+    if (request.prompt) input.prompt = request.prompt;
     if (request.first_frame_url)
       input.first_frame_url = request.first_frame_url;
     if (request.last_frame_url) input.last_frame_url = request.last_frame_url;
-    if (request.first_clip_url) input.first_clip_url = request.first_clip_url;
-    if (request.driving_audio_url)
-      input.driving_audio_url = request.driving_audio_url;
-    if (request.reference_image?.length)
-      input.reference_image = request.reference_image;
-    if (request.reference_video?.length)
-      input.reference_video = request.reference_video;
-    if (request.reference_voice)
-      input.reference_voice = request.reference_voice;
-    if (request.first_frame) input.first_frame = request.first_frame;
-    if (request.video_url_edit) input.video_url = request.video_url_edit;
-    if (request.reference_image_edit)
-      input.reference_image = request.reference_image_edit;
-    if (request.audio_setting) input.audio_setting = request.audio_setting;
+    if (request.reference_image_urls?.length)
+      input.reference_image_urls = request.reference_image_urls;
+    if (request.reference_video_urls?.length)
+      input.reference_video_urls = request.reference_video_urls;
+    if (request.reference_audio_urls?.length)
+      input.reference_audio_urls = request.reference_audio_urls;
+    if (request.reference_file_urls?.length)
+      input.reference_file_urls = request.reference_file_urls;
+    if (request.reference_link_urls?.length)
+      input.reference_link_urls = request.reference_link_urls;
     if (request.seed !== undefined) input.seed = request.seed;
+    if (request.nsfw_checker !== undefined)
+      input.nsfw_checker = request.nsfw_checker;
 
-    input.resolution = request.resolution || "1080p";
-    input.ratio = request.ratio || "16:9";
+    input.resolution = request.resolution || "1080P";
+    input.aspect_ratio = request.aspect_ratio || "adaptive";
     input.duration = request.duration || 5;
-    input.prompt_extend = request.prompt_extend !== false;
-    input.watermark = request.watermark || false;
-    input.nsfw_checker = request.nsfw_checker || false;
+    input.audio = request.audio !== false;
 
     const jobRequest = {
-      model,
+      model: "wan/3-0-video",
       input,
       callBackUrl: this.callbackUrl(request.callBackUrl),
     };

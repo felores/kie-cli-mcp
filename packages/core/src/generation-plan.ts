@@ -128,14 +128,17 @@ export function resolveGenerationMode(
           ? "image-to-video"
           : "text-to-video";
     case "wan_video":
-      if (typeof args.mode === "string") return args.mode;
-      return args.video_url_edit
-        ? "video-edit"
-        : hasValues(args.reference_image) || hasValues(args.reference_video)
-          ? "reference-to-video"
-          : args.first_frame_url || args.last_frame_url || args.first_clip_url
-            ? "image-to-video"
-            : "text-to-video";
+      return hasValues(args.reference_file_urls)
+        ? "file-to-video"
+        : hasValues(args.reference_link_urls)
+          ? "link-to-video"
+          : hasValues(args.reference_image_urls) ||
+              hasValues(args.reference_video_urls) ||
+              hasValues(args.reference_audio_urls)
+            ? "reference-to-video"
+            : args.first_frame_url || args.last_frame_url
+              ? "image-to-video"
+              : "text-to-video";
     case "happyhorse_video":
       if (typeof args.mode === "string") return args.mode;
       return args.video_url

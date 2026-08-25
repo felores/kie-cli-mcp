@@ -587,123 +587,79 @@ export const RunwayAlephVideoSchema = z.object({
     ),
 });
 
-export const Wan27VideoSchema = z
+export const Wan30VideoSchema = z
   .object({
-    mode: z
-      .enum([
-        "text-to-video",
-        "image-to-video",
-        "reference-to-video",
-        "video-edit",
-      ])
-      .optional()
-      .describe(
-        "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted.",
-      ),
     prompt: z
       .string()
       .min(1)
-      .max(5000)
-      .describe("Text prompt for video generation (max 5000 characters)"),
-    negative_prompt: z
-      .string()
-      .max(500)
+      .max(20000)
       .optional()
       .describe(
-        "Negative prompt to describe content to avoid (max 500 characters)",
+        "Text prompt for video generation (max 20000 characters). Required when no media reference is provided.",
       ),
-    // T2V
-    audio_url: z
-      .string()
-      .url()
-      .optional()
-      .describe("Audio URL for text-to-video with audio (T2V mode only)"),
-    // I2V
     first_frame_url: z
       .string()
       .url()
       .optional()
-      .describe("URL of first frame image for image-to-video mode"),
+      .describe(
+        "URL of the first-frame image (cannot be mixed with reference_*_urls)",
+      ),
     last_frame_url: z
       .string()
       .url()
       .optional()
-      .describe("URL of last frame image for image-to-video mode"),
-    first_clip_url: z
-      .string()
-      .url()
+      .describe("URL of the last-frame image; requires first_frame_url"),
+    reference_image_urls: z
+      .array(z.string().url())
+      .max(10)
       .optional()
-      .describe("URL of first video clip for image-to-video mode"),
-    driving_audio_url: z
-      .string()
-      .url()
-      .optional()
-      .describe("Audio URL to drive facial expressions (I2V mode)"),
-    // R2V
-    reference_image: z
+      .describe(
+        "Reference image URLs mapped to Image1, Image2, and so on (up to 10)",
+      ),
+    reference_video_urls: z
       .array(z.string().url())
       .max(5)
       .optional()
-      .describe("Reference images for reference-to-video mode (up to 5)"),
-    reference_video: z
+      .describe(
+        "Reference video URLs mapped to Video1, Video2, and so on (up to 5)",
+      ),
+    reference_audio_urls: z
       .array(z.string().url())
       .max(5)
       .optional()
-      .describe("Reference videos for reference-to-video mode (up to 5)"),
-    reference_voice: z
-      .string()
-      .url()
+      .describe(
+        "Reference audio URLs mapped to Audio1, Audio2, and so on (up to 5)",
+      ),
+    reference_file_urls: z
+      .array(z.string().url())
+      .max(1)
       .optional()
-      .describe("Voice reference URL for R2V mode"),
-    first_frame: z
-      .string()
-      .url()
+      .describe("Public document URL for file-to-video generation (maximum 1)"),
+    reference_link_urls: z
+      .array(z.string().url())
+      .max(1)
       .optional()
-      .describe("First frame image URL for R2V mode"),
-    // Video Edit
-    video_url_edit: z
-      .string()
-      .url()
-      .optional()
-      .describe("Video URL to edit (video-edit mode)"),
-    reference_image_edit: z
-      .string()
-      .url()
-      .optional()
-      .describe("Reference image URL for video-edit mode"),
-    audio_setting: z
-      .enum(["auto", "origin"])
-      .optional()
-      .describe("Audio handling for video-edit: auto or origin"),
-    // Common
+      .describe("Public webpage URL for link-to-video generation (maximum 1)"),
     resolution: z
-      .enum(["720p", "1080p"])
-      .default("1080p")
+      .enum(["480P", "720P", "1080P"])
+      .default("1080P")
       .optional()
       .describe("Video resolution"),
-    ratio: z
-      .enum(["16:9", "9:16", "1:1", "4:3", "3:4"])
-      .default("16:9")
+    aspect_ratio: z
+      .enum(["adaptive", "16:9", "4:3", "1:1", "3:4", "9:16"])
+      .default("adaptive")
       .optional()
       .describe("Aspect ratio of the generated video"),
     duration: z
-      .number()
-      .int()
-      .min(2)
-      .max(15)
+      .union([z.literal(-1), z.number().int().min(2).max(30)])
       .default(5)
       .optional()
-      .describe("Duration in seconds (2-15)"),
-    prompt_extend: z
+      .describe("Duration in seconds (2-30), or -1 for smart duration"),
+    audio: z
       .boolean()
       .default(true)
       .optional()
-      .describe("Enable prompt rewriting using LLM for better results"),
-    watermark: z
-      .boolean()
-      .default(false)
-      .optional()
-      .describe("Add watermark to generated video"),
+      .describe("Whether the generated video includes an audio track"),
     seed: z
       .number()
       .int()
@@ -711,54 +667,51 @@ export const Wan27VideoSchema = z
       .max(2147483647)
       .optional()
       .describe("Random seed for reproducible results (0-2147483647)"),
-    nsfw_checker: z
-      .boolean()
-      .default(false)
-      .optional()
-      .describe("Enable NSFW content filter"),
+    nsfw_checker: z.boolean().optional().describe("Enable NSFW content filter"),
     callBackUrl: z
       .string()
       .url()
       .optional()
       .describe("Optional: URL for task completion notifications"),
   })
-  .refine(
-    (data) => {
-      const mode =
-        data.mode ||
-        (data.video_url_edit
-          ? "video-edit"
-          : data.reference_image || data.reference_video
-            ? "reference-to-video"
-            : data.first_frame_url || data.last_frame_url || data.first_clip_url
-              ? "image-to-video"
-              : "text-to-video");
-      if (
-        mode === "image-to-video" &&
-        !data.first_frame_url &&
-        !data.last_frame_url &&
-        !data.first_clip_url
-      ) {
-        return false;
-      }
-      if (
-        mode === "reference-to-video" &&
-        !data.reference_image?.length &&
-        !data.reference_video?.length
-      ) {
-        return false;
-      }
-      if (mode === "video-edit" && !data.video_url_edit) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message:
-        "Invalid parameter combination for the detected mode. Ensure required inputs are provided.",
-      path: [],
-    },
-  );
+  .strict()
+  .superRefine((data, ctx) => {
+    const hasReferences = Boolean(
+      data.reference_image_urls?.length ||
+        data.reference_video_urls?.length ||
+        data.reference_audio_urls?.length ||
+        data.reference_file_urls?.length ||
+        data.reference_link_urls?.length,
+    );
+    if (!data.prompt && !data.first_frame_url && !hasReferences) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Provide prompt, first_frame_url, or at least one reference URL",
+      });
+    }
+    if (data.last_frame_url && !data.first_frame_url) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["last_frame_url"],
+        message: "last_frame_url requires first_frame_url",
+      });
+    }
+    if ((data.first_frame_url || data.last_frame_url) && hasReferences) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "First/last frame URLs cannot be combined with reference_*_urls",
+      });
+    }
+    if (data.reference_file_urls?.length && data.reference_link_urls?.length) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "reference_file_urls and reference_link_urls are mutually exclusive",
+      });
+    }
+  });
 
 export const ByteDanceSeedreamImageSchema = z.object({
   prompt: z
@@ -1613,7 +1566,7 @@ export type ByteDanceSeedanceVideoRequest = z.infer<
   typeof ByteDanceSeedanceVideoSchema
 >;
 export type RunwayAlephVideoRequest = z.infer<typeof RunwayAlephVideoSchema>;
-export type WanVideoRequest = z.infer<typeof Wan27VideoSchema>;
+export type WanVideoRequest = z.infer<typeof Wan30VideoSchema>;
 export type ByteDanceSeedreamImageRequest = z.infer<
   typeof ByteDanceSeedreamImageSchema
 >;

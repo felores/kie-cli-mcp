@@ -16,7 +16,7 @@ import {
   NanoBananaImageSchema,
   QwenImageSchema,
   Veo3GenerateSchema,
-  Wan27VideoSchema,
+  Wan30VideoSchema,
   ZImageSchema,
 } from "@felores/kie-ai-core";
 import type { KieAiClient } from "@felores/kie-ai-core/client";
@@ -685,7 +685,8 @@ export const OPENAI_ADAPTER_REGISTRY = [
       client.generateVeo3Video(request as never),
   },
   {
-    publicModelId: "kie-wan-2-7-video",
+    publicModelId: "kie-wan-3-0-video",
+    aliases: ["kie-wan-2-7-video"],
     toolName: "wan_video",
     mediaType: "video",
     ownedBy: "kie.ai",
@@ -695,12 +696,12 @@ export const OPENAI_ADAPTER_REGISTRY = [
     resultHostEvidenceUrl: evidence,
     cardinality: oneVideo,
     referenceLimits: {
-      maxImageReferences: 5,
+      maxImageReferences: 10,
       maxVideoReferences: 5,
-      maxAudioReferences: 1,
+      maxAudioReferences: 5,
       maxReferenceBytes: 100 * 1024 * 1024,
-      maxTotalReferenceBytes: 100 * 1024 * 1024,
-      evidenceUrl: "https://docs.kie.ai/market/wan/2-7",
+      maxTotalReferenceBytes: 775 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/wan/3-0-video",
     },
     operations: ["text-to-video", "image-to-video", "reference-to-video"],
     presets: {
@@ -709,21 +710,15 @@ export const OPENAI_ADAPTER_REGISTRY = [
       "reference-to-video": null,
     },
     normalizeSubmission: (input: VideoSubmissionInput) => {
-      if (input.generateAudio !== undefined) {
-        throw new Error(
-          "Wan does not expose generate_audio through the OpenAI video route.",
-        );
-      }
-      if (input.audioUrls.length > 1) {
-        throw new Error("Wan accepts at most one audio reference.");
-      }
       const imageUrls = [
         ...input.imageUrls,
         ...(input.firstFrameUrl ? [input.firstFrameUrl] : []),
         ...(input.lastFrameUrl ? [input.lastFrameUrl] : []),
       ];
       const hasReferenceInputs = Boolean(
-        input.videoUrls.length || imageUrls.length > 2,
+        input.videoUrls.length ||
+          input.audioUrls.length ||
+          imageUrls.length > 2,
       );
       const inferredPreset =
         input.preset ??
@@ -734,13 +729,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
             : "text-to-video");
       if (
         inferredPreset === "text-to-video" &&
-        (imageUrls.length || input.videoUrls.length)
+        (imageUrls.length || input.videoUrls.length || input.audioUrls.length)
       ) {
         throw new Error("Text-to-video does not accept reference files.");
       }
       if (inferredPreset === "image-to-video") {
         if (
           input.videoUrls.length ||
+          input.audioUrls.length ||
           imageUrls.length < 1 ||
           imageUrls.length > 2
         ) {
@@ -752,30 +748,36 @@ export const OPENAI_ADAPTER_REGISTRY = [
       if (
         inferredPreset === "reference-to-video" &&
         !imageUrls.length &&
-        !input.videoUrls.length
+        !input.videoUrls.length &&
+        !input.audioUrls.length
       ) {
         throw new Error(
           "Reference-to-video requires at least one reference file.",
         );
       }
       const request: Record<string, unknown> = {
-        mode: inferredPreset,
         prompt: input.prompt,
         ...(input.duration !== undefined ? { duration: input.duration } : {}),
-        ...(input.aspectRatio ? { ratio: input.aspectRatio } : {}),
-        ...(input.resolution ? { resolution: input.resolution } : {}),
+        ...(input.aspectRatio ? { aspect_ratio: input.aspectRatio } : {}),
+        ...(input.resolution
+          ? { resolution: input.resolution.toUpperCase() }
+          : {}),
+        ...(input.generateAudio !== undefined
+          ? { audio: input.generateAudio }
+          : {}),
       };
       if (inferredPreset === "image-to-video") {
         request.first_frame_url = imageUrls[0];
         if (imageUrls[1]) request.last_frame_url = imageUrls[1];
       } else if (inferredPreset === "reference-to-video") {
-        if (imageUrls.length) request.reference_image = imageUrls;
-        if (input.videoUrls.length) request.reference_video = input.videoUrls;
-        if (input.firstFrameUrl) request.first_frame = input.firstFrameUrl;
+        if (imageUrls.length) request.reference_image_urls = imageUrls;
+        if (input.videoUrls.length)
+          request.reference_video_urls = input.videoUrls;
+        if (input.audioUrls.length)
+          request.reference_audio_urls = input.audioUrls;
       }
-      if (input.audioUrls.length) request.audio_url = input.audioUrls[0];
       if (input.callbackUrl) request.callBackUrl = input.callbackUrl;
-      return Wan27VideoSchema.parse(request);
+      return Wan30VideoSchema.parse(request);
     },
     submit: (client: KieAiClient, request: unknown) =>
       client.generateWanVideo(request as never),

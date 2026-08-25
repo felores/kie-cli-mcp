@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 6.0.0 / CLI 1.0.0 / OpenAI transport 1.0.0 - 2026-08-25
+
+### Added
+- Added Wan 3.0 multimodal inputs for image, video, audio, document, and webpage references.
+- Added first-frame and first-and-last-frame generation, native audio control, smart duration, and clips up to 30 seconds.
+- Added the `kie-wan-3-0-video` OpenAI model ID while retaining `kie-wan-2-7-video` as a compatibility alias.
+
+### Changed
+- Upgraded `wan_video` from the four Wan 2.7 endpoints to the unified `wan/3-0-video` endpoint.
+- Expanded Wan reference limits to 10 images, 5 videos, and 5 audio clips based on the official Kie.ai contract.
+- Replaced Wan 2.7-only prompt, negative prompt, watermark, and edit-mode parameters with the Wan 3.0 schema.
+
 ## OpenAI transport 0.6.1 - 2026-08-25
 
 ### Fixed

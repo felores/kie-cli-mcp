@@ -445,34 +445,26 @@ Animate static images or replace characters in videos using Alibaba's Wan 2.2 An
 
 ### wan_video
 
-Generate videos using Alibaba Wan 2.7 (text-to-video, image-to-video, reference-to-video, video-edit with native audio support)
+Generate videos using Alibaba Wan 3.0 with text, first/last frames, images, videos, audio, documents, or webpage references
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `mode` | `text-to-video` / `image-to-video` / `reference-to-video` / `video-edit` | no | Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted. |
-| `prompt` | string | yes | Text prompt for video generation (max 5000 characters) |
-| `negative_prompt` | string | no | Negative prompt to describe content to avoid (max 500 characters) |
-| `audio_url` | string | no | Audio URL for text-to-video with audio (T2V mode only) |
-| `first_frame_url` | string | no | URL of first frame image for image-to-video mode |
-| `last_frame_url` | string | no | URL of last frame image for image-to-video mode |
-| `first_clip_url` | string | no | URL of first video clip for image-to-video mode |
-| `driving_audio_url` | string | no | Audio URL to drive facial expressions (I2V mode) |
-| `reference_image` | array | no | Reference images for reference-to-video mode (up to 5) |
-| `reference_video` | array | no | Reference videos for reference-to-video mode (up to 5) |
-| `reference_voice` | string | no | Voice reference URL for R2V mode |
-| `first_frame` | string | no | First frame image URL for R2V mode |
-| `video_url_edit` | string | no | Video URL to edit (video-edit mode) |
-| `reference_image_edit` | string | no | Reference image URL for video-edit mode |
-| `audio_setting` | `auto` / `origin` | no | Audio handling for video-edit: auto or origin |
-| `resolution` | `720p` / `1080p` | no | Video resolution (default: `"1080p"`) |
-| `ratio` | `16:9` / `9:16` / `1:1` / `4:3` / `3:4` | no | Aspect ratio of the generated video (default: `"16:9"`) |
-| `duration` | integer | no | Duration in seconds (2-15) (default: `5`) |
-| `prompt_extend` | boolean | no | Enable prompt rewriting using LLM for better results (default: `true`) |
-| `watermark` | boolean | no | Add watermark to generated video (default: `false`) |
+| `prompt` | string | no | Text prompt for video generation (max 20000 characters). Required when no media reference is provided. |
+| `first_frame_url` | string | no | URL of the first-frame image (cannot be mixed with reference_*_urls) |
+| `last_frame_url` | string | no | URL of the last-frame image; requires first_frame_url |
+| `reference_image_urls` | array | no | Reference image URLs mapped to Image1, Image2, and so on (up to 10) |
+| `reference_video_urls` | array | no | Reference video URLs mapped to Video1, Video2, and so on (up to 5) |
+| `reference_audio_urls` | array | no | Reference audio URLs mapped to Audio1, Audio2, and so on (up to 5) |
+| `reference_file_urls` | array | no | Public document URL for file-to-video generation (maximum 1) |
+| `reference_link_urls` | array | no | Public webpage URL for link-to-video generation (maximum 1) |
+| `resolution` | `480P` / `720P` / `1080P` | no | Video resolution (default: `"1080P"`) |
+| `aspect_ratio` | `adaptive` / `16:9` / `4:3` / `1:1` / `3:4` / `9:16` | no | Aspect ratio of the generated video (default: `"adaptive"`) |
+| `duration` | any | no | Duration in seconds (2-30), or -1 for smart duration (default: `5`) |
+| `audio` | boolean | no | Whether the generated video includes an audio track (default: `true`) |
 | `seed` | integer | no | Random seed for reproducible results (0-2147483647) |
-| `nsfw_checker` | boolean | no | Enable NSFW content filter (default: `false`) |
+| `nsfw_checker` | boolean | no | Enable NSFW content filter |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications |
 
 ## Audio tools
