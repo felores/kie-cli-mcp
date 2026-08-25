@@ -369,19 +369,25 @@ function normalizeJsonRequest(body: unknown): NormalizedImageRequest {
   if (!descriptor.supportsCount && body.n !== undefined) {
     throw invalidSetting(`The model ${model} does not support n.`, "n");
   }
-  if (model === "kie-z-image" && body.output_format !== undefined) {
-    throw invalidSetting(
-      `The model ${model} does not support output_format.`,
-      "output_format",
-    );
-  }
   const prompt = readString(body.prompt, "prompt", true)!;
   const outputFormat = readOutputFormat(body.output_format, model);
+  const resolution = descriptor.supportsQuality
+    ? readQuality(body.quality)
+    : "1K";
+  if (
+    descriptor.acceptedResolutions &&
+    !descriptor.acceptedResolutions.includes(resolution)
+  ) {
+    throw invalidSetting(
+      `The model ${model} supports only standard image quality.`,
+      "quality",
+    );
+  }
   const normalized: NormalizedImageRequest = {
     model,
     prompt,
     count: readCount(body.n),
-    resolution: descriptor.supportsQuality ? readQuality(body.quality) : "1K",
+    resolution,
     aspectRatio: readAspectRatio(body.size, model),
     responseFormat: readResponseFormat(body.response_format),
     requestedOutputFormat: outputFormat.requested,
@@ -498,15 +504,6 @@ async function normalizeMultipartRequest(
   ) {
     throw invalidSetting(`The model ${model} does not support n.`, "n");
   }
-  if (
-    model === "kie-z-image" &&
-    formValue(parsed.fields, "output_format") !== undefined
-  ) {
-    throw invalidSetting(
-      `The model ${model} does not support output_format.`,
-      "output_format",
-    );
-  }
   const outputFormat = readOutputFormat(
     formValue(parsed.fields, "output_format"),
     model,
@@ -515,13 +512,22 @@ async function normalizeMultipartRequest(
     (file) => file.fieldName === "image" || file.fieldName === "image[]",
   );
   validateReferences(model, parsed.files);
+  const quality = formValue(parsed.fields, "quality");
+  const resolution = descriptor.supportsQuality ? readQuality(quality) : "1K";
+  if (
+    descriptor.acceptedResolutions &&
+    !descriptor.acceptedResolutions.includes(resolution)
+  ) {
+    throw invalidSetting(
+      `The model ${model} supports only standard image quality.`,
+      "quality",
+    );
+  }
   const normalized: NormalizedImageRequest = {
     model,
     prompt: readString(formValue(parsed.fields, "prompt"), "prompt", true)!,
     count: readCount(formValue(parsed.fields, "n")),
-    resolution: descriptor.supportsQuality
-      ? readQuality(formValue(parsed.fields, "quality"))
-      : "1K",
+    resolution,
     aspectRatio: readAspectRatio(formValue(parsed.fields, "size"), model),
     responseFormat: readResponseFormat(
       formValue(parsed.fields, "response_format"),

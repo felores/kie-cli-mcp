@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Discovery, model validation, result-host policy, and dispatch now share the resolved registry. Active media tools are explicitly adapted or excluded with a reason.
+- Z-Image accepts Infinite Canvas's standard `n`, `quality=standard`, and `output_format=png` request shape, and Seedance aliases are idempotent across equivalent model IDs.
 - Incremented the OpenAI transport contract version to 3.
 
 ## OpenAI transport 0.2.0 - 2026-08-24

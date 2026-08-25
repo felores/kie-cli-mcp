@@ -254,6 +254,7 @@ export class RequestJournal {
   async reserve(input: {
     requestId: string;
     model: string;
+    equivalentModels?: readonly string[];
     count: number;
     fingerprint?: string;
     callbackToken?: string;
@@ -262,10 +263,14 @@ export class RequestJournal {
     return this.serialize(requestIdHash, async () => {
       const existing = await this.read(requestIdHash);
       if (existing) {
+        const modelMatches =
+          existing.model === input.model ||
+          (input.equivalentModels?.includes(existing.model) === true &&
+            input.equivalentModels.includes(input.model));
         if (
           input.fingerprint !== undefined &&
           (existing.fingerprint !== input.fingerprint ||
-            existing.model !== input.model ||
+            !modelMatches ||
             existing.count !== input.count)
         ) {
           throw new RequestJournalConflictError(

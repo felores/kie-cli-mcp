@@ -479,7 +479,10 @@ function assertMatchingRequest(
   input: NormalizedVideoRequest,
   fingerprint: string,
 ): void {
-  if (record.model !== input.model || record.fingerprint !== fingerprint) {
+  if (
+    canonicalModelId(record.model) !== canonicalModelId(input.model) ||
+    record.fingerprint !== fingerprint
+  ) {
     throw idempotencyConflict();
   }
 }
@@ -632,12 +635,18 @@ export async function handleVideoCreate(
 
   const callbackToken = generateCallbackToken();
   const callbackUrl = callbackUrlFor(context, requestIdHash, callbackToken);
+  const descriptor = videoDescriptor(input.model);
 
   let reservation: Awaited<ReturnType<RequestJournal["reserve"]>>;
   try {
+    const equivalentModels = [
+      canonicalModelId(input.model),
+      ...(videoModel(canonicalModelId(input.model))?.aliases ?? []),
+    ];
     reservation = await context.journal.reserve({
       requestId: id,
       model: input.model,
+      equivalentModels,
       count: 1,
       fingerprint,
       callbackToken,
@@ -656,7 +665,6 @@ export async function handleVideoCreate(
   }
 
   try {
-    const descriptor = videoDescriptor(input.model);
     const providerRequest = descriptor.normalizeSubmission({
       prompt: input.prompt,
       duration: input.duration,

@@ -1238,7 +1238,10 @@ describe("KIE OpenAI image contract", () => {
         createdBodies.push(
           JSON.parse(String(init?.body)) as Record<string, unknown>,
         );
-        return jsonResponse({ code: 200, data: { taskId: "z-1" } });
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `z-${createdBodies.length}` },
+        });
       }
       if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`))
         return jsonResponse({
@@ -1274,6 +1277,10 @@ describe("KIE OpenAI image contract", () => {
       model: "kie-z-image",
       prompt: "A bright red kite",
       size: "1024x1024",
+      n: 2,
+      quality: "standard",
+      response_format: "b64_json",
+      output_format: "png",
     };
     const response = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
@@ -1284,12 +1291,13 @@ describe("KIE OpenAI image contract", () => {
       body: JSON.stringify(request),
     });
     expect(response.status).toBe(200);
-    expect(createdBodies).toEqual([
-      {
+    expect((await responseJson(response)).data).toHaveLength(2);
+    expect(createdBodies).toEqual(
+      Array.from({ length: 2 }, () => ({
         model: "z-image",
         input: { prompt: "A bright red kite", aspect_ratio: "1:1" },
-      },
-    ]);
+      })),
+    );
     const retry = await fetch(`${baseUrl}/v1/images/generations`, {
       method: "POST",
       headers: {
@@ -1299,12 +1307,8 @@ describe("KIE OpenAI image contract", () => {
       body: JSON.stringify(request),
     });
     expect(retry.status).toBe(200);
-    expect(createdBodies).toHaveLength(1);
-    for (const invalid of [
-      { quality: "hd" },
-      { n: 1 },
-      { output_format: "png" },
-    ]) {
+    expect(createdBodies).toHaveLength(2);
+    for (const invalid of [{ quality: "hd" }, { output_format: "jpg" }]) {
       const rejected = await fetch(`${baseUrl}/v1/images/generations`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1312,7 +1316,7 @@ describe("KIE OpenAI image contract", () => {
       });
       expect(rejected.status).toBe(422);
     }
-    expect(createdBodies).toHaveLength(1);
+    expect(createdBodies).toHaveLength(2);
     resultUrls = [
       "https://cdn.example/z.png",
       "https://cdn.example/z-duplicate.png",
@@ -1329,7 +1333,7 @@ describe("KIE OpenAI image contract", () => {
     expect((await responseJson(multiplied)).error).toMatchObject({
       code: "kie_invalid_result",
     });
-    expect(createdBodies).toHaveLength(2);
+    expect(createdBodies).toHaveLength(4);
     await rm(dataDir, { recursive: true, force: true });
   });
 });
