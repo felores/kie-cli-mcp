@@ -73,6 +73,7 @@ export interface OpenAiImageAdapter extends OpenAiAdapterBase {
   defaultOutputFormat: ImageOutputFormatCapability;
   cardinality: ImageCardinality;
   supportsQuality: boolean;
+  acceptedResolutions?: readonly ("1K" | "2K" | "4K")[];
   supportsCount: boolean;
   normalizeSubmission(input: ImageSubmissionInput): unknown;
   submit(client: KieAiClient, request: unknown): Promise<TaskResponse>;
@@ -184,8 +185,9 @@ export const OPENAI_ADAPTER_REGISTRY = [
     cardinality: oneImage,
     operations: ["generation"],
     maxReferences: 0,
-    supportsQuality: false,
-    supportsCount: false,
+    supportsQuality: true,
+    acceptedResolutions: ["1K"],
+    supportsCount: true,
     defaultOutputFormat: { semanticFormat: "png", mimeType: "image/png" },
     outputFormats: { png: { semanticFormat: "png", mimeType: "image/png" } },
     normalizeSubmission: (input: ImageSubmissionInput) =>

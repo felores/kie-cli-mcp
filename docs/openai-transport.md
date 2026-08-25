@@ -74,7 +74,7 @@ apply. Embedded deployments continue using the host application's authentication
 |---|---|---|---|
 | `kie-nano-banana-image` | Nano Banana 2 | image gen/edit | `output_format=png`, `jpg`, or `jpeg`; `jpeg` maps to Kie `jpg`; up to 14 image references |
 | `kie-gpt-image-2` | GPT Image 2 text-to-image or image-to-image | image gen/edit | Fixed PNG output; omitted or explicit `output_format=png`; up to 16 image references |
-| `kie-z-image` | Z-Image | image generation | Standard image ratios; `n`, `quality`, and explicit `output_format` are not supported |
+| `kie-z-image` | Z-Image | image generation | Standard image ratios; one task per requested `n`; accepts `quality=auto`, `low`, or `standard`; fixed PNG output accepts `output_format=png` |
 | `kie-bytedance-video` | Seedance 2.5 | video | Omitted `preset` or `preset=normal`; both select the same fixed provider route |
 | `kie-bytedance-fast-video` | Seedance 2.5 | video | Legacy alias with the same `normal` preset normalization; it does not select a fast mode |
 
@@ -158,7 +158,7 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 |---|---|---|---|
 | `kie-nano-banana-image` | `nano_banana_image` | generation, edit | one Kie task and exactly one image result per requested `n` item |
 | `kie-gpt-image-2` | `gpt_image_2` | generation, edit | one Kie task and exactly one image result per requested `n` item |
-| `kie-z-image` | `z_image` | generation | one task and one PNG result; `n`, `quality`, and `output_format` are rejected |
+| `kie-z-image` | `z_image` | generation | one task and one PNG result per requested `n`; standard-compatible quality values and `output_format=png` are accepted without forwarding unsupported provider fields |
 | `kie-bytedance-video` | `bytedance_seedance_video` | create video | one task and exactly one video result |
 | `kie-bytedance-fast-video` | `bytedance_seedance_video` | create video | legacy alias of `kie-bytedance-video` |
 

@@ -185,6 +185,38 @@ describe("KIE OpenAI video contract", () => {
     router.close();
   });
 
+  test("retries idempotently across canonical and fast Seedance aliases", async () => {
+    const dataDir = await makeDataDir();
+    const calls = mockProviderForTask("vid-alias-retry", "submit");
+    const app = express();
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      dataDir,
+      ...resultHosts,
+    });
+    app.use(router);
+    const base = await serve(app);
+    const submit = (model: string) =>
+      fetch(`${base}/v1/videos`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": "alias-retry",
+        },
+        body: JSON.stringify({
+          model,
+          prompt: "Equivalent alias retry",
+          seconds: 5,
+        }),
+      });
+
+    expect((await submit("kie-bytedance-video")).status).toBe(200);
+    expect((await submit("kie-bytedance-fast-video")).status).toBe(200);
+    expect(calls.createBodies).toHaveLength(1);
+    router.close();
+  });
+
   test("unsupported model is rejected", async () => {
     const dataDir = await makeDataDir();
     const app = express();
