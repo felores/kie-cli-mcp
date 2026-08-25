@@ -86,6 +86,8 @@ apply. Embedded deployments continue using the host application's authentication
 | `kie-veo3-video` | Veo 3 | video | Text/image-to-video; `veo3` or `veo3_fast`; Veo status polling |
 | `kie-wan-2-7-video` | Wan 2.7 | video | Text, image, or reference-to-video; editing modes are excluded |
 | `kie-happyhorse-1-0-video` | HappyHorse 1.0 | video | Text, image, or reference-to-video; editing modes are excluded |
+| `kie-midjourney-video` | Midjourney | video | Image-to-video only; one uploaded image; Midjourney status normalization |
+| `kie-grok-video` | Grok Imagine | video | Text/image-to-video; `preset=normal`; one uploaded image for image mode |
 
 Video model IDs intentionally omit `seedance` so consumers use the generic video route, not an Ark-specific branch.
 
@@ -179,6 +181,8 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-veo3-video` | `veo3_generate_video` | text/image-to-video | one task and exactly one video result; Veo status route |
 | `kie-wan-2-7-video` | `wan_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
 | `kie-happyhorse-1-0-video` | `happyhorse_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
+| `kie-midjourney-video` | `midjourney_generate` | image-to-video | one task and exactly one video result; image modes remain operation exclusions |
+| `kie-grok-video` | `grok_imagine` | text/image-to-video | one task and exactly one video result; image and upscale modes remain operation exclusions |
 
 Reference counts follow each provider/core contract. Multipart uploads also
 apply a transport safety ceiling: Seedream 5 Pro and Flux 2 document 30 MiB per
@@ -186,6 +190,19 @@ provider reference but this HTTP transport accepts at most 25 MiB per file and
 25 MiB total; Qwen's provider and transport limit is 10 MiB; Flux Kontext's
 provider documentation does not state a byte limit, so the transport's 25 MiB
 ceiling applies without claiming a provider maximum.
+
+Midjourney and Grok video adapters accept at most one image reference and no
+video, audio, or frame files. Grok reference files are capped at 20 MiB by the
+transport. Both adapters accept only the `normal` compatibility preset, which
+is normalized into the provider request and omitted from the provider payload
+when it has no provider meaning. Midjourney uses its dedicated `/mj/record-info`
+status route and normalizes `successFlag` plus `resultInfoJson.resultUrls` into
+the common video polling shape.
+
+The mixed core tools remain executable through their native MCP and CLI routes.
+The OpenAI registry records unsupported operations explicitly: Midjourney image,
+style-reference, and omni-reference modes, and Grok image-generation, image
+editing, and upscale modes are not advertised through standard OpenAI routes.
 
 To add a model, add a source-backed core catalog and tool entry first, then an explicit adapter with model-specific normalization, core schema parsing, Kie client submission, status strategy, cardinality, operations, and evidence-backed exact result hosts. Add deterministic request, polling, result, idempotency, and pre-submission rejection tests. Do not add a separate model list.
 

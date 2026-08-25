@@ -62,6 +62,8 @@ Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>
 | `kie-veo3-video` | Text/image-to-video; `preset=veo3` or `veo3_fast`; fixed provider duration |
 | `kie-wan-2-7-video` | Text/image/reference-to-video; video editing is not exposed |
 | `kie-happyhorse-1-0-video` | Text/image/reference-to-video; video editing is not exposed |
+| `kie-midjourney-video` | Image-to-video only; exactly one image reference; standard motion mode |
+| `kie-grok-video` | Text/image-to-video; `preset=normal`; one image reference for image mode |
 
 Explicit image formats are verified against the result MIME type and file
 signature. Masks and `background=transparent` are unsupported and fail before

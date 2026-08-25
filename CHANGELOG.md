@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## OpenAI transport 0.6.0 - 2026-08-25
+
+### Added
+- Added `kie-midjourney-video` for one-image Midjourney image-to-video generation.
+- Added `kie-grok-video` for Grok Imagine text-to-video and one-image image-to-video generation.
+- Added explicit operation exclusions for unsupported mixed-tool image, reference, and upscale modes.
+- Added Midjourney `successFlag` and `resultInfoJson.resultUrls` status normalization.
+
+### Changed
+- Expanded registry-derived discovery and dispatch with both Phase 4 video adapters.
+- Added adapter-owned reference limits and malformed-result, host-isolation, cardinality, and early-rejection coverage.
+- Preserved contract version 3 and the existing four public model IDs.
+
 ## OpenAI transport 0.5.0 - 2026-08-24
 
 ### Added
