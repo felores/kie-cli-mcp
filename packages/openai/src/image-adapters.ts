@@ -40,19 +40,6 @@ export const DEFAULT_RESULT_HOSTS = [
   "tempfile.aiquickdraw.com",
 ] as const;
 
-const NANO_RATIOS = [
-  "1:1",
-  "2:3",
-  "3:2",
-  "3:4",
-  "4:3",
-  "4:5",
-  "5:4",
-  "9:16",
-  "16:9",
-  "21:9",
-] as const;
-const GPT_RATIOS = ["1:1", "9:16", "16:9", "4:3", "3:4"] as const;
 const QUALITY_TO_RESOLUTION: Record<string, "1K" | "2K" | "4K"> = {
   auto: "1K",
   low: "1K",
@@ -265,7 +252,10 @@ function reduceRatio(width: number, height: number): string {
 }
 
 function readAspectRatio(value: unknown, model: KieImageModel): string {
-  if (value === undefined || value === "auto" || value === "") return "auto";
+  const descriptor = descriptorFor(model);
+  if (value === undefined || value === "auto" || value === "") {
+    return descriptor.defaultAspectRatio;
+  }
   if (typeof value !== "string") {
     throw invalidSetting("The size setting is invalid.", "size");
   }
@@ -300,13 +290,7 @@ function readAspectRatio(value: unknown, model: KieImageModel): string {
     );
   }
 
-  const supported =
-    model === "kie-nano-banana-image"
-      ? NANO_RATIOS
-      : model === "kie-gpt-image-2"
-        ? GPT_RATIOS
-        : ["1:1", "4:3", "3:4", "16:9", "9:16"];
-  if (!(supported as readonly string[]).includes(ratio)) {
+  if (!descriptor.aspectRatios.includes(ratio)) {
     throw invalidSetting(
       `The size ratio ${ratio} is not supported for ${model}.`,
       "size",
@@ -463,6 +447,12 @@ function validateReferences(
       throw error;
     }
     totalBytes += file.bytes.length;
+    if (descriptor && file.bytes.length > descriptor.maxReferenceBytes) {
+      throw invalidReference(
+        `This model accepts reference images up to ${Math.floor(descriptor.maxReferenceBytes / (1024 * 1024))} MiB.`,
+        file.fieldName,
+      );
+    }
   }
   if (totalBytes > MAX_REFERENCE_TOTAL_BYTES) {
     throw invalidReference("The total reference image size is too large.");
@@ -938,6 +928,30 @@ function readResultUrls(data: Record<string, unknown>): string[] {
   return urls as string[];
 }
 
+function normalizedImageStatus(
+  descriptor: OpenAiImageAdapter,
+  data: Record<string, unknown>,
+): { state: "pending" | "success" | "fail"; urls?: string[] } {
+  if (descriptor.statusStrategy === "flux-kontext") {
+    const successFlag = data.successFlag;
+    if (successFlag === 0) return { state: "pending" };
+    if (successFlag === 2 || successFlag === 3) return { state: "fail" };
+    if (successFlag !== 1 || !isRecord(data.response)) {
+      throw new InvalidProviderResultError();
+    }
+    const url = data.response.resultImageUrl;
+    if (typeof url !== "string" || url.length === 0) {
+      throw new InvalidProviderResultError();
+    }
+    return { state: "success", urls: [url] };
+  }
+  if (data.state === "fail") return { state: "fail" };
+  if (data.state === "success") {
+    return { state: "success", urls: readResultUrls(data) };
+  }
+  return { state: "pending" };
+}
+
 async function delay(milliseconds: number): Promise<void> {
   await new Promise<void>((resolvePromise) => {
     setTimeout(resolvePromise, milliseconds);
@@ -952,30 +966,24 @@ async function pollAndDownload(
 ): Promise<string[]> {
   const deadline = Date.now() + context.pollTimeoutMs;
   let firstPoll = true;
+  const descriptor = descriptorFor(input.model);
   for (;;) {
     if (!firstPoll && Date.now() >= deadline) {
       throw new ProviderTimeoutError();
     }
     firstPoll = false;
-    const response = await pollOpenAiAdapterStatus(
-      descriptorFor(input.model),
-      client,
-      taskId,
-    );
+    const response = await pollOpenAiAdapterStatus(descriptor, client, taskId);
     if (!responseCodeIsSuccessful(response.code) || !isRecord(response.data)) {
       throw new KieAiResponseError(
         response.code,
         "The provider status response is invalid.",
       );
     }
-    const state = response.data.state;
-    if (state === "fail") throw new ProviderTaskFailedError();
-    if (state === "success") {
-      const urls = readResultUrls(response.data);
-      if (
-        urls.length !==
-        descriptorFor(input.model).cardinality.expectedResultsPerTask
-      ) {
+    const status = normalizedImageStatus(descriptor, response.data);
+    if (status.state === "fail") throw new ProviderTaskFailedError();
+    if (status.state === "success") {
+      const urls = status.urls ?? [];
+      if (urls.length !== descriptor.cardinality.expectedResultsPerTask) {
         throw new InvalidProviderResultError();
       }
       const downloads: string[] = [];

@@ -9,7 +9,15 @@ import express from "express";
 import { createKieOpenAiRouter } from "../src/http-server.js";
 
 const providerBaseUrl = "https://provider.example/api/v1";
-const resultOptions = { allowedResultHosts: ["cdn.example"] };
+const resultOptions = {
+  allowedResultHosts: ["cdn.example"],
+  allowedResultHostsByModel: {
+    "kie-seedream-5-pro-image": ["cdn.example"],
+    "kie-qwen-image": ["cdn.example"],
+    "kie-flux-2-pro-image": ["cdn.example"],
+    "kie-flux-kontext-pro-image": ["cdn.example"],
+  },
+};
 const originalFetch = globalThis.fetch;
 const servers: Server[] = [];
 
@@ -1334,6 +1342,595 @@ describe("KIE OpenAI image contract", () => {
       code: "kie_invalid_result",
     });
     expect(createdBodies).toHaveLength(4);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("maps exact Infinite Canvas generation payloads for every expanded image adapter", async () => {
+    const dataDir = await makeDataDir();
+    const submissions: Array<{ url: string; body: Record<string, unknown> }> =
+      [];
+    let taskNumber = 0;
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (
+        url === `${providerBaseUrl}/jobs/createTask` ||
+        url === `${providerBaseUrl}/flux/kontext/generate`
+      ) {
+        submissions.push({
+          url,
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `expanded-generation-${taskNumber++}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        const taskId = new URL(url).searchParams.get("taskId");
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: [`https://cdn.example/${taskId}.png`],
+            }),
+          },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/flux/kontext/record-info`)) {
+        const taskId = new URL(url).searchParams.get("taskId");
+        return jsonResponse({
+          code: 200,
+          data: {
+            successFlag: 1,
+            response: {
+              resultImageUrl: `https://cdn.example/${taskId}.png`,
+            },
+          },
+        });
+      }
+      if (url.startsWith("https://cdn.example/")) {
+        return new Response(pngBytes(url), {
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    const models = [
+      "kie-seedream-5-pro-image",
+      "kie-qwen-image",
+      "kie-flux-2-pro-image",
+      "kie-flux-kontext-pro-image",
+    ];
+    for (const model of models) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": `generation-${model}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt: "A geometric botanical poster",
+          n: 2,
+          quality: "standard",
+          size: "1024x1024",
+          response_format: "b64_json",
+          output_format: "png",
+        }),
+      });
+      const body = await responseJson(response);
+      if (response.status !== 200) {
+        throw new Error(`${model}: ${JSON.stringify(body)}`);
+      }
+      expect({ model, status: response.status, body }).toMatchObject({
+        model,
+        status: 200,
+      });
+      expect(body.data).toHaveLength(2);
+    }
+
+    expect(submissions).toHaveLength(8);
+    expect(submissions.map(({ url, body }) => ({ url, body }))).toEqual([
+      ...Array.from({ length: 2 }, () => ({
+        url: `${providerBaseUrl}/jobs/createTask`,
+        body: {
+          model: "seedream/5-pro-text-to-image",
+          input: {
+            prompt: "A geometric botanical poster",
+            aspect_ratio: "1:1",
+            quality: "basic",
+            output_format: "png",
+            nsfw_checker: false,
+          },
+        },
+      })),
+      ...Array.from({ length: 2 }, () => ({
+        url: `${providerBaseUrl}/jobs/createTask`,
+        body: {
+          model: "qwen/text-to-image",
+          input: {
+            prompt: "A geometric botanical poster",
+            image_size: "square_hd",
+            num_inference_steps: 30,
+            guidance_scale: 2.5,
+            enable_safety_checker: false,
+            output_format: "png",
+            negative_prompt: " ",
+            acceleration: "none",
+          },
+        },
+      })),
+      ...Array.from({ length: 2 }, () => ({
+        url: `${providerBaseUrl}/jobs/createTask`,
+        body: {
+          model: "flux-2/pro-text-to-image",
+          input: {
+            prompt: "A geometric botanical poster",
+            aspect_ratio: "1:1",
+            resolution: "1K",
+          },
+        },
+      })),
+      ...Array.from({ length: 2 }, () => ({
+        url: `${providerBaseUrl}/flux/kontext/generate`,
+        body: {
+          prompt: "A geometric botanical poster",
+          enableTranslation: true,
+          uploadCn: false,
+          aspectRatio: "1:1",
+          outputFormat: "png",
+          promptUpsampling: false,
+          model: "flux-kontext-pro",
+          safetyTolerance: 6,
+        },
+      })),
+    ]);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("maps exact Infinite Canvas edit payloads for every expanded image adapter", async () => {
+    const dataDir = await makeDataDir();
+    const submissions: Array<{ url: string; body: Record<string, unknown> }> =
+      [];
+    let uploadNumber = 0;
+    let taskNumber = 0;
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === "https://upload.example/api/file-stream-upload") {
+        uploadNumber += 1;
+        return jsonResponse({
+          code: 200,
+          data: { fileUrl: `https://uploaded.example/ref-${uploadNumber}.png` },
+        });
+      }
+      if (
+        url === `${providerBaseUrl}/jobs/createTask` ||
+        url === `${providerBaseUrl}/flux/kontext/generate`
+      ) {
+        submissions.push({
+          url,
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `expanded-edit-${taskNumber++}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/edit.png"],
+            }),
+          },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/flux/kontext/record-info`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            successFlag: 1,
+            response: { resultImageUrl: "https://cdn.example/edit.png" },
+          },
+        });
+      }
+      if (url === "https://cdn.example/edit.png") {
+        return new Response(pngBytes("expanded-edit"), {
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          uploadBaseUrl: "https://upload.example",
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    const models = [
+      "kie-seedream-5-pro-image",
+      "kie-qwen-image",
+      "kie-flux-2-pro-image",
+      "kie-flux-kontext-pro-image",
+    ];
+    for (const model of models) {
+      const form = new FormData();
+      form.set("model", model);
+      form.set("prompt", "Turn the subject into a paper collage");
+      form.set("n", "1");
+      form.set("quality", "standard");
+      form.set("size", "1024x1024");
+      form.set("response_format", "b64_json");
+      form.set("output_format", "png");
+      form.append(
+        "image",
+        new Blob([pngBytes(model)], { type: "image/png" }),
+        `${model}.png`,
+      );
+      const response = await fetch(`${baseUrl}/v1/images/edits`, {
+        method: "POST",
+        headers: { "Idempotency-Key": `edit-${model}` },
+        body: form,
+      });
+      const body = await responseJson(response);
+      if (response.status !== 200) {
+        throw new Error(`${model}: ${JSON.stringify(body)}`);
+      }
+      expect({ model, status: response.status, body }).toMatchObject({
+        model,
+        status: 200,
+      });
+      expect(body.data).toHaveLength(1);
+    }
+
+    expect(uploadNumber).toBe(4);
+    expect(submissions).toEqual([
+      {
+        url: `${providerBaseUrl}/jobs/createTask`,
+        body: {
+          model: "seedream/5-pro-image-to-image",
+          input: {
+            prompt: "Turn the subject into a paper collage",
+            aspect_ratio: "1:1",
+            quality: "basic",
+            output_format: "png",
+            nsfw_checker: false,
+            image_urls: ["https://uploaded.example/ref-1.png"],
+          },
+        },
+      },
+      {
+        url: `${providerBaseUrl}/jobs/createTask`,
+        body: {
+          model: "qwen/image-edit",
+          input: {
+            prompt: "Turn the subject into a paper collage",
+            image_size: "square_hd",
+            num_inference_steps: 25,
+            guidance_scale: 4,
+            enable_safety_checker: false,
+            output_format: "png",
+            negative_prompt: "blurry, ugly",
+            acceleration: "none",
+            image_url: "https://uploaded.example/ref-2.png",
+            sync_mode: false,
+          },
+        },
+      },
+      {
+        url: `${providerBaseUrl}/jobs/createTask`,
+        body: {
+          model: "flux-2/pro-image-to-image",
+          input: {
+            prompt: "Turn the subject into a paper collage",
+            aspect_ratio: "1:1",
+            resolution: "1K",
+            input_urls: ["https://uploaded.example/ref-3.png"],
+          },
+        },
+      },
+      {
+        url: `${providerBaseUrl}/flux/kontext/generate`,
+        body: {
+          prompt: "Turn the subject into a paper collage",
+          enableTranslation: true,
+          uploadCn: false,
+          aspectRatio: "1:1",
+          outputFormat: "png",
+          promptUpsampling: false,
+          model: "flux-kontext-pro",
+          safetyTolerance: 2,
+          inputImage: "https://uploaded.example/ref-4.png",
+        },
+      },
+    ]);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("maps and validates JPEG results for every JPEG-capable expanded adapter", async () => {
+    const dataDir = await makeDataDir();
+    const submissions: Array<{ url: string; body: Record<string, unknown> }> =
+      [];
+    let taskNumber = 0;
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (
+        url === `${providerBaseUrl}/jobs/createTask` ||
+        url === `${providerBaseUrl}/flux/kontext/generate`
+      ) {
+        submissions.push({
+          url,
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `jpeg-expanded-${taskNumber++}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        const taskId = new URL(url).searchParams.get("taskId");
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: [`https://cdn.example/${taskId}.jpg`],
+            }),
+          },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/flux/kontext/record-info`)) {
+        const taskId = new URL(url).searchParams.get("taskId");
+        return jsonResponse({
+          code: 200,
+          data: {
+            successFlag: 1,
+            response: {
+              resultImageUrl: `https://cdn.example/${taskId}.jpg`,
+            },
+          },
+        });
+      }
+      if (url.startsWith("https://cdn.example/") && url.endsWith(".jpg")) {
+        return new Response(jpegBytes(url), {
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    for (const model of [
+      "kie-seedream-5-pro-image",
+      "kie-qwen-image",
+      "kie-flux-kontext-pro-image",
+    ]) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": `jpeg-${model}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt: "A warm editorial portrait",
+          n: 1,
+          quality: "standard",
+          size: "1024x1024",
+          response_format: "b64_json",
+          output_format: "jpeg",
+        }),
+      });
+      expect(response.status).toBe(200);
+      expect((await responseJson(response)).data).toHaveLength(1);
+    }
+    expect(submissions).toHaveLength(3);
+    expect(submissions[0]).toMatchObject({
+      body: { input: { output_format: "jpeg" } },
+    });
+    expect(submissions[1]).toMatchObject({
+      body: { input: { output_format: "jpeg" } },
+    });
+    expect(submissions[2]).toMatchObject({
+      body: { outputFormat: "jpeg" },
+    });
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("rejects unsupported expanded-adapter settings and reference counts before provider work", async () => {
+    const dataDir = await makeDataDir();
+    const providerCalls: string[] = [];
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (
+        url.startsWith(providerBaseUrl) ||
+        url.startsWith("https://upload.example")
+      ) {
+        providerCalls.push(url);
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          uploadBaseUrl: "https://upload.example",
+          dataDir,
+        }),
+      ),
+    );
+    const invalidGeneration = [
+      { model: "kie-seedream-5-pro-image", quality: "high" },
+      { model: "kie-qwen-image", quality: "hd" },
+      { model: "kie-flux-2-pro-image", quality: "high" },
+      { model: "kie-flux-2-pro-image", output_format: "jpg" },
+      { model: "kie-flux-kontext-pro-image", quality: "hd" },
+    ];
+    for (const invalid of invalidGeneration) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          prompt: "Unsupported setting fixture",
+          n: 1,
+          quality: "standard",
+          size: "1024x1024",
+          response_format: "b64_json",
+          output_format: "png",
+          ...invalid,
+        }),
+      });
+      expect({ invalid, status: response.status }).toEqual({
+        invalid,
+        status: 422,
+      });
+    }
+
+    const limits: Array<[string, number]> = [
+      ["kie-seedream-5-pro-image", 11],
+      ["kie-qwen-image", 2],
+      ["kie-flux-2-pro-image", 9],
+      ["kie-flux-kontext-pro-image", 2],
+    ];
+    for (const [model, count] of limits) {
+      const form = new FormData();
+      form.set("model", model);
+      form.set("prompt", "Too many references");
+      form.set("n", "1");
+      form.set("quality", "standard");
+      form.set("size", "1024x1024");
+      form.set("response_format", "b64_json");
+      form.set("output_format", "png");
+      for (let index = 0; index < count; index += 1) {
+        form.append(
+          "image",
+          new Blob([pngBytes(`${model}-${index}`)], { type: "image/png" }),
+          `${index}.png`,
+        );
+      }
+      const response = await fetch(`${baseUrl}/v1/images/edits`, {
+        method: "POST",
+        body: form,
+      });
+      expect(response.status).toBe(422);
+    }
+    expect(providerCalls).toEqual([]);
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("parses Flux Kontext pending, success, failure, and malformed status envelopes", async () => {
+    const dataDir = await makeDataDir();
+    let taskNumber = 0;
+    const polls = new Map<string, number>();
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/flux/kontext/generate`) {
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `kontext-status-${taskNumber++}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/flux/kontext/record-info`)) {
+        const taskId = new URL(url).searchParams.get("taskId") ?? "";
+        const count = (polls.get(taskId) ?? 0) + 1;
+        polls.set(taskId, count);
+        if (taskId === "kontext-status-0" && count === 1) {
+          return jsonResponse({ code: 200, data: { successFlag: 0 } });
+        }
+        if (taskId === "kontext-status-0") {
+          return jsonResponse({
+            code: 200,
+            data: {
+              successFlag: 1,
+              response: {
+                resultImageUrl: "https://cdn.example/kontext-status.png",
+              },
+            },
+          });
+        }
+        if (taskId === "kontext-status-1") {
+          return jsonResponse({ code: 200, data: { successFlag: 3 } });
+        }
+        return jsonResponse({ code: 200, data: { successFlag: 1 } });
+      }
+      if (url === "https://cdn.example/kontext-status.png") {
+        return new Response(pngBytes("kontext-status"), {
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    const submit = (key: string) =>
+      fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": key,
+        },
+        body: JSON.stringify({
+          model: "kie-flux-kontext-pro-image",
+          prompt: "Flux Kontext status fixture",
+          n: 1,
+          quality: "standard",
+          size: "1024x1024",
+          response_format: "b64_json",
+          output_format: "png",
+        }),
+      });
+
+    expect((await submit("kontext-success")).status).toBe(200);
+    expect((await submit("kontext-failure")).status).toBe(502);
+    const malformed = await submit("kontext-malformed");
+    expect(malformed.status).toBe(502);
+    expect((await responseJson(malformed)).error).toMatchObject({
+      code: "kie_invalid_result",
+    });
     await rm(dataDir, { recursive: true, force: true });
   });
 });

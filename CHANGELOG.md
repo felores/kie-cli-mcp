@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## OpenAI transport 0.4.0 - 2026-08-24
+
+### Added
+- Added registry-driven generation and editing adapters for Seedream 5 Pro, Qwen Image, Flux 2 Pro, and Flux Kontext Pro.
+- Added exact Infinite Canvas generation and multipart edit contracts for every new public model.
+
+### Changed
+- Expanded `/v1/models` with four stable `-image` IDs while preserving per-model formats, quality limits, references, task cardinality, status parsing, and result-host isolation.
+- Removed the four completed image tools from the explicit OpenAI exclusion map.
+
 ## OpenAI transport 0.3.0 - 2026-08-24
 
 ### Added

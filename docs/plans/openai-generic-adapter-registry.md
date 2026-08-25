@@ -10,6 +10,7 @@
 - Baseline OpenAI contract version: `2`
 - Implemented contract version: `3`
 - Implementation status: completed 2026-08-24
+- Phase 2 image expansion: completed in OpenAI transport `0.4.0`
 
 ## Objective
 
