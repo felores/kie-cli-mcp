@@ -50,6 +50,10 @@ Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>
 |---|---|
 | `kie-nano-banana-image` | `output_format=png`, `jpg`, or `jpeg` (`jpeg` normalizes to `jpg`) |
 | `kie-z-image` | generation only; PNG output and standard ratios |
+| `kie-seedream-5-pro-image` | Generation/editing; PNG or JPEG; 1K/2K; up to 10 references |
+| `kie-qwen-image` | Generation/editing; PNG or JPEG; one reference |
+| `kie-flux-2-pro-image` | Generation/editing; fixed PNG; 1K/2K; up to 8 references |
+| `kie-flux-kontext-pro-image` | Generation/editing; PNG or JPEG; one reference |
 | `kie-gpt-image-2` | Fixed PNG; omit `output_format` or use `png` |
 | `kie-bytedance-video` | Omit `preset` or use `preset=normal` |
 | `kie-bytedance-fast-video` | Same fixed Seedance 2.5 route and preset behavior |

@@ -1,6 +1,6 @@
 {
   "name": "@felores/kie-ai-openai-server",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "OpenAI-compatible HTTP transport for selected Kie.ai image and video models.",
   "type": "module",
   "main": "dist/index.js",

@@ -75,6 +75,10 @@ apply. Embedded deployments continue using the host application's authentication
 | `kie-nano-banana-image` | Nano Banana 2 | image gen/edit | `output_format=png`, `jpg`, or `jpeg`; `jpeg` maps to Kie `jpg`; up to 14 image references |
 | `kie-gpt-image-2` | GPT Image 2 text-to-image or image-to-image | image gen/edit | Fixed PNG output; omitted or explicit `output_format=png`; up to 16 image references |
 | `kie-z-image` | Z-Image | image generation | Standard image ratios; one task per requested `n`; accepts `quality=auto`, `low`, or `standard`; fixed PNG output accepts `output_format=png` |
+| `kie-seedream-5-pro-image` | Seedream 5 Pro | image gen/edit | PNG or JPEG; 1K/2K; up to 10 references |
+| `kie-qwen-image` | Qwen Image | image gen/edit | PNG or JPEG; standard-compatible quality; one reference |
+| `kie-flux-2-pro-image` | Flux 2 Pro | image gen/edit | Fixed PNG; 1K/2K; up to 8 references |
+| `kie-flux-kontext-pro-image` | Flux Kontext Pro | image gen/edit | PNG or JPEG; standard-compatible quality; one reference; Flux Kontext status route |
 | `kie-bytedance-video` | Seedance 2.5 | video | Omitted `preset` or `preset=normal`; both select the same fixed provider route |
 | `kie-bytedance-fast-video` | Seedance 2.5 | video | Legacy alias with the same `normal` preset normalization; it does not select a fast mode |
 
@@ -159,6 +163,10 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-nano-banana-image` | `nano_banana_image` | generation, edit | one Kie task and exactly one image result per requested `n` item |
 | `kie-gpt-image-2` | `gpt_image_2` | generation, edit | one Kie task and exactly one image result per requested `n` item |
 | `kie-z-image` | `z_image` | generation | one task and one PNG result per requested `n`; standard-compatible quality values and `output_format=png` are accepted without forwarding unsupported provider fields |
+| `kie-seedream-5-pro-image` | `bytedance_seedream_image` | generation, edit | one Seedream 5 Pro task and one PNG/JPEG result per requested `n`; 10 references |
+| `kie-qwen-image` | `qwen_image` | generation, edit | one Qwen task and one PNG/JPEG result per requested `n`; one reference |
+| `kie-flux-2-pro-image` | `flux2_image` | generation, edit | one Flux 2 Pro task and one fixed PNG result per requested `n`; 8 references |
+| `kie-flux-kontext-pro-image` | `flux_kontext_image` | generation, edit | one Flux Kontext Pro task and one PNG/JPEG result per requested `n`; one reference and special status parsing |
 | `kie-bytedance-video` | `bytedance_seedance_video` | create video | one task and exactly one video result |
 | `kie-bytedance-fast-video` | `bytedance_seedance_video` | create video | legacy alias of `kie-bytedance-video` |
 

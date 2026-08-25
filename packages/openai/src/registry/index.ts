@@ -1,11 +1,15 @@
 import {
   ByteDanceSeedanceVideoSchema,
+  ByteDanceSeedreamImageSchema,
+  Flux2ImageSchema,
+  FluxKontextImageSchema,
   GptImage2Schema,
   getCatalogEntry,
   getTool,
   type KieAiResponse,
   MODEL_CATALOG,
   NanoBananaImageSchema,
+  QwenImageSchema,
   ZImageSchema,
 } from "@felores/kie-ai-core";
 import type { KieAiClient } from "@felores/kie-ai-core/client";
@@ -20,7 +24,7 @@ export type StatusStrategy =
 export type ImageOutputFormatCapability = {
   semanticFormat: "png" | "jpg";
   mimeType: "image/png" | "image/jpeg";
-  providerFormat?: "png" | "jpg";
+  providerFormat?: "png" | "jpg" | "jpeg";
 };
 export type ImageCardinality = {
   submission: "one-task-per-image";
@@ -69,6 +73,9 @@ export interface OpenAiImageAdapter extends OpenAiAdapterBase {
   mediaType: "image";
   operations: readonly ("generation" | "edit")[];
   maxReferences: number;
+  maxReferenceBytes: number;
+  aspectRatios: readonly string[];
+  defaultAspectRatio: string;
   outputFormats: Readonly<Record<string, ImageOutputFormatCapability>>;
   defaultOutputFormat: ImageOutputFormatCapability;
   cardinality: ImageCardinality;
@@ -96,8 +103,10 @@ const resultHosts = [
   "file.aiquickdraw.com",
   "tempfile.aiquickdraw.com",
 ] as const;
+const temporaryResultHosts = ["tempfile.aiquickdraw.com"] as const;
 const evidence = "https://docs.kie.ai/market-api/quickstart";
 const generatedFileEvidence = "https://docs.kie.ai/common-api/download-url";
+const imageReferenceBytes = 25 * 1024 * 1024;
 const png = {
   semanticFormat: "png",
   mimeType: "image/png",
@@ -108,6 +117,13 @@ const jpg = {
   mimeType: "image/jpeg",
   providerFormat: "jpg",
 } as const;
+const jpeg = {
+  semanticFormat: "jpg",
+  mimeType: "image/jpeg",
+  providerFormat: "jpeg",
+} as const;
+const commonRatios = ["1:1", "4:3", "3:4", "16:9", "9:16"] as const;
+const extendedRatios = [...commonRatios, "2:3", "3:2", "21:9"] as const;
 const oneImage: ImageCardinality = {
   submission: "one-task-per-image",
   providerCount: "one",
@@ -131,6 +147,21 @@ export const OPENAI_ADAPTER_REGISTRY = [
     cardinality: oneImage,
     operations: ["generation", "edit"],
     maxReferences: 14,
+    maxReferenceBytes: imageReferenceBytes,
+    aspectRatios: [
+      "auto",
+      "1:1",
+      "2:3",
+      "3:2",
+      "3:4",
+      "4:3",
+      "4:5",
+      "5:4",
+      "9:16",
+      "16:9",
+      "21:9",
+    ],
+    defaultAspectRatio: "auto",
     supportsQuality: true,
     supportsCount: true,
     defaultOutputFormat: png,
@@ -159,6 +190,9 @@ export const OPENAI_ADAPTER_REGISTRY = [
     cardinality: oneImage,
     operations: ["generation", "edit"],
     maxReferences: 16,
+    maxReferenceBytes: imageReferenceBytes,
+    aspectRatios: commonRatios,
+    defaultAspectRatio: "1:1",
     supportsQuality: true,
     supportsCount: true,
     defaultOutputFormat: { semanticFormat: "png", mimeType: "image/png" },
@@ -185,6 +219,9 @@ export const OPENAI_ADAPTER_REGISTRY = [
     cardinality: oneImage,
     operations: ["generation"],
     maxReferences: 0,
+    maxReferenceBytes: 0,
+    aspectRatios: commonRatios,
+    defaultAspectRatio: "1:1",
     supportsQuality: true,
     acceptedResolutions: ["1K"],
     supportsCount: true,
@@ -197,6 +234,146 @@ export const OPENAI_ADAPTER_REGISTRY = [
       }),
     submit: (client: KieAiClient, request: unknown) =>
       client.generateZImage(request as never),
+  },
+  {
+    publicModelId: "kie-seedream-5-pro-image",
+    toolName: "bytedance_seedream_image",
+    mediaType: "image",
+    ownedBy: "kie.ai",
+    apiType: "bytedance-seedream-image",
+    statusStrategy: "jobs",
+    allowedResultHosts: temporaryResultHosts,
+    resultHostEvidenceUrl:
+      "https://docs.kie.ai/market/seedream/5-pro-image-to-image",
+    cardinality: oneImage,
+    operations: ["generation", "edit"],
+    maxReferences: 10,
+    maxReferenceBytes: imageReferenceBytes,
+    aspectRatios: extendedRatios,
+    defaultAspectRatio: "1:1",
+    supportsQuality: true,
+    acceptedResolutions: ["1K", "2K"],
+    supportsCount: true,
+    defaultOutputFormat: png,
+    outputFormats: { png, jpg: jpeg, jpeg },
+    normalizeSubmission: (input: ImageSubmissionInput) =>
+      ByteDanceSeedreamImageSchema.parse({
+        version: "5-pro",
+        prompt: input.prompt,
+        ...(input.imageUrls.length ? { image_urls: input.imageUrls } : {}),
+        aspect_ratio: input.aspectRatio,
+        quality: input.resolution === "2K" ? "high" : "basic",
+        output_format: input.effectiveOutputFormat.providerFormat,
+        nsfw_checker: false,
+      }),
+    submit: (client: KieAiClient, request: unknown) =>
+      client.generateByteDanceSeedreamImage(request as never),
+  },
+  {
+    publicModelId: "kie-qwen-image",
+    toolName: "qwen_image",
+    mediaType: "image",
+    ownedBy: "kie.ai",
+    apiType: "qwen-image",
+    statusStrategy: "jobs",
+    allowedResultHosts: temporaryResultHosts,
+    resultHostEvidenceUrl: "https://docs.kie.ai/market/qwen/image-edit",
+    cardinality: oneImage,
+    operations: ["generation", "edit"],
+    maxReferences: 1,
+    maxReferenceBytes: 10 * 1024 * 1024,
+    aspectRatios: commonRatios,
+    defaultAspectRatio: "1:1",
+    supportsQuality: true,
+    acceptedResolutions: ["1K"],
+    supportsCount: true,
+    defaultOutputFormat: png,
+    outputFormats: { png, jpg: jpeg, jpeg },
+    normalizeSubmission: (input: ImageSubmissionInput) => {
+      const sizeByRatio: Record<string, string> = {
+        "1:1": "square_hd",
+        "4:3": "landscape_4_3",
+        "3:4": "portrait_4_3",
+        "16:9": "landscape_16_9",
+        "9:16": "portrait_16_9",
+      };
+      return QwenImageSchema.parse({
+        prompt: input.prompt,
+        ...(input.imageUrls[0] ? { image_url: input.imageUrls[0] } : {}),
+        image_size: sizeByRatio[input.aspectRatio],
+        output_format: input.effectiveOutputFormat.providerFormat,
+        enable_safety_checker: false,
+        negative_prompt: input.imageUrls.length ? "blurry, ugly" : " ",
+      });
+    },
+    submit: (client: KieAiClient, request: unknown) =>
+      client.generateQwenImage(request as never),
+  },
+  {
+    publicModelId: "kie-flux-2-pro-image",
+    toolName: "flux2_image",
+    mediaType: "image",
+    ownedBy: "kie.ai",
+    apiType: "flux2-image",
+    statusStrategy: "jobs",
+    allowedResultHosts: temporaryResultHosts,
+    resultHostEvidenceUrl: "https://docs.kie.ai/market/flux2/pro-text-to-image",
+    cardinality: oneImage,
+    operations: ["generation", "edit"],
+    maxReferences: 8,
+    maxReferenceBytes: imageReferenceBytes,
+    aspectRatios: extendedRatios.filter((ratio) => ratio !== "21:9"),
+    defaultAspectRatio: "1:1",
+    supportsQuality: true,
+    acceptedResolutions: ["1K", "2K"],
+    supportsCount: true,
+    defaultOutputFormat: { semanticFormat: "png", mimeType: "image/png" },
+    outputFormats: { png: { semanticFormat: "png", mimeType: "image/png" } },
+    normalizeSubmission: (input: ImageSubmissionInput) =>
+      Flux2ImageSchema.parse({
+        prompt: input.prompt,
+        ...(input.imageUrls.length ? { input_urls: input.imageUrls } : {}),
+        aspect_ratio: input.aspectRatio,
+        resolution: input.resolution,
+        model_type: "pro",
+      }),
+    submit: (client: KieAiClient, request: unknown) =>
+      client.generateFlux2Image(request as never),
+  },
+  {
+    publicModelId: "kie-flux-kontext-pro-image",
+    toolName: "flux_kontext_image",
+    mediaType: "image",
+    ownedBy: "kie.ai",
+    apiType: "flux-kontext-image",
+    statusStrategy: "flux-kontext",
+    allowedResultHosts: temporaryResultHosts,
+    resultHostEvidenceUrl: generatedFileEvidence,
+    cardinality: oneImage,
+    operations: ["generation", "edit"],
+    maxReferences: 1,
+    maxReferenceBytes: imageReferenceBytes,
+    aspectRatios: ["21:9", ...commonRatios],
+    defaultAspectRatio: "16:9",
+    supportsQuality: true,
+    acceptedResolutions: ["1K"],
+    supportsCount: true,
+    defaultOutputFormat: jpeg,
+    outputFormats: { png, jpg: jpeg, jpeg },
+    normalizeSubmission: (input: ImageSubmissionInput) =>
+      FluxKontextImageSchema.parse({
+        prompt: input.prompt,
+        ...(input.imageUrls[0] ? { inputImage: input.imageUrls[0] } : {}),
+        aspectRatio: input.aspectRatio,
+        outputFormat: input.effectiveOutputFormat.providerFormat,
+        model: "flux-kontext-pro",
+        enableTranslation: true,
+        promptUpsampling: false,
+        uploadCn: false,
+        safetyTolerance: input.imageUrls.length ? 2 : 6,
+      }),
+    submit: (client: KieAiClient, request: unknown) =>
+      client.generateFluxKontextImage(request as never),
   },
   {
     publicModelId: "kie-bytedance-video",
@@ -241,10 +418,6 @@ export const OPENAI_ADAPTER_REGISTRY = [
 ] as const satisfies readonly OpenAiAdapter[];
 
 export const OPENAI_EXCLUSIONS: Readonly<Record<string, string>> = {
-  bytedance_seedream_image: "requires a dedicated image adapter",
-  qwen_image: "requires a dedicated image adapter",
-  flux_kontext_image: "requires a dedicated image adapter and status strategy",
-  flux2_image: "requires a dedicated image adapter",
   topaz_upscale_image:
     "utility transformation is not mapped to standard image routes",
   ideogram_reframe: "reframe transformation has a specialized input contract",
@@ -286,6 +459,8 @@ export const OPENAI_STATUS_STRATEGIES: Readonly<
   >
 > = {
   jobs: (client, taskId, apiType) => client.getTaskStatus(taskId, apiType),
+  "flux-kontext": (client, taskId, apiType) =>
+    client.getTaskStatus(taskId, apiType),
 };
 
 export function pollOpenAiAdapterStatus(
@@ -342,7 +517,11 @@ function resolveAdapter(adapter: OpenAiAdapter): OpenAiAdapter {
     !adapter.cardinality ||
     !adapter.normalizeSubmission ||
     !adapter.submit ||
-    (adapter.mediaType === "image" && adapter.maxReferences < 0)
+    (adapter.mediaType === "image" &&
+      (adapter.maxReferences < 0 ||
+        adapter.maxReferenceBytes < 0 ||
+        adapter.aspectRatios.length === 0 ||
+        !adapter.aspectRatios.includes(adapter.defaultAspectRatio)))
   )
     throw new Error(
       `OpenAI adapter ${adapter.publicModelId} is not executable.`,

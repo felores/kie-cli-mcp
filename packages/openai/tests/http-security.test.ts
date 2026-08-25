@@ -150,8 +150,12 @@ describe("standalone security boundary", () => {
     expect(await responseJson(discovered)).toEqual({
       object: "list",
       data: [
+        "kie-flux-2-pro-image",
+        "kie-flux-kontext-pro-image",
         "kie-gpt-image-2",
         "kie-nano-banana-image",
+        "kie-qwen-image",
+        "kie-seedream-5-pro-image",
         "kie-z-image",
         "kie-bytedance-fast-video",
         "kie-bytedance-video",
@@ -279,8 +283,12 @@ describe("embedded router contract", () => {
       expect(
         (body.data as Array<{ id: string }>).map((model) => model.id),
       ).toEqual([
+        "kie-flux-2-pro-image",
+        "kie-flux-kontext-pro-image",
         "kie-gpt-image-2",
         "kie-nano-banana-image",
+        "kie-qwen-image",
+        "kie-seedream-5-pro-image",
         "kie-z-image",
         "kie-bytedance-fast-video",
         "kie-bytedance-video",
@@ -426,5 +434,20 @@ describe("embedded router contract", () => {
     expect([...aliasHosts.get("kie-bytedance-fast-video")!]).toEqual([
       "video.example",
     ]);
+    const expandedHosts = resolvedResultHosts({
+      allowedResultHosts: ["legacy.example"],
+      allowedResultHostsByModel: {
+        "kie-flux-2-pro-image": ["flux2.example"],
+      },
+    });
+    expect(
+      expandedHosts.get("kie-flux-2-pro-image")?.has("flux2.example"),
+    ).toBe(true);
+    expect(expandedHosts.get("kie-qwen-image")?.has("flux2.example")).toBe(
+      false,
+    );
+    expect(expandedHosts.get("kie-qwen-image")?.has("legacy.example")).toBe(
+      false,
+    );
   });
 });

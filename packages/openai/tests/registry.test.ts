@@ -1,6 +1,7 @@
 import { openAiModelList } from "../src/model-catalog.js";
 import {
   activeCoreMediaTools,
+  type OpenAiImageAdapter,
   OPENAI_EXCLUSIONS,
   OPENAI_STATUS_STRATEGIES,
   openAiAdapter,
@@ -16,6 +17,10 @@ describe("OpenAI adapter registry", () => {
       "kie-nano-banana-image",
       "kie-gpt-image-2",
       "kie-z-image",
+      "kie-seedream-5-pro-image",
+      "kie-qwen-image",
+      "kie-flux-2-pro-image",
+      "kie-flux-kontext-pro-image",
       "kie-bytedance-video",
       "kie-bytedance-fast-video",
     ]);
@@ -34,8 +39,13 @@ describe("OpenAI adapter registry", () => {
 
   test("preserves the contract-2 public descriptor surface", () => {
     expect(
-      RESOLVED_OPENAI_ADAPTERS.filter(
-        (adapter) => adapter.publicModelId !== "kie-z-image",
+      RESOLVED_OPENAI_ADAPTERS.filter((adapter) =>
+        [
+          "kie-nano-banana-image",
+          "kie-gpt-image-2",
+          "kie-bytedance-video",
+          "kie-bytedance-fast-video",
+        ].includes(adapter.publicModelId),
       ).map((adapter) => ({
         id: adapter.publicModelId,
         tool: adapter.toolName,
@@ -79,6 +89,14 @@ describe("OpenAI adapter registry", () => {
     expect(activeCoreMediaTools().length).toBeGreaterThan(0);
     expect(unaccountedCoreMediaTools()).toEqual([]);
     expect(Object.keys(OPENAI_EXCLUSIONS)).toContain("topaz_upscale_image");
+    for (const adapted of [
+      "bytedance_seedream_image",
+      "qwen_image",
+      "flux2_image",
+      "flux_kontext_image",
+    ]) {
+      expect(OPENAI_EXCLUSIONS).not.toHaveProperty(adapted);
+    }
     expect(
       Object.values(OPENAI_EXCLUSIONS).every((reason) => reason.trim()),
     ).toBe(true);
@@ -100,6 +118,14 @@ describe("OpenAI adapter registry", () => {
         .map((adapter) => adapter.publicModelId),
     );
     expect(openAiAdapter("kie-z-image", "image")?.toolName).toBe("z_image");
+    for (const model of [
+      "kie-seedream-5-pro-image",
+      "kie-qwen-image",
+      "kie-flux-2-pro-image",
+      "kie-flux-kontext-pro-image",
+    ]) {
+      expect(openAiAdapter(model, "image")).toBeDefined();
+    }
   });
 
   test("declares executable cardinality, operations, aliases, and Infinite Canvas names", () => {
@@ -119,5 +145,54 @@ describe("OpenAI adapter registry", () => {
     expect(openAiAdapter("kie-bytedance-fast-video")?.toolName).toBe(
       "bytedance_seedance_video",
     );
+  });
+
+  test("preserves expanded image format, reference, and polling contracts", () => {
+    const contracts = Object.fromEntries(
+      RESOLVED_OPENAI_ADAPTERS.filter(
+        (adapter): adapter is OpenAiImageAdapter =>
+          adapter.mediaType === "image" &&
+          [
+            "kie-seedream-5-pro-image",
+            "kie-qwen-image",
+            "kie-flux-2-pro-image",
+            "kie-flux-kontext-pro-image",
+          ].includes(adapter.publicModelId),
+      ).map((adapter) => [
+        adapter.publicModelId,
+        {
+          formats: Object.keys(adapter.outputFormats),
+          references: adapter.maxReferences,
+          status: adapter.statusStrategy,
+          results: adapter.cardinality.expectedResultsPerTask,
+        },
+      ]),
+    );
+    expect(contracts).toEqual({
+      "kie-seedream-5-pro-image": {
+        formats: ["png", "jpg", "jpeg"],
+        references: 10,
+        status: "jobs",
+        results: 1,
+      },
+      "kie-qwen-image": {
+        formats: ["png", "jpg", "jpeg"],
+        references: 1,
+        status: "jobs",
+        results: 1,
+      },
+      "kie-flux-2-pro-image": {
+        formats: ["png"],
+        references: 8,
+        status: "jobs",
+        results: 1,
+      },
+      "kie-flux-kontext-pro-image": {
+        formats: ["png", "jpg", "jpeg"],
+        references: 1,
+        status: "flux-kontext",
+        results: 1,
+      },
+    });
   });
 });
