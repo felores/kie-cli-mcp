@@ -251,6 +251,39 @@ function reduceRatio(width: number, height: number): string {
   return `${width / divisor}:${height / divisor}`;
 }
 
+function isPositiveDimension(value: number): boolean {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+const MAX_DIMENSION_RATIO_LOG_ERROR = 0.03;
+
+function nearestSupportedDimensionRatio(
+  width: number,
+  height: number,
+  supportedRatios: readonly string[],
+): string | undefined {
+  const exactRatio = reduceRatio(width, height);
+  if (supportedRatios.includes(exactRatio)) return exactRatio;
+
+  const actualRatio = width / height;
+  let nearestRatio: string | undefined;
+  let nearestError = Number.POSITIVE_INFINITY;
+  for (const candidate of supportedRatios) {
+    const match = candidate.match(/^(\d+):(\d+)$/);
+    if (!match) continue;
+    const candidateRatio = Number(match[1]) / Number(match[2]);
+    const error = Math.abs(Math.log(actualRatio / candidateRatio));
+    if (error < nearestError) {
+      nearestRatio = candidate;
+      nearestError = error;
+    }
+  }
+
+  return nearestError <= MAX_DIMENSION_RATIO_LOG_ERROR
+    ? nearestRatio
+    : undefined;
+}
+
 function readAspectRatio(value: unknown, model: KieImageModel): string {
   const descriptor = descriptorFor(model);
   if (value === undefined || value === "auto" || value === "") {
@@ -260,43 +293,50 @@ function readAspectRatio(value: unknown, model: KieImageModel): string {
     throw invalidSetting("The size setting is invalid.", "size");
   }
 
-  let ratio: string;
   const dimensionMatch = value.match(/^(\d+)x(\d+)$/i);
   const ratioMatch = value.match(/^(\d+):(\d+)$/);
   if (dimensionMatch) {
     const width = Number(dimensionMatch[1]);
     const height = Number(dimensionMatch[2]);
-    if (width < 1 || height < 1) {
+    if (!isPositiveDimension(width) || !isPositiveDimension(height)) {
       throw invalidSetting(
         "The size setting must have positive dimensions.",
         "size",
       );
     }
-    ratio = reduceRatio(width, height);
-  } else if (ratioMatch) {
+    const ratio = nearestSupportedDimensionRatio(
+      width,
+      height,
+      descriptor.aspectRatios,
+    );
+    if (ratio) return ratio;
+    throw invalidSetting(
+      `The size ratio ${reduceRatio(width, height)} is not supported for ${model}.`,
+      "size",
+    );
+  }
+  if (ratioMatch) {
     const width = Number(ratioMatch[1]);
     const height = Number(ratioMatch[2]);
-    if (width < 1 || height < 1) {
+    if (!isPositiveDimension(width) || !isPositiveDimension(height)) {
       throw invalidSetting(
         "The size setting must have positive dimensions.",
         "size",
       );
     }
-    ratio = reduceRatio(width, height);
-  } else {
-    throw invalidSetting(
-      "The size setting must be auto or a supported WxH image size.",
-      "size",
-    );
+    const ratio = reduceRatio(width, height);
+    if (!descriptor.aspectRatios.includes(ratio)) {
+      throw invalidSetting(
+        `The size ratio ${ratio} is not supported for ${model}.`,
+        "size",
+      );
+    }
+    return ratio;
   }
-
-  if (!descriptor.aspectRatios.includes(ratio)) {
-    throw invalidSetting(
-      `The size ratio ${ratio} is not supported for ${model}.`,
-      "size",
-    );
-  }
-  return ratio;
+  throw invalidSetting(
+    "The size setting must be auto or a supported WxH image size.",
+    "size",
+  );
 }
 
 function readResponseFormat(value: unknown): "b64_json" {

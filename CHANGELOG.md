@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## OpenAI transport 0.6.1 - 2026-08-25
+
+### Fixed
+- Mapped pixel dimensions within a 3% logarithmic tolerance to the nearest aspect ratio supported by the selected image adapter.
+- Preserved strict validation for explicit ratio strings and dimensions outside the bounded tolerance.
+- Normalized equivalent exact and rounded sizes before idempotency fingerprinting for both generation and edit routes.
+
 ## OpenAI transport 0.6.0 - 2026-08-25
 
 ### Added

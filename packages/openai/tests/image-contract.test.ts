@@ -255,7 +255,7 @@ describe("KIE OpenAI image contract", () => {
     editForm.set("prompt", "Add a yellow tail");
     editForm.set("n", "1");
     editForm.set("quality", "standard");
-    editForm.set("size", "1024x1024");
+    editForm.set("size", "1824x1024");
     editForm.set("output_format", "png");
     editForm.append(
       "image",
@@ -273,7 +273,7 @@ describe("KIE OpenAI image contract", () => {
       input: {
         prompt: "Add a yellow tail",
         input_urls: ["https://uploaded.example/gpt-source.png"],
-        aspect_ratio: "1:1",
+        aspect_ratio: "16:9",
         resolution: "1K",
       },
     });
@@ -291,6 +291,247 @@ describe("KIE OpenAI image contract", () => {
       code: "unsupported_model",
     });
     expect(createdBodies).toHaveLength(2);
+
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("maps rounded pixel dimensions to adapter-supported ratios", async () => {
+    const dataDir = await makeDataDir();
+    const createdBodies: Record<string, unknown>[] = [];
+    let taskNumber = 0;
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `ratio-${taskNumber++}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/ratio.png"],
+            }),
+          },
+        });
+      }
+      if (url === "https://cdn.example/ratio.png") {
+        return new Response(pngBytes("ratio-png"), {
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+
+    const cases = [
+      ["kie-gpt-image-2", "1824x1024", "16:9"],
+      ["kie-gpt-image-2", "2720x1536", "16:9"],
+      ["kie-gpt-image-2", "3840x2160", "16:9"],
+      ["kie-gpt-image-2", "1024x1824", "9:16"],
+      ["kie-gpt-image-2", "1792x1024", "16:9"],
+      ["kie-gpt-image-2", "1024x1792", "9:16"],
+      ["kie-gpt-image-2", "1360x1024", "4:3"],
+      ["kie-gpt-image-2", "1400x1024", "4:3"],
+      ["kie-gpt-image-2", "1024x1360", "3:4"],
+      ["kie-nano-banana-image", "1536x1024", "3:2"],
+    ] as const;
+
+    for (const [model, size, expectedRatio] of cases) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": `rounded-${model}-${size}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt: `Ratio ${size}`,
+          n: 1,
+          quality: "low",
+          size,
+          output_format: "png",
+        }),
+      });
+      expect(response.status).toBe(200);
+      expect(createdBodies.at(-1)).toMatchObject({
+        input: { aspect_ratio: expectedRatio, resolution: "1K" },
+      });
+    }
+    expect(createdBodies).toHaveLength(cases.length);
+
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("fingerprints exact and rounded representations as one image request", async () => {
+    const dataDir = await makeDataDir();
+    const createdBodies: Record<string, unknown>[] = [];
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        createdBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({ code: 200, data: { taskId: "equivalent-size" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://cdn.example/equivalent.png"],
+            }),
+          },
+        });
+      }
+      if (url === "https://cdn.example/equivalent.png") {
+        return new Response(pngBytes("equivalent-png"), {
+          headers: { "content-type": "image/png" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+
+    const responses: Record<string, unknown>[] = [];
+    for (const size of ["1824x1024", "16:9", "2048x1152"]) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": "equivalent-size-retry",
+        },
+        body: JSON.stringify({
+          model: "kie-gpt-image-2",
+          prompt: "A cinematic landscape",
+          n: 1,
+          quality: "low",
+          size,
+          output_format: "png",
+        }),
+      });
+      expect(response.status).toBe(200);
+      responses.push(await responseJson(response));
+    }
+    expect(responses[1]).toEqual(responses[0]);
+    expect(responses[2]).toEqual(responses[0]);
+    expect(createdBodies).toHaveLength(1);
+    expect(createdBodies[0]).toMatchObject({
+      model: "gpt-image-2-text-to-image",
+      input: {
+        prompt: "A cinematic landscape",
+        aspect_ratio: "16:9",
+        resolution: "1K",
+      },
+    });
+
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  test("rejects unsupported ratios and malformed dimensions before paid work", async () => {
+    const dataDir = await makeDataDir();
+    const providerFetch = jest
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => originalFetch(input, init));
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          uploadBaseUrl: "https://upload.example",
+          dataDir,
+        }),
+      ),
+    );
+
+    for (const size of [
+      "57:32",
+      "1536x1024",
+      "1408x1024",
+      "0x1024",
+      "-1x1024",
+      "wide",
+      "Infinityx1024",
+      `${"9".repeat(400)}x1024`,
+    ]) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": `rejected-${size}`,
+        },
+        body: JSON.stringify({
+          model: "kie-gpt-image-2",
+          prompt: "Rejected size",
+          size,
+        }),
+      });
+      expect(response.status).toBe(422);
+      expect((await responseJson(response)).error).toMatchObject({
+        code: "unsupported_setting",
+        param: "size",
+      });
+    }
+
+    const editForm = new FormData();
+    editForm.set("model", "kie-gpt-image-2");
+    editForm.set("prompt", "Rejected edit size");
+    editForm.set("size", "1408x1024");
+    editForm.append(
+      "image",
+      new Blob([pngBytes("rejected-edit")], { type: "image/png" }),
+      "rejected-edit.png",
+    );
+    const editResponse = await fetch(`${baseUrl}/v1/images/edits`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "rejected-edit-size" },
+      body: editForm,
+    });
+    expect(editResponse.status).toBe(422);
+    expect((await responseJson(editResponse)).error).toMatchObject({
+      code: "unsupported_setting",
+      param: "size",
+    });
+    expect(
+      providerFetch.mock.calls.some(([input]) =>
+        [providerBaseUrl, "https://upload.example"].some((base) =>
+          String(input).startsWith(base),
+        ),
+      ),
+    ).toBe(false);
+    expect(
+      (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
+    ).toHaveLength(0);
 
     await rm(dataDir, { recursive: true, force: true });
   });

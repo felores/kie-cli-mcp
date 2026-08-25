@@ -97,6 +97,15 @@ format selector, so the transport accepts only its fixed PNG contract and does n
 invent JPEG or WebP conversion. A real 1K smoke task through each GPT Image 2
 route on 2026-08-24 returned `image/png` with a valid PNG signature.
 
+Image `size` accepts explicit ratios and pixel dimensions. Explicit ratio
+strings are reduced and must exactly match a ratio declared by the selected
+adapter. Pixel dimensions within a 3% symmetric logarithmic ratio tolerance map
+to that adapter's nearest declared ratio, so values such as `1824x1024` map to
+`16:9`. Dimensions outside the bounded tolerance are rejected before uploads,
+journal reservation, or provider submission. The transport does not resize or
+crop returned images, and `quality` continues to select provider resolution
+independently from aspect ratio.
+
 `preset=normal` is a client compatibility value. It is not forwarded to Kie because
 the current Seedance 2.5 mapping has no provider preset field. Omitted and `normal`
 requests have equivalent idempotency semantics.
