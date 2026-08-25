@@ -1669,6 +1669,106 @@ describe("KIE OpenAI image contract", () => {
     await rm(dataDir, { recursive: true, force: true });
   });
 
+  test("maps and validates JPEG results for every JPEG-capable expanded adapter", async () => {
+    const dataDir = await makeDataDir();
+    const submissions: Array<{ url: string; body: Record<string, unknown> }> =
+      [];
+    let taskNumber = 0;
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (
+        url === `${providerBaseUrl}/jobs/createTask` ||
+        url === `${providerBaseUrl}/flux/kontext/generate`
+      ) {
+        submissions.push({
+          url,
+          body: JSON.parse(String(init?.body)) as Record<string, unknown>,
+        });
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `jpeg-expanded-${taskNumber++}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        const taskId = new URL(url).searchParams.get("taskId");
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: [`https://cdn.example/${taskId}.jpg`],
+            }),
+          },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/flux/kontext/record-info`)) {
+        const taskId = new URL(url).searchParams.get("taskId");
+        return jsonResponse({
+          code: 200,
+          data: {
+            successFlag: 1,
+            response: {
+              resultImageUrl: `https://cdn.example/${taskId}.jpg`,
+            },
+          },
+        });
+      }
+      if (url.startsWith("https://cdn.example/") && url.endsWith(".jpg")) {
+        return new Response(jpegBytes(url), {
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const baseUrl = await serve(
+      express().use(
+        createKieOpenAiRouter({
+          ...resultOptions,
+          apiKey: "provider-key",
+          baseUrl: providerBaseUrl,
+          dataDir,
+          pollIntervalMs: 1,
+          pollTimeoutMs: 100,
+        }),
+      ),
+    );
+    for (const model of [
+      "kie-seedream-5-pro-image",
+      "kie-qwen-image",
+      "kie-flux-kontext-pro-image",
+    ]) {
+      const response = await fetch(`${baseUrl}/v1/images/generations`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "Idempotency-Key": `jpeg-${model}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt: "A warm editorial portrait",
+          n: 1,
+          quality: "standard",
+          size: "1024x1024",
+          response_format: "b64_json",
+          output_format: "jpeg",
+        }),
+      });
+      expect(response.status).toBe(200);
+      expect((await responseJson(response)).data).toHaveLength(1);
+    }
+    expect(submissions).toHaveLength(3);
+    expect(submissions[0]).toMatchObject({
+      body: { input: { output_format: "jpeg" } },
+    });
+    expect(submissions[1]).toMatchObject({
+      body: { input: { output_format: "jpeg" } },
+    });
+    expect(submissions[2]).toMatchObject({
+      body: { outputFormat: "jpeg" },
+    });
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
   test("rejects unsupported expanded-adapter settings and reference counts before provider work", async () => {
     const dataDir = await makeDataDir();
     const providerCalls: string[] = [];

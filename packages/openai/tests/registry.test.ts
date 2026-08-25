@@ -163,6 +163,11 @@ describe("OpenAI adapter registry", () => {
         {
           formats: Object.keys(adapter.outputFormats),
           references: adapter.maxReferences,
+          transportReferenceMiB: adapter.maxReferenceBytes / (1024 * 1024),
+          providerReferenceMiB:
+            adapter.providerMaxReferenceBytes === undefined
+              ? null
+              : adapter.providerMaxReferenceBytes / (1024 * 1024),
           status: adapter.statusStrategy,
           results: adapter.cardinality.expectedResultsPerTask,
         },
@@ -172,24 +177,32 @@ describe("OpenAI adapter registry", () => {
       "kie-seedream-5-pro-image": {
         formats: ["png", "jpg", "jpeg"],
         references: 10,
+        transportReferenceMiB: 25,
+        providerReferenceMiB: 30,
         status: "jobs",
         results: 1,
       },
       "kie-qwen-image": {
         formats: ["png", "jpg", "jpeg"],
         references: 1,
+        transportReferenceMiB: 10,
+        providerReferenceMiB: 10,
         status: "jobs",
         results: 1,
       },
       "kie-flux-2-pro-image": {
         formats: ["png"],
         references: 8,
+        transportReferenceMiB: 25,
+        providerReferenceMiB: 30,
         status: "jobs",
         results: 1,
       },
       "kie-flux-kontext-pro-image": {
         formats: ["png", "jpg", "jpeg"],
         references: 1,
+        transportReferenceMiB: 25,
+        providerReferenceMiB: null,
         status: "flux-kontext",
         results: 1,
       },

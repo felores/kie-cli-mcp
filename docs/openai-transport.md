@@ -170,6 +170,13 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-bytedance-video` | `bytedance_seedance_video` | create video | one task and exactly one video result |
 | `kie-bytedance-fast-video` | `bytedance_seedance_video` | create video | legacy alias of `kie-bytedance-video` |
 
+Reference counts follow each provider/core contract. Multipart uploads also
+apply a transport safety ceiling: Seedream 5 Pro and Flux 2 document 30 MiB per
+provider reference but this HTTP transport accepts at most 25 MiB per file and
+25 MiB total; Qwen's provider and transport limit is 10 MiB; Flux Kontext's
+provider documentation does not state a byte limit, so the transport's 25 MiB
+ceiling applies without claiming a provider maximum.
+
 To add a model, add a source-backed core catalog and tool entry first, then an explicit adapter with model-specific normalization, core schema parsing, Kie client submission, status strategy, cardinality, operations, and evidence-backed exact result hosts. Add deterministic request, polling, result, idempotency, and pre-submission rejection tests. Do not add a separate model list.
 
 `allowedResultHostsByModel` replaces result hosts for one canonical public model and all of its aliases. Alias keys are rejected so trust cannot diverge within one adapter. Unknown IDs and non-public, wildcard, path, credential, loopback, private, link-local, or reserved hosts are rejected during router creation. The legacy `allowedResultHosts` option remains a compatibility replacement only for the four contract-2 public IDs and cannot authorize a newer adapter such as Z-Image.

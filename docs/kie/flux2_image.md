@@ -19,8 +19,9 @@ the core `flux2_image` schema and `KieAiClient.generateFlux2Image()`.
 - Supported ratios are `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, and
   `2:3`.
 - Supported resolutions are 1K and 2K.
-- The transport accepts up to eight references, matching the canonical core
-  schema, and keeps the shared 25 MiB multipart safety ceiling.
+- The provider documents a 30 MiB per-reference limit. The transport accepts up
+  to eight references, matching the canonical core schema, and deliberately
+  applies a stricter 25 MiB per-file and total multipart safety ceiling.
 - Provider examples return one PNG URL per task. The adapter therefore accepts
   only `output_format=png` and uses one task per requested image.
 

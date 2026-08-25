@@ -74,6 +74,8 @@ export interface OpenAiImageAdapter extends OpenAiAdapterBase {
   operations: readonly ("generation" | "edit")[];
   maxReferences: number;
   maxReferenceBytes: number;
+  providerMaxReferenceBytes?: number;
+  referenceLimitEvidenceUrl?: string;
   aspectRatios: readonly string[];
   defaultAspectRatio: string;
   outputFormats: Readonly<Record<string, ImageOutputFormatCapability>>;
@@ -249,6 +251,9 @@ export const OPENAI_ADAPTER_REGISTRY = [
     operations: ["generation", "edit"],
     maxReferences: 10,
     maxReferenceBytes: imageReferenceBytes,
+    providerMaxReferenceBytes: 30 * 1024 * 1024,
+    referenceLimitEvidenceUrl:
+      "https://docs.kie.ai/market/seedream/5-pro-image-to-image",
     aspectRatios: extendedRatios,
     defaultAspectRatio: "1:1",
     supportsQuality: true,
@@ -282,6 +287,8 @@ export const OPENAI_ADAPTER_REGISTRY = [
     operations: ["generation", "edit"],
     maxReferences: 1,
     maxReferenceBytes: 10 * 1024 * 1024,
+    providerMaxReferenceBytes: 10 * 1024 * 1024,
+    referenceLimitEvidenceUrl: "https://docs.kie.ai/market/qwen/image-edit",
     aspectRatios: commonRatios,
     defaultAspectRatio: "1:1",
     supportsQuality: true,
@@ -322,6 +329,9 @@ export const OPENAI_ADAPTER_REGISTRY = [
     operations: ["generation", "edit"],
     maxReferences: 8,
     maxReferenceBytes: imageReferenceBytes,
+    providerMaxReferenceBytes: 30 * 1024 * 1024,
+    referenceLimitEvidenceUrl:
+      "https://docs.kie.ai/market/flux2/pro-image-to-image",
     aspectRatios: extendedRatios.filter((ratio) => ratio !== "21:9"),
     defaultAspectRatio: "1:1",
     supportsQuality: true,
@@ -353,6 +363,8 @@ export const OPENAI_ADAPTER_REGISTRY = [
     operations: ["generation", "edit"],
     maxReferences: 1,
     maxReferenceBytes: imageReferenceBytes,
+    referenceLimitEvidenceUrl:
+      "https://docs.kie.ai/flux-kontext-api/generate-or-edit-image",
     aspectRatios: ["21:9", ...commonRatios],
     defaultAspectRatio: "16:9",
     supportsQuality: true,
@@ -520,6 +532,9 @@ function resolveAdapter(adapter: OpenAiAdapter): OpenAiAdapter {
     (adapter.mediaType === "image" &&
       (adapter.maxReferences < 0 ||
         adapter.maxReferenceBytes < 0 ||
+        (adapter.providerMaxReferenceBytes !== undefined &&
+          (adapter.providerMaxReferenceBytes < adapter.maxReferenceBytes ||
+            !adapter.referenceLimitEvidenceUrl?.startsWith("https://"))) ||
         adapter.aspectRatios.length === 0 ||
         !adapter.aspectRatios.includes(adapter.defaultAspectRatio)))
   )
