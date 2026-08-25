@@ -69,5 +69,12 @@ Explicit image formats are verified against the result MIME type and file
 signature. Masks and `background=transparent` are unsupported and fail before
 provider work.
 
+Image `size` accepts an explicit model-supported ratio such as `16:9`, or pixel
+dimensions such as `1824x1024`. Explicit ratio strings remain strict. Pixel
+dimensions within a bounded 3% logarithmic tolerance map to the nearest ratio
+supported by the selected model. The transport does not resize or crop output;
+the provider still generates its declared ratio. `quality` selects resolution
+independently from aspect ratio.
+
 For Infinite Canvas, use `http://127.0.0.1:51311` as the base URL and the value
 of `KIE_OPENAI_TOKEN` as the API key. Do not append `/v1`.
