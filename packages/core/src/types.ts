@@ -1017,7 +1017,7 @@ export const GrokImagineSchema = z
       if (data[field] !== undefined) addIssue(message, [field]);
     };
     const imageRatios = ["1:1", "2:3", "3:2", "16:9", "9:16"];
-    const videoRatios = ["1:1", "2:3", "3:2"];
+    const videoRatios = ["1:1", "2:3", "3:2", "16:9", "9:16"];
 
     switch (effectiveMode) {
       case "text-to-image":

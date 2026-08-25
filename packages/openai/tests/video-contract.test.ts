@@ -1095,6 +1095,560 @@ describe("KIE OpenAI video contract", () => {
     },
   );
 
+  test("maps Midjourney image-to-video, normalizes its status, and serves content", async () => {
+    const dataDir = await makeDataDir();
+    const createBodies: Record<string, unknown>[] = [];
+    const videoData = new Uint8Array([
+      0x00,
+      0x00,
+      0x00,
+      0x20,
+      ...new Array(28).fill(0x6d),
+    ]);
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/api/file-stream-upload")) {
+        return jsonResponse({
+          code: 200,
+          data: { fileUrl: "https://upload.example/midjourney-reference.png" },
+        });
+      }
+      if (url === `${providerBaseUrl}/mj/generate`) {
+        createBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({ code: 200, data: { taskId: "mj-video-1" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/mj/record-info`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            successFlag: 1,
+            resultInfoJson: {
+              resultUrls: [
+                { resultUrl: "https://file.aiquickdraw.com/mj-video.mp4" },
+              ],
+            },
+          },
+        });
+      }
+      if (url === "https://file.aiquickdraw.com/mj-video.mp4") {
+        return new Response(videoData, {
+          status: 200,
+          headers: { "content-type": "video/mp4" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      uploadBaseUrl: "https://upload.example",
+      dataDir,
+      pollIntervalMs: 1,
+      pollTimeoutMs: 5_000,
+    });
+    const base = await serve(express().use(router));
+    const form = new FormData();
+    form.set("model", "kie-midjourney-video");
+    form.set("prompt", "A paper city comes alive at sunrise");
+    form.set("size", "1280x720");
+    form.set("preset", "normal");
+    form.append(
+      "input_reference",
+      new Blob(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        { type: "image/png" },
+      ),
+      "reference.png",
+    );
+    const create = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "mj-video-request" },
+      body: form,
+    });
+    expect(create.status).toBe(200);
+    expect(createBodies).toHaveLength(1);
+    expect(createBodies[0]).toMatchObject({
+      taskType: "mj_video",
+      aspectRatio: "16:9",
+      motion: "high",
+      videoBatchSize: 1,
+      fileUrls: ["https://upload.example/midjourney-reference.png"],
+    });
+
+    const retry = new FormData();
+    retry.set("model", "kie-midjourney-video");
+    retry.set("prompt", "A paper city comes alive at sunrise");
+    retry.set("size", "1280x720");
+    retry.set("preset", "normal");
+    retry.append(
+      "input_reference",
+      new Blob(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        { type: "image/png" },
+      ),
+      "reference.png",
+    );
+    const retryResponse = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "mj-video-request" },
+      body: retry,
+    });
+    expect(retryResponse.status).toBe(200);
+    expect(createBodies).toHaveLength(1);
+
+    const id = (await responseJson(create)).id as string;
+    const status = await fetch(`${base}/v1/videos/${id}`);
+    expect(status.status).toBe(200);
+    expect((await responseJson(status)).status).toBe("completed");
+    const content = await fetch(`${base}/v1/videos/${id}/content`);
+    expect(content.status).toBe(200);
+    expect(new Uint8Array(await content.arrayBuffer())).toEqual(videoData);
+    router.close();
+  });
+
+  test("maps Grok text/image-to-video modes and keeps normal preset compatibility", async () => {
+    const dataDir = await makeDataDir();
+    const createBodies: Record<string, unknown>[] = [];
+    const uploadBodies: string[] = [];
+    const videoData = new Uint8Array([
+      0x00,
+      0x00,
+      0x00,
+      0x20,
+      ...new Array(28).fill(0x67),
+    ]);
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/api/file-stream-upload")) {
+        uploadBodies.push(url);
+        return jsonResponse({
+          code: 200,
+          data: {
+            fileUrl: `https://upload.example/grok-${uploadBodies.length}.png`,
+          },
+        });
+      }
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        createBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({
+          code: 200,
+          data: { taskId: `grok-video-${createBodies.length}` },
+        });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: ["https://file.aiquickdraw.com/grok-video.mp4"],
+            }),
+          },
+        });
+      }
+      if (url === "https://file.aiquickdraw.com/grok-video.mp4") {
+        return new Response(videoData, {
+          status: 200,
+          headers: { "content-type": "video/mp4" },
+        });
+      }
+      return originalFetch(input, init);
+    });
+
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      uploadBaseUrl: "https://upload.example",
+      dataDir,
+      pollIntervalMs: 1,
+      pollTimeoutMs: 5_000,
+    });
+    const base = await serve(express().use(router));
+    const text = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "grok-text-request",
+      },
+      body: JSON.stringify({
+        model: "kie-grok-video",
+        prompt: "A fox runs through a neon market",
+        preset: "normal",
+        size: "1280x720",
+      }),
+    });
+    expect(text.status).toBe(200);
+    expect(createBodies[0]).toMatchObject({
+      model: "grok-imagine/text-to-video",
+      input: {
+        prompt: "A fox runs through a neon market",
+        aspect_ratio: "16:9",
+        mode: "normal",
+      },
+    });
+    const textRecord = (await responseJson(text)).id as string;
+    const retry = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": "grok-text-request",
+      },
+      body: JSON.stringify({
+        model: "kie-grok-video",
+        prompt: "A fox runs through a neon market",
+        preset: "normal",
+        size: "1280x720",
+      }),
+    });
+    expect(retry.status).toBe(200);
+    expect(createBodies).toHaveLength(1);
+    const status = await fetch(`${base}/v1/videos/${textRecord}`);
+    expect((await responseJson(status)).status).toBe("completed");
+    const content = await fetch(`${base}/v1/videos/${textRecord}/content`);
+    expect(content.status).toBe(200);
+    expect(new Uint8Array(await content.arrayBuffer())).toEqual(videoData);
+
+    const form = new FormData();
+    form.set("model", "kie-grok-video");
+    form.set("prompt", "Animate this reference gently");
+    form.set("size", "1:1");
+    form.append(
+      "input_reference",
+      new Blob(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        { type: "image/png" },
+      ),
+      "reference.png",
+    );
+    const image = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "grok-image-request" },
+      body: form,
+    });
+    expect(image.status).toBe(200);
+    expect(createBodies[1]).toMatchObject({
+      model: "grok-imagine/image-to-video",
+      input: {
+        image_urls: ["https://upload.example/grok-1.png"],
+        prompt: "Animate this reference gently",
+        mode: "normal",
+      },
+    });
+    const imageRecord = (await responseJson(image)).id as string;
+    const imageRetry = new FormData();
+    imageRetry.set("model", "kie-grok-video");
+    imageRetry.set("prompt", "Animate this reference gently");
+    imageRetry.set("size", "1:1");
+    imageRetry.append(
+      "input_reference",
+      new Blob(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        { type: "image/png" },
+      ),
+      "reference.png",
+    );
+    const imageRetryResponse = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": "grok-image-request" },
+      body: imageRetry,
+    });
+    expect(imageRetryResponse.status).toBe(200);
+    expect(createBodies).toHaveLength(2);
+    const imageStatus = await fetch(`${base}/v1/videos/${imageRecord}`);
+    expect((await responseJson(imageStatus)).status).toBe("completed");
+    const imageContent = await fetch(
+      `${base}/v1/videos/${imageRecord}/content`,
+    );
+    expect(imageContent.status).toBe(200);
+    expect(new Uint8Array(await imageContent.arrayBuffer())).toEqual(videoData);
+    router.close();
+  });
+
+  test.each([
+    {
+      name: "malformed Midjourney result entries",
+      resultInfoJson: {
+        resultUrls: [
+          { resultUrl: "https://file.aiquickdraw.com/valid.mp4" },
+          {},
+        ],
+      },
+    },
+    {
+      name: "multiple Midjourney result URLs",
+      resultInfoJson: {
+        resultUrls: [
+          { resultUrl: "https://file.aiquickdraw.com/first.mp4" },
+          { resultUrl: "https://file.aiquickdraw.com/second.mp4" },
+        ],
+      },
+    },
+    {
+      name: "foreign Midjourney result host",
+      resultInfoJson: {
+        resultUrls: [{ resultUrl: "https://foreign.example/video.mp4" }],
+      },
+    },
+  ])("fails safely on $name", async (fixture) => {
+    const dataDir = await makeDataDir();
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/api/file-stream-upload")) {
+        return jsonResponse({
+          code: 200,
+          data: { fileUrl: "https://upload.example/malformed-reference.png" },
+        });
+      }
+      if (url === `${providerBaseUrl}/mj/generate`) {
+        return jsonResponse({ code: 200, data: { taskId: "mj-invalid-1" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/mj/record-info`)) {
+        return jsonResponse({
+          code: 200,
+          data: { successFlag: 1, resultInfoJson: fixture.resultInfoJson },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      uploadBaseUrl: "https://upload.example",
+      dataDir,
+      pollIntervalMs: 1,
+      pollTimeoutMs: 5_000,
+    });
+    const base = await serve(express().use(router));
+    const form = new FormData();
+    form.set("model", "kie-midjourney-video");
+    form.set("prompt", "A malformed result test");
+    form.append(
+      "input_reference",
+      new Blob(
+        [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+        { type: "image/png" },
+      ),
+      "reference.png",
+    );
+    const create = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      body: form,
+    });
+    const id = (await responseJson(create)).id as string;
+    const status = await fetch(`${base}/v1/videos/${id}`);
+    expect(status.status).toBe(200);
+    expect((await responseJson(status)).status).toBe("failed");
+    router.close();
+  });
+
+  test("fails safely on a malformed Grok result", async () => {
+    const dataDir = await makeDataDir();
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url === `${providerBaseUrl}/jobs/createTask`) {
+        return jsonResponse({ code: 200, data: { taskId: "grok-invalid-1" } });
+      }
+      if (url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)) {
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({ resultUrls: [{}] }),
+          },
+        });
+      }
+      return originalFetch(input, init);
+    });
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      dataDir,
+      pollIntervalMs: 1,
+      pollTimeoutMs: 5_000,
+    });
+    const base = await serve(express().use(router));
+    const create = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "kie-grok-video",
+        prompt: "Malformed Grok result",
+      }),
+    });
+    const id = (await responseJson(create)).id as string;
+    const status = await fetch(`${base}/v1/videos/${id}`);
+    expect((await responseJson(status)).status).toBe("failed");
+    router.close();
+  });
+
+  test.each([
+    {
+      model: "kie-midjourney-video",
+      operation: "image-to-video",
+      providerStatus: { successFlag: 0 },
+      expected: "pending",
+    },
+    {
+      model: "kie-midjourney-video",
+      operation: "image-to-video",
+      providerStatus: { successFlag: 2 },
+      expected: "failed",
+    },
+    {
+      model: "kie-grok-video",
+      operation: "text-to-video",
+      providerStatus: { state: "waiting" },
+      expected: "pending",
+    },
+    {
+      model: "kie-grok-video",
+      operation: "text-to-video",
+      providerStatus: { state: "fail" },
+      expected: "failed",
+    },
+    {
+      model: "kie-grok-video",
+      operation: "image-to-video",
+      providerStatus: { state: "waiting" },
+      expected: "pending",
+    },
+    {
+      model: "kie-grok-video",
+      operation: "image-to-video",
+      providerStatus: { state: "fail" },
+      expected: "failed",
+    },
+  ] as const)(
+    "normalizes $model $operation provider status to $expected",
+    async (fixture) => {
+      const dataDir = await makeDataDir();
+      jest
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(async (input, _init) => {
+          const url = String(input);
+          if (url.includes("/api/file-stream-upload")) {
+            return jsonResponse({
+              code: 200,
+              data: { fileUrl: "https://upload.example/phase4-status.png" },
+            });
+          }
+          if (
+            url === `${providerBaseUrl}/mj/generate` ||
+            url === `${providerBaseUrl}/jobs/createTask`
+          ) {
+            return jsonResponse({
+              code: 200,
+              data: { taskId: `phase4-${fixture.model}-${fixture.expected}` },
+            });
+          }
+          if (
+            url.startsWith(`${providerBaseUrl}/mj/record-info`) ||
+            url.startsWith(`${providerBaseUrl}/jobs/recordInfo`)
+          ) {
+            return jsonResponse({
+              code: 200,
+              data: fixture.providerStatus,
+            });
+          }
+          return originalFetch(input, _init);
+        });
+      const router = createKieOpenAiRouter({
+        apiKey: "test-key",
+        baseUrl: providerBaseUrl,
+        uploadBaseUrl: "https://upload.example",
+        dataDir,
+        pollIntervalMs: 1,
+        pollTimeoutMs: 25,
+      });
+      const base = await serve(express().use(router));
+      let body: BodyInit;
+      if (fixture.operation === "text-to-video") {
+        body = JSON.stringify({
+          model: fixture.model,
+          prompt: "Phase 4 status fixture",
+        });
+      } else {
+        const form = new FormData();
+        form.set("model", fixture.model);
+        form.set("prompt", "Phase 4 status fixture");
+        form.set("preset", "normal");
+        form.append(
+          "input_reference",
+          new Blob(
+            [new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])],
+            { type: "image/png" },
+          ),
+          "reference.png",
+        );
+        body = form;
+      }
+      const create = await fetch(`${base}/v1/videos`, {
+        method: "POST",
+        headers:
+          fixture.operation === "text-to-video"
+            ? { "content-type": "application/json" }
+            : undefined,
+        body,
+      });
+      expect(create.status).toBe(200);
+      const id = (await responseJson(create)).id as string;
+      const status = await fetch(`${base}/v1/videos/${id}`);
+      expect((await responseJson(status)).status).toBe(fixture.expected);
+      router.close();
+    },
+  );
+
+  test.each([
+    {
+      model: "kie-midjourney-video",
+      body: {
+        model: "kie-midjourney-video",
+        prompt: "Missing reference",
+      },
+    },
+    {
+      model: "kie-grok-video",
+      body: {
+        model: "kie-grok-video",
+        prompt: "Unsupported preset",
+        preset: "fun",
+      },
+    },
+  ])(
+    "rejects unsupported Phase 4 input before provider work for $model",
+    async (fixture) => {
+      const dataDir = await makeDataDir();
+      const calls = mockProviderForTask(`early-${fixture.model}`, "submit");
+      const router = createKieOpenAiRouter({
+        apiKey: "test-key",
+        baseUrl: providerBaseUrl,
+        uploadBaseUrl: "https://upload.example",
+        dataDir,
+        allowedResultHostsByModel: {
+          [fixture.model]: ["cdn.example"],
+        },
+      });
+      const base = await serve(express().use(router));
+      const response = await fetch(`${base}/v1/videos`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(fixture.body),
+      });
+      expect(response.status).toBe(422);
+      expect(calls.createBodies).toHaveLength(0);
+      expect(calls.uploadBodies).toHaveLength(0);
+      expect(
+        (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
+      ).toHaveLength(0);
+      router.close();
+    },
+  );
+
   test.each([
     { model: "kie-kling-3-video", preset: undefined, field: "input_reference" },
     {

@@ -6,12 +6,13 @@
 - Baseline reviewed: `main` at `e14ae99`
 - Affected package: `@felores/kie-ai-openai-server`
 - Baseline OpenAI package version: `0.2.0`
-- Implemented feature version: `0.5.0`
+- Implemented feature version: `0.6.0`
 - Baseline OpenAI contract version: `2`
 - Implemented contract version: `3`
-- Implementation status: completed 2026-08-24
+- Implementation status: completed 2026-08-25
 - Phase 2 image expansion: completed in OpenAI transport `0.4.0`
 - Phase 3 video expansion: completed in OpenAI transport `0.5.0`
+- Phase 4 Midjourney/Grok video additions: completed in OpenAI transport `0.6.0`
 
 ## Objective
 
@@ -430,11 +431,26 @@ Expose only operations representable by current HTTP routes. Keep video editing 
 
 Completion criterion: each advertised video model passes create, poll, content-download, reference-upload, idempotency, and early-rejection tests.
 
-### Phase 4: mixed and specialized tools
+### Phase 4: Midjourney and Grok video additions
 
-Evaluate Midjourney, Grok Imagine, video editors, animation, and avatar tools individually. A core tool may produce multiple public model IDs with different media types and operations.
+Implement only the modes that fit Infinite Canvas's existing OpenAI video route without frontend changes:
 
-No specialized entry moves from exclusion to discovery without an explicit descriptor and contract tests.
+1. `kie-midjourney-video`
+   - Core tool: `midjourney_generate`.
+   - Expose image-to-video only.
+   - Map Infinite Canvas image references to Midjourney's supported image input.
+   - Keep Midjourney image generation, style/omni reference modes, and unrelated special operations outside this phase.
+2. `kie-grok-video`
+   - Core tool: `grok_imagine`.
+   - Expose text-to-video and image-to-video only.
+   - Map Infinite Canvas prompt, image references, size/ratio, and normal preset semantics to the corresponding Grok modes.
+   - Keep Grok image generation, image editing, and upscale outside this phase.
+
+Both public IDs must use the existing `POST /v1/videos`, `GET /v1/videos/:id`, and `GET /v1/videos/:id/content` contract. Each adapter must declare its real status strategy, one-task/one-result cardinality, evidence-backed result hosts, accepted reference limits, and exact provider mode mapping.
+
+Remove `midjourney_generate` and `grok_imagine` from `OPENAI_EXCLUSIONS` only after both video descriptors are executable. If the completeness model cannot represent partial tool adaptation, replace each whole-tool exclusion with operation-level exclusions so unsupported image/upscale modes remain explicit.
+
+Completion criterion: Infinite Canvas discovers both video IDs, classifies them as video, and passes exact text/image-to-video request, upload, submission, polling, content-download, idempotency, result-host, malformed-result, and early-rejection contract tests. No video editor, animation, avatar, lip-sync, upscale, reframe, background-removal, or mixed audio/video workflow is added in this phase.
 
 ## Public model ID rules
 
@@ -552,7 +568,7 @@ Document:
 
 ## Versioning
 
-Release Phase 1 as `@felores/kie-ai-openai-server@0.3.0` with contract version `3` after the registry foundation and at least one new model adapter are complete. Phase 2 shipped as `0.4.0`; Phase 3 ships as `0.5.0` without changing the contract version.
+Phase 1 shipped as `0.3.0`, Phase 2 as `0.4.0`, and Phase 3 as `0.5.0`. Release Phase 4 as `@felores/kie-ai-openai-server@0.6.0`. Keep contract version `3` because Phase 4 adds adapters without changing the HTTP route contract.
 
 Update:
 
@@ -592,13 +608,13 @@ unaccounted active media tools: 0
 2. Image and video dispatch use the same resolved registry as discovery.
 3. No standalone hardcoded public-model list remains.
 4. Every active registered core image/video tool is adapted or explicitly excluded with a reason.
-5. At least one additional image or video model is exposed and works end to end.
+5. Both `kie-midjourney-video` and `kie-grok-video` are exposed and work end to end; completion after only one adapter is not accepted.
 6. The existing four public IDs retain their exact behavior and security contract.
 7. Invalid or unsupported model requests fail before upload, reservation, or paid submission.
 8. Every advertised operation has deterministic contract tests.
 9. Registry completeness tests report zero unaccounted active media tools.
 10. Provider task count and result count follow one declared cardinality strategy without multiplication.
-11. Infinite Canvas discovers and correctly classifies new mapped models through its existing model-fetch action without source changes.
+11. Infinite Canvas discovers and correctly classifies both Phase 4 video models through its existing model-fetch action without source changes.
 12. New adapters cannot broaden result-host trust for unrelated models.
 13. Status polling remains behind `KieAiClient`.
 14. The package remains self-contained and all verification commands pass.
@@ -606,7 +622,7 @@ unaccounted active media tools: 0
 ## Delivery procedure
 
 1. Update local `main` and create a topic branch.
-2. Implement Phase 1 and one bounded Phase 2 adapter before broad expansion.
+2. Implement Phase 4 completely: both Midjourney Video and Grok Video adapters, with no specialized Phase 4B operations.
 3. Run the registry completeness report and all verification commands.
 4. Obtain an independent evaluator review because this changes discovery and dispatch across every OpenAI model.
 5. Commit and push the topic branch.
@@ -614,4 +630,4 @@ unaccounted active media tools: 0
 7. Wait for the required `Verify` check.
 8. Merge through the pull request.
 9. Synchronize local `main` with `origin/main` and confirm a clean tree.
-10. Tag and publish `0.3.0` through the repository release process.
+10. Tag and publish `0.6.0` through the repository release process only after both Phase 4 adapters pass review.

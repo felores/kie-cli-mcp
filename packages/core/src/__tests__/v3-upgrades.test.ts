@@ -176,6 +176,18 @@ describe("GrokImagineSchema (Grok Imagine Image 2.0)", () => {
     ).toBe(true);
   });
 
+  it("accepts the current Grok video aspect-ratio vocabulary", () => {
+    for (const aspect_ratio of ["16:9", "9:16", "1:1", "2:3", "3:2"] as const) {
+      expect(
+        GrokImagineSchema.safeParse({
+          generation_mode: "text-to-video",
+          prompt: "A fox runs",
+          aspect_ratio,
+        }).success,
+      ).toBe(true);
+    }
+  });
+
   it("accepts Image 2.0 text-to-image and defaults its required provider ratio", () => {
     expect(
       GrokImagineSchema.safeParse({

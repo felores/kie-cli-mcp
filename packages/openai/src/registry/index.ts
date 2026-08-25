@@ -4,12 +4,14 @@ import {
   Flux2ImageSchema,
   FluxKontextImageSchema,
   GptImage2Schema,
+  GrokImagineSchema,
   getCatalogEntry,
   getTool,
   HailuoVideoSchema,
   HappyHorseVideoSchema,
   type KieAiResponse,
   KlingVideoSchema,
+  MidjourneyGenerateSchema,
   MODEL_CATALOG,
   NanoBananaImageSchema,
   QwenImageSchema,
@@ -39,6 +41,14 @@ export type ImageCardinality = {
 export type VideoCardinality = {
   submission: "one-task-per-video";
   expectedResultsPerTask: 1;
+};
+export type VideoReferenceLimits = {
+  maxImageReferences: number;
+  maxVideoReferences: number;
+  maxAudioReferences: number;
+  maxReferenceBytes: number;
+  maxTotalReferenceBytes: number;
+  evidenceUrl: string;
 };
 export type VideoSubmissionInput = {
   prompt: string;
@@ -74,6 +84,8 @@ interface OpenAiAdapterBase {
   statusStrategy: StatusStrategy;
   allowedResultHosts: readonly string[];
   resultHostEvidenceUrl: string;
+  /** Explicitly reviewed when a mixed-media core tool exposes one route mode. */
+  mixedMediaReason?: string;
 }
 export interface OpenAiImageAdapter extends OpenAiAdapterBase {
   mediaType: "image";
@@ -104,6 +116,9 @@ export interface OpenAiVideoAdapter extends OpenAiAdapterBase {
   defaultPreset?: string;
   /** Preserve contract-2 fingerprints when a compatibility-only default is added. */
   omitDefaultPresetFromFingerprint?: boolean;
+  /** Provider derives dimensions from a single image reference. */
+  omitAspectRatioForImageReference?: boolean;
+  referenceLimits: VideoReferenceLimits;
   cardinality: VideoCardinality;
   normalizeSubmission(input: VideoSubmissionInput): unknown;
   submit(client: KieAiClient, request: unknown): Promise<TaskResponse>;
@@ -407,6 +422,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
     allowedResultHosts: resultHosts,
     resultHostEvidenceUrl: evidence,
     cardinality: oneVideo,
+    referenceLimits: {
+      maxImageReferences: 5,
+      maxVideoReferences: 5,
+      maxAudioReferences: 5,
+      maxReferenceBytes: 100 * 1024 * 1024,
+      maxTotalReferenceBytes: 100 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/bytedance/seedance-2-5",
+    },
     operations: ["text-to-video", "image-to-video", "reference-to-video"],
     presets: { normal: null },
     defaultPreset: "normal",
@@ -448,6 +471,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
     allowedResultHosts: resultHosts,
     resultHostEvidenceUrl: evidence,
     cardinality: oneVideo,
+    referenceLimits: {
+      maxImageReferences: 2,
+      maxVideoReferences: 0,
+      maxAudioReferences: 0,
+      maxReferenceBytes: 25 * 1024 * 1024,
+      maxTotalReferenceBytes: 25 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/kling/v3-turbo-image-to-video",
+    },
     operations: ["text-to-video", "image-to-video"],
     presets: { std: null, pro: null },
     defaultPreset: "std",
@@ -494,6 +525,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
     resultHostEvidenceUrl:
       "https://docs.kie.ai/market/minimax-h3/reference-to-video",
     cardinality: oneVideo,
+    referenceLimits: {
+      maxImageReferences: 9,
+      maxVideoReferences: 3,
+      maxAudioReferences: 3,
+      maxReferenceBytes: 100 * 1024 * 1024,
+      maxTotalReferenceBytes: 100 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/minimax-h3/reference-to-video",
+    },
     operations: ["text-to-video", "image-to-video", "reference-to-video"],
     presets: {
       "text-to-video": null,
@@ -602,6 +641,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
     allowedResultHosts: resultHosts,
     resultHostEvidenceUrl: "https://docs.kie.ai/veo3-api/quickstart",
     cardinality: oneVideo,
+    referenceLimits: {
+      maxImageReferences: 2,
+      maxVideoReferences: 0,
+      maxAudioReferences: 0,
+      maxReferenceBytes: 25 * 1024 * 1024,
+      maxTotalReferenceBytes: 25 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/veo3-api/quickstart",
+    },
     operations: ["text-to-video", "image-to-video"],
     presets: { veo3: null, veo3_fast: null },
     defaultPreset: "veo3",
@@ -647,6 +694,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
     allowedResultHosts: resultHosts,
     resultHostEvidenceUrl: evidence,
     cardinality: oneVideo,
+    referenceLimits: {
+      maxImageReferences: 5,
+      maxVideoReferences: 5,
+      maxAudioReferences: 1,
+      maxReferenceBytes: 100 * 1024 * 1024,
+      maxTotalReferenceBytes: 100 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/wan/2-7",
+    },
     operations: ["text-to-video", "image-to-video", "reference-to-video"],
     presets: {
       "text-to-video": null,
@@ -735,6 +790,14 @@ export const OPENAI_ADAPTER_REGISTRY = [
     allowedResultHosts: resultHosts,
     resultHostEvidenceUrl: evidence,
     cardinality: oneVideo,
+    referenceLimits: {
+      maxImageReferences: 9,
+      maxVideoReferences: 0,
+      maxAudioReferences: 0,
+      maxReferenceBytes: 25 * 1024 * 1024,
+      maxTotalReferenceBytes: 25 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/happyhorse/1-0",
+    },
     operations: ["text-to-video", "image-to-video", "reference-to-video"],
     presets: {
       "text-to-video": null,
@@ -796,6 +859,137 @@ export const OPENAI_ADAPTER_REGISTRY = [
     submit: (client: KieAiClient, request: unknown) =>
       client.generateHappyHorseVideo(request as never),
   },
+  {
+    publicModelId: "kie-midjourney-video",
+    toolName: "midjourney_generate",
+    mediaType: "video",
+    mixedMediaReason:
+      "midjourney_generate also owns image modes; this descriptor exposes only image-to-video",
+    ownedBy: "kie.ai",
+    apiType: "midjourney",
+    statusStrategy: "midjourney",
+    allowedResultHosts: resultHosts,
+    resultHostEvidenceUrl: "https://docs.kie.ai/mj-api/get-mj-task-details",
+    referenceLimits: {
+      maxImageReferences: 1,
+      maxVideoReferences: 0,
+      maxAudioReferences: 0,
+      maxReferenceBytes: 25 * 1024 * 1024,
+      maxTotalReferenceBytes: 25 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/mj-api/generate-mj-image",
+    },
+    cardinality: oneVideo,
+    operations: ["image-to-video"],
+    presets: { normal: null },
+    defaultPreset: "normal",
+    omitDefaultPresetFromFingerprint: true,
+    normalizeSubmission: (input: VideoSubmissionInput) => {
+      if (input.imageUrls.length !== 1) {
+        throw new Error(
+          "Midjourney image-to-video requires exactly one image reference.",
+        );
+      }
+      if (
+        input.videoUrls.length ||
+        input.audioUrls.length ||
+        input.firstFrameUrl ||
+        input.lastFrameUrl
+      ) {
+        throw new Error(
+          "Midjourney image-to-video accepts one input_reference image only.",
+        );
+      }
+      if (
+        input.duration !== undefined ||
+        input.resolution !== undefined ||
+        input.generateAudio !== undefined
+      ) {
+        throw new Error(
+          "Midjourney does not expose seconds, resolution_name, or generate_audio through the OpenAI video route.",
+        );
+      }
+      if (input.prompt.length > 2000) {
+        throw new Error(
+          "Midjourney video prompts must be at most 2000 characters.",
+        );
+      }
+      return MidjourneyGenerateSchema.parse({
+        prompt: input.prompt,
+        fileUrls: input.imageUrls,
+        taskType: "mj_video",
+        aspectRatio: input.aspectRatio ?? "16:9",
+        motion: 100,
+        videoBatchSize: 1,
+        version: "7",
+        high_definition_video: false,
+        callBackUrl: input.callbackUrl,
+      });
+    },
+    submit: (client: KieAiClient, request: unknown) =>
+      client.generateMidjourney(request as never),
+  },
+  {
+    publicModelId: "kie-grok-video",
+    toolName: "grok_imagine",
+    mediaType: "video",
+    ownedBy: "kie.ai",
+    apiType: "grok-imagine",
+    statusStrategy: "jobs",
+    allowedResultHosts: resultHosts,
+    resultHostEvidenceUrl:
+      "https://docs.kie.ai/market/grok-imagine/text-to-video",
+    referenceLimits: {
+      maxImageReferences: 1,
+      maxVideoReferences: 0,
+      maxAudioReferences: 0,
+      maxReferenceBytes: 20 * 1024 * 1024,
+      maxTotalReferenceBytes: 20 * 1024 * 1024,
+      evidenceUrl: "https://docs.kie.ai/market/grok-imagine/image-to-video",
+    },
+    cardinality: oneVideo,
+    operations: ["text-to-video", "image-to-video"],
+    presets: { normal: null },
+    defaultPreset: "normal",
+    omitDefaultPresetFromFingerprint: true,
+    omitAspectRatioForImageReference: true,
+    normalizeSubmission: (input: VideoSubmissionInput) => {
+      if (input.imageUrls.length > 1) {
+        throw new Error(
+          "Grok image-to-video accepts exactly one image reference.",
+        );
+      }
+      if (
+        input.videoUrls.length ||
+        input.audioUrls.length ||
+        input.firstFrameUrl ||
+        input.lastFrameUrl
+      ) {
+        throw new Error(
+          "Grok video accepts one input_reference image and no video, audio, or frame files.",
+        );
+      }
+      if (
+        input.duration !== undefined ||
+        input.resolution !== undefined ||
+        input.generateAudio !== undefined
+      ) {
+        throw new Error(
+          "Grok video does not expose seconds, resolution_name, or generate_audio through the OpenAI video route.",
+        );
+      }
+      const imageToVideo = input.imageUrls.length === 1;
+      return GrokImagineSchema.parse({
+        generation_mode: imageToVideo ? "image-to-video" : "text-to-video",
+        prompt: input.prompt,
+        ...(imageToVideo ? { image_urls: input.imageUrls } : {}),
+        ...(!imageToVideo ? { aspect_ratio: input.aspectRatio ?? "1:1" } : {}),
+        mode: input.preset ?? "normal",
+        callBackUrl: input.callbackUrl,
+      });
+    },
+    submit: (client: KieAiClient, request: unknown) =>
+      client.generateGrokImagine(request as never),
+  },
 ] as const satisfies readonly OpenAiAdapter[];
 
 export const OPENAI_EXCLUSIONS: Readonly<Record<string, string>> = {
@@ -804,15 +998,33 @@ export const OPENAI_EXCLUSIONS: Readonly<Record<string, string>> = {
   ideogram_reframe: "reframe transformation has a specialized input contract",
   recraft_remove_background:
     "transparent-background workflow is outside this contract",
-  midjourney_generate:
-    "mixed image/video modes require explicit route mappings",
   wan_animate: "character animation has a specialized media contract",
   runway_aleph_video: "video transformation is not standard create-video",
-  grok_imagine: "mixed image/video/upscale modes require explicit descriptors",
   infinitalk_lip_sync: "avatar workflow requires image and audio contracts",
   kling_avatar: "avatar workflow requires image and audio contracts",
   omnihuman_video: "avatar workflow requires image and audio contracts",
   gemini_omni: "mixed character, voice, and video workflow",
+};
+export const OPENAI_OPERATION_EXCLUSIONS: Readonly<
+  Record<string, Readonly<Record<string, string>>>
+> = {
+  midjourney_generate: {
+    "text-to-image":
+      "Midjourney image generation is not mapped to the OpenAI video route",
+    "image-to-image":
+      "Midjourney image editing is not mapped to the OpenAI video route",
+    "style-reference":
+      "Midjourney style references require a specialized image contract",
+    "omni-reference":
+      "Midjourney omni references require a specialized image contract",
+  },
+  grok_imagine: {
+    "text-to-image":
+      "Grok image generation is not mapped to the OpenAI video route",
+    "image-to-image":
+      "Grok image editing is not mapped to the OpenAI video route",
+    upscale: "Grok upscale is not mapped to the OpenAI video route",
+  },
 };
 const strategies = new Set<StatusStrategy>([
   "jobs",
@@ -873,6 +1085,50 @@ export const OPENAI_STATUS_STRATEGIES: Readonly<
   },
   "flux-kontext": (client, taskId, apiType) =>
     client.getTaskStatus(taskId, apiType),
+  midjourney: async (client, taskId, apiType) => {
+    const response = await client.getTaskStatus(taskId, apiType);
+    const data = response.data;
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return response;
+    }
+    const normalizedData = { ...data } as Record<string, unknown>;
+    const successFlag = normalizedData.successFlag;
+    if (successFlag === 0) normalizedData.state = "waiting";
+    else if (successFlag === 2 || successFlag === 3) {
+      normalizedData.state = "fail";
+    } else if (successFlag === 1) {
+      normalizedData.state = "success";
+      const resultInfo = normalizedData.resultInfoJson;
+      const resultUrls =
+        typeof resultInfo === "object" &&
+        resultInfo !== null &&
+        !Array.isArray(resultInfo)
+          ? (resultInfo as Record<string, unknown>).resultUrls
+          : normalizedData.resultUrls;
+      if (Array.isArray(resultUrls)) {
+        const malformed = resultUrls.some(
+          (entry) =>
+            !(
+              typeof entry === "string" ||
+              (typeof entry === "object" &&
+                entry !== null &&
+                !Array.isArray(entry) &&
+                typeof (entry as Record<string, unknown>).resultUrl ===
+                  "string")
+            ),
+        );
+        const urls = malformed
+          ? []
+          : resultUrls.map((entry) =>
+              typeof entry === "string"
+                ? entry
+                : (entry as Record<string, string>).resultUrl,
+            );
+        normalizedData.resultJson = JSON.stringify({ resultUrls: urls });
+      }
+    }
+    return { ...response, data: normalizedData };
+  },
 };
 
 export function pollOpenAiAdapterStatus(
@@ -904,10 +1160,23 @@ function resolveAdapter(adapter: OpenAiAdapter): OpenAiAdapter {
     throw new Error(
       `OpenAI adapter ${adapter.publicModelId} has no active catalog entry.`,
     );
-  if (!tool || tool.category !== adapter.mediaType)
+  const categoryMatches = tool?.category === adapter.mediaType;
+  const reviewedMixedMedia =
+    Boolean(adapter.mixedMediaReason?.trim()) &&
+    (tool?.category === "image" || tool?.category === "video") &&
+    (adapter.mediaType === "image" || adapter.mediaType === "video");
+  if (!tool || (!categoryMatches && !reviewedMixedMedia))
     throw new Error(
       `OpenAI adapter ${adapter.publicModelId} does not match a registered ${adapter.mediaType} tool.`,
     );
+  if (
+    !categoryMatches &&
+    (!adapter.mixedMediaReason || adapter.mixedMediaReason.trim().length === 0)
+  ) {
+    throw new Error(
+      `OpenAI adapter ${adapter.publicModelId} requires a mixed-media review reason.`,
+    );
+  }
   if (
     !strategies.has(adapter.statusStrategy) ||
     !OPENAI_STATUS_STRATEGIES[adapter.statusStrategy] ||
@@ -929,6 +1198,14 @@ function resolveAdapter(adapter: OpenAiAdapter): OpenAiAdapter {
     !adapter.cardinality ||
     !adapter.normalizeSubmission ||
     !adapter.submit ||
+    (adapter.mediaType === "video" &&
+      (!adapter.referenceLimits ||
+        adapter.referenceLimits.maxImageReferences < 0 ||
+        adapter.referenceLimits.maxVideoReferences < 0 ||
+        adapter.referenceLimits.maxAudioReferences < 0 ||
+        adapter.referenceLimits.maxReferenceBytes <= 0 ||
+        adapter.referenceLimits.maxTotalReferenceBytes <= 0 ||
+        !adapter.referenceLimits.evidenceUrl.startsWith("https://"))) ||
     (adapter.mediaType === "video" &&
       adapter.defaultPreset !== undefined &&
       !Object.hasOwn(adapter.presets, adapter.defaultPreset)) ||
@@ -1009,6 +1286,18 @@ for (const [toolName, reason] of Object.entries(OPENAI_EXCLUSIONS)) {
     throw new Error(`Invalid OpenAI exclusion: ${toolName}`);
   }
 }
+for (const [toolName, operations] of Object.entries(
+  OPENAI_OPERATION_EXCLUSIONS,
+)) {
+  if (
+    !activeMediaToolNames.has(toolName) ||
+    !adaptedToolNames.has(toolName) ||
+    Object.keys(operations).length === 0 ||
+    Object.values(operations).some((reason) => reason.trim().length === 0)
+  ) {
+    throw new Error(`Invalid OpenAI operation exclusion: ${toolName}`);
+  }
+}
 const unaccounted = unaccountedCoreMediaTools();
 if (unaccounted.length > 0) {
   throw new Error(
@@ -1016,5 +1305,8 @@ if (unaccounted.length > 0) {
   );
 }
 export function registrySummary(): string {
-  return `active core media tools: ${activeCoreMediaTools().length}\nadapted tool families: ${new Set(RESOLVED_OPENAI_ADAPTERS.map((a) => a.toolName)).size}\npublic OpenAI model IDs: ${RESOLVED_OPENAI_ADAPTERS.length}\nexplicit exclusions: ${Object.keys(OPENAI_EXCLUSIONS).length}\nunaccounted active media tools: ${unaccountedCoreMediaTools().length}`;
+  const operationExclusionCount = Object.values(
+    OPENAI_OPERATION_EXCLUSIONS,
+  ).reduce((count, operations) => count + Object.keys(operations).length, 0);
+  return `active core media tools: ${activeCoreMediaTools().length}\nadapted tool families: ${new Set(RESOLVED_OPENAI_ADAPTERS.map((a) => a.toolName)).size}\npublic OpenAI model IDs: ${RESOLVED_OPENAI_ADAPTERS.length}\nexplicit exclusions: ${Object.keys(OPENAI_EXCLUSIONS).length + operationExclusionCount}\nunaccounted active media tools: ${unaccountedCoreMediaTools().length}`;
 }

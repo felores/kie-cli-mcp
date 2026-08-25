@@ -28,7 +28,7 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 
 - **Servidor MCP**: `@felores/kie-ai-mcp-server`, para Claude Desktop y otros clientes MCP. Ver **Inicio rápido** abajo.
 - **CLI**: `@felores/kie-cli` (binario `kie-cli`), para la terminal, sin cliente MCP: `npm i -g @felores/kie-cli`, luego `kie-cli --help`. Ver [`packages/cli/README.md`](packages/cli/README.md).
-- **Transporte OpenAI**: `@felores/kie-ai-openai-server`, un servidor HTTP local que expone modelos seleccionados de imagen y video mediante rutas con formato OpenAI. La versión 0.5 agrega adaptadores de video para Kling, MiniMax H3, Veo 3, Wan 2.7 y HappyHorse mediante el registro. Ver [`docs/openai-transport.md`](docs/openai-transport.md).
+- **Transporte OpenAI**: `@felores/kie-ai-openai-server`, un servidor HTTP local que expone modelos seleccionados de imagen y video mediante rutas con formato OpenAI. La versión 0.6 agrega generación de video de Midjourney y Grok mediante el registro, sin cambiar el contrato de rutas existente. Ver [`docs/openai-transport.md`](docs/openai-transport.md).
 
 El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
 

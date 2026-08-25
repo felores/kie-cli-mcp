@@ -417,7 +417,11 @@ export function videoRequestFingerprint(input: NormalizedVideoRequest): string {
             ? undefined
             : input.preset,
         duration: input.duration,
-        aspectRatio: input.aspectRatio,
+        aspectRatio:
+          descriptor.omitAspectRatioForImageReference &&
+          input.imageRefs.length === 1
+            ? undefined
+            : input.aspectRatio,
         resolution: input.resolution,
         generateAudio: input.generateAudio,
         images: input.imageRefs.map(fileHash),
@@ -461,6 +465,54 @@ function validateVideoSubmission(input: NormalizedVideoRequest): void {
     const message =
       error instanceof Error ? error.message : "The video request is invalid.";
     throw invalidSetting(message, "model");
+  }
+}
+
+function validateVideoReferenceLimits(input: NormalizedVideoRequest): void {
+  const descriptor = videoDescriptor(input.model);
+  const limits = descriptor.referenceLimits;
+  const imageReferences = [
+    ...input.imageRefs,
+    ...(input.firstFrame ? [input.firstFrame] : []),
+    ...(input.lastFrame ? [input.lastFrame] : []),
+  ];
+  if (imageReferences.length > limits.maxImageReferences) {
+    throw invalidReference(
+      `${input.model} accepts at most ${limits.maxImageReferences} image reference${limits.maxImageReferences === 1 ? "" : "s"}.`,
+    );
+  }
+  if (input.videoRefs.length > limits.maxVideoReferences) {
+    throw invalidReference(
+      `${input.model} accepts at most ${limits.maxVideoReferences} video reference${limits.maxVideoReferences === 1 ? "" : "s"}.`,
+      "reference_video",
+    );
+  }
+  if (input.audioRefs.length > limits.maxAudioReferences) {
+    throw invalidReference(
+      `${input.model} accepts at most ${limits.maxAudioReferences} audio reference${limits.maxAudioReferences === 1 ? "" : "s"}.`,
+      "reference_audio",
+    );
+  }
+  const allReferences = [
+    ...imageReferences,
+    ...input.videoRefs,
+    ...input.audioRefs,
+  ];
+  if (
+    allReferences.some((file) => file.bytes.length > limits.maxReferenceBytes)
+  ) {
+    throw invalidReference(
+      `${input.model} accepts reference files up to ${Math.floor(limits.maxReferenceBytes / (1024 * 1024))} MiB.`,
+    );
+  }
+  const totalBytes = allReferences.reduce(
+    (total, file) => total + file.bytes.length,
+    0,
+  );
+  if (totalBytes > limits.maxTotalReferenceBytes) {
+    throw invalidReference(
+      `${input.model} accepts at most ${Math.floor(limits.maxTotalReferenceBytes / (1024 * 1024))} MiB of reference files.`,
+    );
   }
 }
 
@@ -586,7 +638,12 @@ async function pollVideoStatus(
       throw new Error("The provider task failed.");
     }
     if (state === "success") {
-      const urls = readResultUrls(response.data);
+      let urls: string[];
+      try {
+        urls = readResultUrls(response.data);
+      } catch {
+        throw new InvalidProviderResultError();
+      }
       if (urls.length !== descriptor.cardinality.expectedResultsPerTask) {
         throw new Error(
           "The provider returned multiple video results where one was expected.",
@@ -679,6 +736,7 @@ export async function handleVideoCreate(
   // journal reservation. The validation pass uses syntactically valid sentinel
   // URLs and is repeated with uploaded URLs immediately before submission.
   validateVideoSubmission(input);
+  validateVideoReferenceLimits(input);
 
   const existing = await context.journal.read(requestIdHash);
   if (existing) {

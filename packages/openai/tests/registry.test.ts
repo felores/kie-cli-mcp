@@ -2,6 +2,7 @@ import { openAiModelList } from "../src/model-catalog.js";
 import {
   activeCoreMediaTools,
   OPENAI_EXCLUSIONS,
+  OPENAI_OPERATION_EXCLUSIONS,
   OPENAI_STATUS_STRATEGIES,
   type OpenAiImageAdapter,
   openAiAdapter,
@@ -28,6 +29,8 @@ describe("OpenAI adapter registry", () => {
       "kie-veo3-video",
       "kie-wan-2-7-video",
       "kie-happyhorse-1-0-video",
+      "kie-midjourney-video",
+      "kie-grok-video",
     ]);
     expect(
       new Set(RESOLVED_OPENAI_ADAPTERS.map((adapter) => adapter.publicModelId))
@@ -94,6 +97,21 @@ describe("OpenAI adapter registry", () => {
     expect(activeCoreMediaTools().length).toBeGreaterThan(0);
     expect(unaccountedCoreMediaTools()).toEqual([]);
     expect(Object.keys(OPENAI_EXCLUSIONS)).toContain("topaz_upscale_image");
+    expect(OPENAI_EXCLUSIONS).not.toHaveProperty("midjourney_generate");
+    expect(OPENAI_EXCLUSIONS).not.toHaveProperty("grok_imagine");
+    expect(OPENAI_OPERATION_EXCLUSIONS.midjourney_generate).toEqual(
+      expect.objectContaining({
+        "text-to-image": expect.any(String),
+        "image-to-image": expect.any(String),
+      }),
+    );
+    expect(OPENAI_OPERATION_EXCLUSIONS.grok_imagine).toEqual(
+      expect.objectContaining({
+        "text-to-image": expect.any(String),
+        "image-to-image": expect.any(String),
+        upscale: expect.any(String),
+      }),
+    );
     for (const adapted of [
       "bytedance_seedream_image",
       "qwen_image",
@@ -152,6 +170,11 @@ describe("OpenAI adapter registry", () => {
         expect(adapter.submit).toBeDefined();
       } else {
         expect(Object.keys(adapter.presets).length).toBeGreaterThan(0);
+        expect(
+          adapter.referenceLimits.maxImageReferences,
+        ).toBeGreaterThanOrEqual(0);
+        expect(adapter.referenceLimits.maxReferenceBytes).toBeGreaterThan(0);
+        expect(adapter.referenceLimits.evidenceUrl).toMatch(/^https:\/\//);
         if (adapter.defaultPreset !== undefined) {
           expect(Object.hasOwn(adapter.presets, adapter.defaultPreset)).toBe(
             true,
@@ -162,6 +185,25 @@ describe("OpenAI adapter registry", () => {
     expect(openAiAdapter("kie-bytedance-fast-video")?.toolName).toBe(
       "bytedance_seedance_video",
     );
+    expect(openAiAdapter("kie-midjourney-video")?.mixedMediaReason).toContain(
+      "image-to-video",
+    );
+    expect(openAiAdapter("kie-grok-video")?.operations).toEqual([
+      "text-to-video",
+      "image-to-video",
+    ]);
+  });
+
+  test("uses IDs that Infinite Canvas classifies as their advertised media type", () => {
+    const classify = (id: string): "image" | "video" | "unknown" =>
+      id.includes("-image")
+        ? "image"
+        : id.includes("-video")
+          ? "video"
+          : "unknown";
+    for (const adapter of RESOLVED_OPENAI_ADAPTERS) {
+      expect(classify(adapter.publicModelId)).toBe(adapter.mediaType);
+    }
   });
 
   test("preserves expanded image format, reference, and polling contracts", () => {

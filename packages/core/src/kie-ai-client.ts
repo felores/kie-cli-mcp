@@ -478,7 +478,8 @@ export class KieAiClient {
       apiType === "omnihuman-video" ||
       apiType === "gemini-omni-video" ||
       apiType === "gpt-image-2" ||
-      apiType === "z-image"
+      apiType === "z-image" ||
+      apiType === "grok-imagine"
     ) {
       return this.makeRequest<any>(`/jobs/recordInfo?taskId=${taskId}`, "GET");
     } else if (apiType === "runway-aleph-video") {
@@ -988,7 +989,12 @@ export class KieAiClient {
     }
 
     if (taskType === "mj_video" || taskType === "mj_video_hd") {
-      payload.motion = request.motion || "high";
+      payload.motion =
+        request.motion === undefined
+          ? "high"
+          : request.motion >= 50
+            ? "high"
+            : "low";
       if (request.videoBatchSize) {
         payload.videoBatchSize = parseInt(request.videoBatchSize.toString());
       }
@@ -1389,6 +1395,9 @@ export class KieAiClient {
         }
         if (hasPrompt) {
           input.prompt = request.prompt;
+        }
+        if (request.aspect_ratio) {
+          input.aspect_ratio = request.aspect_ratio;
         }
         input.mode = request.mode || "normal";
         break;

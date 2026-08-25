@@ -376,6 +376,22 @@ describe("KieAiClient Grok Imagine routing", () => {
       { image_urls: ["https://example.com/first.png"], mode: "normal" },
     ],
     [
+      "image-to-video preserves the requested aspect ratio",
+      {
+        generation_mode: "image-to-video" as const,
+        image_urls: ["https://example.com/first.png"],
+        aspect_ratio: "16:9" as const,
+        prompt: "Animate the reference",
+      },
+      "grok-imagine/image-to-video",
+      {
+        image_urls: ["https://example.com/first.png"],
+        prompt: "Animate the reference",
+        aspect_ratio: "16:9",
+        mode: "normal",
+      },
+    ],
+    [
       "task-only auto upscale",
       { task_id: "previous-task" },
       "grok-imagine/upscale",
@@ -396,4 +412,34 @@ describe("KieAiClient Grok Imagine routing", () => {
       });
     },
   );
+});
+
+describe("KieAiClient Midjourney video routing", () => {
+  test("maps the numeric core motion control to the provider vocabulary", async () => {
+    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ code: 200, data: { taskId: "task-mj" } }), {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await new KieAiClient(config).generateMidjourney({
+      prompt: "Animate the reference",
+      fileUrls: ["https://example.com/reference.png"],
+      taskType: "mj_video",
+      aspectRatio: "16:9",
+      motion: 100,
+      videoBatchSize: 1,
+    });
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      taskType: "mj_video",
+      prompt: "Animate the reference",
+      aspectRatio: "16:9",
+      version: "7",
+      enableTranslation: false,
+      fileUrls: ["https://example.com/reference.png"],
+      motion: "high",
+      videoBatchSize: 1,
+    });
+  });
 });
