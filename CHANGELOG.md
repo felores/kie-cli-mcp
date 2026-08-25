@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## OpenAI transport 0.3.0 - 2026-08-24
+
+### Added
+- Replaced the OpenAI transport model list with a resolved adapter registry joined to the core catalog and tool registry.
+- Added `kie-z-image` generation through the standard images route.
+
+### Changed
+- Discovery, model validation, result-host policy, and dispatch now share the resolved registry. Active media tools are explicitly adapted or excluded with a reason.
+- Incremented the OpenAI transport contract version to 3.
+
 ## OpenAI transport 0.2.0 - 2026-08-24
 
 ### Added

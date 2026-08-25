@@ -1,12 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import {
-  type GptImage2Request,
-  GptImage2Schema,
-  type NanoBananaImageRequest,
-  NanoBananaImageSchema,
-} from "@felores/kie-ai-core";
-import {
   type KieAiClient,
   KieAiRequestError,
 } from "@felores/kie-ai-core/client";
@@ -18,6 +12,10 @@ import {
   KIE_IMAGE_MODELS,
   type KieImageModel,
 } from "./model-catalog.js";
+import {
+  type OpenAiImageAdapter,
+  pollOpenAiAdapterStatus,
+} from "./registry/index.js";
 import {
   hashRequestId,
   type JournalError,
@@ -92,6 +90,7 @@ interface ImageAdapterContext {
   pollTimeoutMs: number;
   multipartLimitBytes: number;
   allowedResultHosts: ReadonlySet<string>;
+  allowedResultHostsByModel?: ReadonlyMap<string, ReadonlySet<string>>;
 }
 
 class ProviderTaskFailedError extends Error {
@@ -179,7 +178,7 @@ function assertAllowedFields(value: Record<string, unknown>): void {
 
 function readModel(value: unknown): KieImageModel {
   const model = imageModel(value);
-  if (model) return model.id as KieImageModel;
+  if (model) return model.publicModelId as KieImageModel;
   unknownModel(value);
 }
 
@@ -302,7 +301,11 @@ function readAspectRatio(value: unknown, model: KieImageModel): string {
   }
 
   const supported =
-    model === "kie-nano-banana-image" ? NANO_RATIOS : GPT_RATIOS;
+    model === "kie-nano-banana-image"
+      ? NANO_RATIOS
+      : model === "kie-gpt-image-2"
+        ? GPT_RATIOS
+        : ["1:1", "4:3", "3:4", "16:9", "9:16"];
   if (!(supported as readonly string[]).includes(ratio)) {
     throw invalidSetting(
       `The size ratio ${ratio} is not supported for ${model}.`,
@@ -322,46 +325,63 @@ function readResponseFormat(value: unknown): "b64_json" {
   return "b64_json";
 }
 
+function descriptorFor(model: KieImageModel): OpenAiImageAdapter {
+  const descriptor = imageModel(model);
+  if (!descriptor) unknownModel(model);
+  return descriptor;
+}
+
 function validateCoreRequest(
   input: NormalizedImageRequest,
   imageUrls: string[],
 ): void {
-  const result =
-    input.model === "kie-nano-banana-image"
-      ? NanoBananaImageSchema.safeParse({
-          prompt: input.prompt,
-          ...(imageUrls.length ? { image_input: imageUrls } : {}),
-          output_format: input.effectiveOutputFormat.providerFormat,
-          aspect_ratio: input.aspectRatio,
-          resolution: input.resolution,
-          google_search: false,
-        })
-      : GptImage2Schema.safeParse({
-          prompt: input.prompt,
-          ...(imageUrls.length ? { input_urls: imageUrls } : {}),
-          aspect_ratio: input.aspectRatio,
-          resolution: input.resolution,
-        });
-  if (!result.success) {
-    const issue = result.error.issues[0];
-    throw invalidSetting(
-      issue?.message ?? "The image request is invalid.",
-      String(issue?.path[0] ?? "prompt"),
-    );
+  try {
+    descriptorFor(input.model).normalizeSubmission({
+      prompt: input.prompt,
+      aspectRatio: input.aspectRatio,
+      resolution: input.resolution,
+      effectiveOutputFormat: input.effectiveOutputFormat,
+      imageUrls,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The image request is invalid.";
+    throw invalidSetting(message, "prompt");
   }
 }
-
 function normalizeJsonRequest(body: unknown): NormalizedImageRequest {
   assertObjectBody(body);
   assertAllowedFields(body);
   const model = readModel(body.model);
+  const descriptor = descriptorFor(model);
+  if (!descriptor.operations.includes("generation")) {
+    throw invalidSetting(
+      `The model ${model} does not support image generation.`,
+      "model",
+    );
+  }
+  if (!descriptor.supportsQuality && body.quality !== undefined) {
+    throw invalidSetting(
+      `The model ${model} does not support quality.`,
+      "quality",
+    );
+  }
+  if (!descriptor.supportsCount && body.n !== undefined) {
+    throw invalidSetting(`The model ${model} does not support n.`, "n");
+  }
+  if (model === "kie-z-image" && body.output_format !== undefined) {
+    throw invalidSetting(
+      `The model ${model} does not support output_format.`,
+      "output_format",
+    );
+  }
   const prompt = readString(body.prompt, "prompt", true)!;
   const outputFormat = readOutputFormat(body.output_format, model);
   const normalized: NormalizedImageRequest = {
     model,
     prompt,
     count: readCount(body.n),
-    resolution: readQuality(body.quality),
+    resolution: descriptor.supportsQuality ? readQuality(body.quality) : "1K",
     aspectRatio: readAspectRatio(body.size, model),
     responseFormat: readResponseFormat(body.response_format),
     requestedOutputFormat: outputFormat.requested,
@@ -416,7 +436,8 @@ function validateReferences(
       unexpectedFile.fieldName,
     );
   }
-  const max = model === "kie-nano-banana-image" ? 14 : 16;
+  const descriptor = imageModel(model);
+  const max = descriptor?.maxReferences ?? 0;
   if (references.length === 0) {
     throw invalidReference("At least one image reference is required.");
   }
@@ -455,6 +476,37 @@ async function normalizeMultipartRequest(
   }
   assertMultipartFields(parsed.fields);
   const model = readModel(formValue(parsed.fields, "model"));
+  if (!imageModel(model)?.operations.includes("edit")) {
+    throw invalidSetting(
+      `The model ${model} does not support image edits.`,
+      "model",
+    );
+  }
+  const descriptor = descriptorFor(model);
+  if (
+    !descriptor.supportsQuality &&
+    formValue(parsed.fields, "quality") !== undefined
+  ) {
+    throw invalidSetting(
+      `The model ${model} does not support quality.`,
+      "quality",
+    );
+  }
+  if (
+    !descriptor.supportsCount &&
+    formValue(parsed.fields, "n") !== undefined
+  ) {
+    throw invalidSetting(`The model ${model} does not support n.`, "n");
+  }
+  if (
+    model === "kie-z-image" &&
+    formValue(parsed.fields, "output_format") !== undefined
+  ) {
+    throw invalidSetting(
+      `The model ${model} does not support output_format.`,
+      "output_format",
+    );
+  }
   const outputFormat = readOutputFormat(
     formValue(parsed.fields, "output_format"),
     model,
@@ -467,7 +519,9 @@ async function normalizeMultipartRequest(
     model,
     prompt: readString(formValue(parsed.fields, "prompt"), "prompt", true)!,
     count: readCount(formValue(parsed.fields, "n")),
-    resolution: readQuality(formValue(parsed.fields, "quality")),
+    resolution: descriptor.supportsQuality
+      ? readQuality(formValue(parsed.fields, "quality"))
+      : "1K",
     aspectRatio: readAspectRatio(formValue(parsed.fields, "size"), model),
     responseFormat: readResponseFormat(
       formValue(parsed.fields, "response_format"),
@@ -813,14 +867,6 @@ function taskIdFromResponse(response: {
   return response.data.taskId;
 }
 
-function providerTaskType(
-  model: KieImageModel,
-): "nano-banana-image" | "gpt-image-2" {
-  return model === "kie-nano-banana-image"
-    ? "nano-banana-image"
-    : "gpt-image-2";
-}
-
 async function runBounded<T>(
   count: number,
   limit: number,
@@ -845,22 +891,13 @@ async function runBounded<T>(
 function providerRequest(
   input: NormalizedImageRequest,
   imageUrls: string[],
-): NanoBananaImageRequest | GptImage2Request {
-  if (input.model === "kie-nano-banana-image") {
-    return NanoBananaImageSchema.parse({
-      prompt: input.prompt,
-      ...(imageUrls.length ? { image_input: imageUrls } : {}),
-      output_format: input.effectiveOutputFormat.providerFormat,
-      aspect_ratio: input.aspectRatio,
-      resolution: input.resolution,
-      google_search: false,
-    });
-  }
-  return GptImage2Schema.parse({
+): unknown {
+  return descriptorFor(input.model).normalizeSubmission({
     prompt: input.prompt,
-    ...(imageUrls.length ? { input_urls: imageUrls } : {}),
-    aspect_ratio: input.aspectRatio,
+    aspectRatio: input.aspectRatio,
     resolution: input.resolution,
+    effectiveOutputFormat: input.effectiveOutputFormat,
+    imageUrls,
   });
 }
 
@@ -869,14 +906,11 @@ async function submitTask(
   input: NormalizedImageRequest,
   imageUrls: string[],
 ): Promise<string> {
-  const request = providerRequest(input, imageUrls);
-  const response =
-    input.model === "kie-nano-banana-image"
-      ? await client.generateNanoBananaImage(request as NanoBananaImageRequest)
-      : await client.generateGptImage2(request as GptImage2Request);
-  return taskIdFromResponse(response);
+  const descriptor = descriptorFor(input.model);
+  return taskIdFromResponse(
+    await descriptor.submit(client, providerRequest(input, imageUrls)),
+  );
 }
-
 function readResultUrls(data: Record<string, unknown>): string[] {
   let result: unknown = data.resultJson;
   if (typeof result === "string") {
@@ -917,9 +951,10 @@ async function pollAndDownload(
       throw new ProviderTimeoutError();
     }
     firstPoll = false;
-    const response = await client.getTaskStatus(
+    const response = await pollOpenAiAdapterStatus(
+      descriptorFor(input.model),
+      client,
       taskId,
-      providerTaskType(input.model),
     );
     if (!responseCodeIsSuccessful(response.code) || !isRecord(response.data)) {
       throw new KieAiResponseError(
@@ -931,11 +966,22 @@ async function pollAndDownload(
     if (state === "fail") throw new ProviderTaskFailedError();
     if (state === "success") {
       const urls = readResultUrls(response.data);
+      if (
+        urls.length !==
+        descriptorFor(input.model).cardinality.expectedResultsPerTask
+      ) {
+        throw new InvalidProviderResultError();
+      }
       const downloads: string[] = [];
       for (const url of urls) {
         const downloaded = await client.downloadFile(url, {
           validateUrl: (currentUrl, previousUrl) =>
-            safeResultUrl(currentUrl, previousUrl, context.allowedResultHosts),
+            safeResultUrl(
+              currentUrl,
+              previousUrl,
+              context.allowedResultHostsByModel?.get(input.model) ??
+                context.allowedResultHosts,
+            ),
           maxBytes: MAX_RESULT_FILE_BYTES,
         });
         try {

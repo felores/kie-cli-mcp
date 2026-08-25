@@ -1,140 +1,46 @@
-export interface ImageOutputFormatCapability {
-  semanticFormat: "png" | "jpg";
-  mimeType: "image/png" | "image/jpeg";
-  providerFormat?: "png" | "jpg";
-}
+import {
+  type ImageOutputFormatCapability,
+  type OpenAiImageAdapter,
+  type OpenAiVideoAdapter,
+  openAiAdapter,
+  RESOLVED_OPENAI_ADAPTERS,
+} from "./registry/index.js";
 
-interface TransportModelBase {
-  id: string;
-  mediaType: "image" | "video";
-  ownedBy: "kie.ai";
-}
-
-export interface ImageTransportModel extends TransportModelBase {
-  mediaType: "image";
-  defaultOutputFormat: ImageOutputFormatCapability;
-  outputFormats: Readonly<Record<string, ImageOutputFormatCapability>>;
-}
-
-export interface VideoTransportModel extends TransportModelBase {
-  mediaType: "video";
-  presets: Readonly<Record<string, null>>;
-}
-
+export type { ImageOutputFormatCapability };
+export type ImageTransportModel = OpenAiImageAdapter;
+export type VideoTransportModel = OpenAiVideoAdapter;
 export type TransportModel = ImageTransportModel | VideoTransportModel;
-
-export const TRANSPORT_MODEL_CATALOG = [
-  {
-    id: "kie-nano-banana-image",
-    mediaType: "image",
-    ownedBy: "kie.ai",
-    defaultOutputFormat: {
-      semanticFormat: "png",
-      mimeType: "image/png",
-      providerFormat: "png",
-    },
-    outputFormats: {
-      png: {
-        semanticFormat: "png",
-        mimeType: "image/png",
-        providerFormat: "png",
-      },
-      jpg: {
-        semanticFormat: "jpg",
-        mimeType: "image/jpeg",
-        providerFormat: "jpg",
-      },
-      jpeg: {
-        semanticFormat: "jpg",
-        mimeType: "image/jpeg",
-        providerFormat: "jpg",
-      },
-    },
-  },
-  {
-    id: "kie-gpt-image-2",
-    mediaType: "image",
-    ownedBy: "kie.ai",
-    defaultOutputFormat: {
-      semanticFormat: "png",
-      mimeType: "image/png",
-    },
-    outputFormats: {
-      png: {
-        semanticFormat: "png",
-        mimeType: "image/png",
-      },
-    },
-  },
-  {
-    id: "kie-bytedance-video",
-    mediaType: "video",
-    ownedBy: "kie.ai",
-    presets: { normal: null },
-  },
-  {
-    id: "kie-bytedance-fast-video",
-    mediaType: "video",
-    ownedBy: "kie.ai",
-    presets: { normal: null },
-  },
-] as const satisfies readonly TransportModel[];
-
-export type KieImageModel = Extract<
-  (typeof TRANSPORT_MODEL_CATALOG)[number],
-  { mediaType: "image" }
->["id"];
-export type KieVideoModel = Extract<
-  (typeof TRANSPORT_MODEL_CATALOG)[number],
-  { mediaType: "video" }
->["id"];
-
-export const KIE_IMAGE_MODELS = TRANSPORT_MODEL_CATALOG.filter(
-  (
-    model,
-  ): model is Extract<
-    (typeof TRANSPORT_MODEL_CATALOG)[number],
-    { mediaType: "image" }
-  > => model.mediaType === "image",
-).map((model) => model.id);
-
-export const KIE_VIDEO_MODELS = TRANSPORT_MODEL_CATALOG.filter(
-  (
-    model,
-  ): model is Extract<
-    (typeof TRANSPORT_MODEL_CATALOG)[number],
-    { mediaType: "video" }
-  > => model.mediaType === "video",
-).map((model) => model.id);
-
+export const TRANSPORT_MODEL_CATALOG = RESOLVED_OPENAI_ADAPTERS;
+export type KieImageModel = string;
+export type KieVideoModel = string;
+export const KIE_IMAGE_MODELS = RESOLVED_OPENAI_ADAPTERS.filter(
+  (m): m is OpenAiImageAdapter => m.mediaType === "image",
+).map((m) => m.publicModelId);
+export const KIE_VIDEO_MODELS = RESOLVED_OPENAI_ADAPTERS.filter(
+  (m): m is OpenAiVideoAdapter => m.mediaType === "video",
+).map((m) => m.publicModelId);
 export function imageModel(id: unknown): ImageTransportModel | undefined {
-  return TRANSPORT_MODEL_CATALOG.find(
-    (model) => model.id === id && model.mediaType === "image",
-  ) as ImageTransportModel | undefined;
+  const value = openAiAdapter(id, "image");
+  return value?.mediaType === "image" ? value : undefined;
 }
-
 export function videoModel(id: unknown): VideoTransportModel | undefined {
-  return TRANSPORT_MODEL_CATALOG.find(
-    (model) => model.id === id && model.mediaType === "video",
-  ) as VideoTransportModel | undefined;
+  const value = openAiAdapter(id, "video");
+  return value?.mediaType === "video" ? value : undefined;
 }
-
-export function openAiModelList(): {
-  object: "list";
-  data: Array<{
-    id: string;
-    object: "model";
-    created: 0;
-    owned_by: string;
-  }>;
-} {
+export function openAiModelList() {
   return {
-    object: "list",
-    data: TRANSPORT_MODEL_CATALOG.map((model) => ({
-      id: model.id,
-      object: "model",
-      created: 0,
-      owned_by: model.ownedBy,
-    })),
+    object: "list" as const,
+    data: RESOLVED_OPENAI_ADAPTERS.slice()
+      .sort(
+        (a, b) =>
+          a.mediaType.localeCompare(b.mediaType) ||
+          a.publicModelId.localeCompare(b.publicModelId),
+      )
+      .map((model) => ({
+        id: model.publicModelId,
+        object: "model" as const,
+        created: 0 as const,
+        owned_by: model.ownedBy,
+      })),
   };
 }

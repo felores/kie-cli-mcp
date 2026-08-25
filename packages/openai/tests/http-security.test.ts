@@ -10,7 +10,10 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import express from "express";
-import { createKieOpenAiRouter } from "../src/http-server.js";
+import {
+  createKieOpenAiRouter,
+  resolvedResultHosts,
+} from "../src/http-server.js";
 import {
   createKieOpenAiStandaloneApp,
   startKieOpenAiStandaloneServer,
@@ -147,31 +150,12 @@ describe("standalone security boundary", () => {
     expect(await responseJson(discovered)).toEqual({
       object: "list",
       data: [
-        {
-          id: "kie-nano-banana-image",
-          object: "model",
-          created: 0,
-          owned_by: "kie.ai",
-        },
-        {
-          id: "kie-gpt-image-2",
-          object: "model",
-          created: 0,
-          owned_by: "kie.ai",
-        },
-        {
-          id: "kie-bytedance-video",
-          object: "model",
-          created: 0,
-          owned_by: "kie.ai",
-        },
-        {
-          id: "kie-bytedance-fast-video",
-          object: "model",
-          created: 0,
-          owned_by: "kie.ai",
-        },
-      ],
+        "kie-gpt-image-2",
+        "kie-nano-banana-image",
+        "kie-z-image",
+        "kie-bytedance-fast-video",
+        "kie-bytedance-video",
+      ].map((id) => ({ id, object: "model", created: 0, owned_by: "kie.ai" })),
     });
     expect(
       JSON.stringify(
@@ -295,10 +279,11 @@ describe("embedded router contract", () => {
       expect(
         (body.data as Array<{ id: string }>).map((model) => model.id),
       ).toEqual([
-        "kie-nano-banana-image",
         "kie-gpt-image-2",
-        "kie-bytedance-video",
+        "kie-nano-banana-image",
+        "kie-z-image",
         "kie-bytedance-fast-video",
+        "kie-bytedance-video",
       ]);
     } finally {
       router.close();
@@ -395,5 +380,51 @@ describe("embedded router contract", () => {
         code: "route_not_found",
       },
     });
+  });
+
+  test("validates scoped result-host overrides during router creation", () => {
+    expect(() =>
+      createKieOpenAiRouter({
+        allowedResultHostsByModel: { "unknown-image": ["cdn.example"] },
+      }),
+    ).toThrow("Unknown or non-canonical OpenAI model");
+    expect(() =>
+      createKieOpenAiRouter({
+        allowedResultHostsByModel: {
+          "kie-bytedance-fast-video": ["cdn.example"],
+        },
+      }),
+    ).toThrow("Unknown or non-canonical OpenAI model");
+    expect(() =>
+      createKieOpenAiRouter({
+        allowedResultHostsByModel: { "kie-z-image": ["127.0.0.1"] },
+      }),
+    ).toThrow("allowed result hosts");
+    const router = createKieOpenAiRouter({
+      allowedResultHosts: ["legacy.example"],
+      allowedResultHostsByModel: { "kie-z-image": ["z.example"] },
+    });
+    router.close();
+    const hosts = resolvedResultHosts({
+      allowedResultHosts: ["legacy.example"],
+      allowedResultHostsByModel: { "kie-z-image": ["z.example"] },
+    });
+    expect([...hosts.get("kie-nano-banana-image")!]).toEqual([
+      "legacy.example",
+    ]);
+    expect([...hosts.get("kie-z-image")!]).toEqual(["z.example"]);
+    expect(hosts.get("kie-z-image")?.has("legacy.example")).toBe(false);
+    expect(hosts.get("kie-gpt-image-2")?.has("z.example")).toBe(false);
+    const aliasHosts = resolvedResultHosts({
+      allowedResultHostsByModel: {
+        "kie-bytedance-video": ["video.example"],
+      },
+    });
+    expect([...aliasHosts.get("kie-bytedance-video")!]).toEqual([
+      "video.example",
+    ]);
+    expect([...aliasHosts.get("kie-bytedance-fast-video")!]).toEqual([
+      "video.example",
+    ]);
   });
 });
