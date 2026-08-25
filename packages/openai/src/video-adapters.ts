@@ -53,7 +53,18 @@ import {
 const SIZE_TO_RATIO: Record<string, string> = {
   "1280x720": "16:9",
   "720x1280": "9:16",
+  "1024x1024": "1:1",
+  "1920x1080": "16:9",
+  "1080x1920": "9:16",
 };
+const SUPPORTED_VIDEO_RATIOS = new Set([
+  "21:9",
+  "16:9",
+  "4:3",
+  "1:1",
+  "3:4",
+  "9:16",
+]);
 
 const ALLOWED_JSON_FIELDS = new Set([
   "model",
@@ -100,6 +111,7 @@ export interface VideoAdapterContext {
 export interface NormalizedVideoRequest {
   model: KieVideoModel;
   prompt: string;
+  preset?: string;
   duration?: number;
   aspectRatio?: string;
   resolution?: string;
@@ -152,6 +164,16 @@ function validatePreset(value: unknown, modelId: KieVideoModel): void {
   }
 }
 
+function readPreset(
+  value: unknown,
+  modelId: KieVideoModel,
+): string | undefined {
+  validatePreset(value, modelId);
+  return value === undefined
+    ? videoModel(modelId)?.defaultPreset
+    : (value as string);
+}
+
 function readString(
   value: unknown,
   field: string,
@@ -165,7 +187,10 @@ function readString(
 }
 
 function readPrompt(value: unknown): string {
-  const prompt = readString(value, "prompt", true)!;
+  const prompt = readString(value, "prompt", true);
+  if (!prompt) {
+    throw invalidSetting("The prompt setting is invalid.", "prompt");
+  }
   if (prompt.length < 3 || prompt.length > 20000) {
     throw invalidSetting(
       "The prompt must be 3 to 20,000 characters.",
@@ -194,10 +219,13 @@ function readAspectRatio(value: unknown): string | undefined {
   if (typeof value !== "string") {
     throw invalidSetting("The size setting is invalid.", "size");
   }
-  const ratio = SIZE_TO_RATIO[value.toLowerCase()];
+  const normalized = value.toLowerCase();
+  const ratio =
+    SIZE_TO_RATIO[normalized] ??
+    (SUPPORTED_VIDEO_RATIOS.has(normalized) ? normalized : undefined);
   if (!ratio) {
     throw invalidSetting(
-      `The size '${value}' is not supported. Use 1280x720 or 720x1280.`,
+      `The size '${value}' is not supported. Use a supported video ratio or 1280x720/720x1280.`,
       "size",
     );
   }
@@ -240,9 +268,9 @@ function normalizeJsonVideoRequest(body: unknown): NormalizedVideoRequest {
   }
   assertAllowedJsonFields(body);
   const model = readModel(body.model);
-  validatePreset(body.preset, model);
   return {
     model,
+    preset: readPreset(body.preset, model),
     prompt: readPrompt(body.prompt),
     duration: readDuration(body.seconds),
     aspectRatio: readAspectRatio(body.size),
@@ -343,7 +371,6 @@ async function normalizeMultipartVideoRequest(
   const parsed = await parseMultipartForm(request, maxBytes);
   assertMultipartFields(parsed.fields);
   const model = readModel(formValue(parsed.fields, "model"));
-  validatePreset(formValue(parsed.fields, "preset"), model);
   const partitioned = partitionMultipartFiles(parsed.files);
   for (const file of partitioned.images) validateImageFile(file);
   for (const file of partitioned.videos) validateVideoFile(file);
@@ -353,6 +380,7 @@ async function normalizeMultipartVideoRequest(
 
   return {
     model,
+    preset: readPreset(formValue(parsed.fields, "preset"), model),
     prompt: readPrompt(formValue(parsed.fields, "prompt")),
     duration: readDuration(formValue(parsed.fields, "seconds")),
     aspectRatio: readAspectRatio(formValue(parsed.fields, "size")),
@@ -370,6 +398,7 @@ async function normalizeMultipartVideoRequest(
 }
 
 export function videoRequestFingerprint(input: NormalizedVideoRequest): string {
+  const descriptor = videoDescriptor(input.model);
   const fileHash = (file: MultipartImageFile): unknown => ({
     fieldName: file.fieldName,
     filename: file.filename,
@@ -382,6 +411,11 @@ export function videoRequestFingerprint(input: NormalizedVideoRequest): string {
       JSON.stringify({
         model: canonicalModelId(input.model),
         prompt: input.prompt,
+        preset:
+          descriptor.omitDefaultPresetFromFingerprint &&
+          input.preset === descriptor.defaultPreset
+            ? undefined
+            : input.preset,
         duration: input.duration,
         aspectRatio: input.aspectRatio,
         resolution: input.resolution,
@@ -394,6 +428,40 @@ export function videoRequestFingerprint(input: NormalizedVideoRequest): string {
       }),
     )
     .digest("hex");
+}
+
+const VALIDATION_REFERENCE_URL = "https://validation.invalid/reference";
+
+function validationUrls(count: number): string[] {
+  return Array.from(
+    { length: count },
+    (_, index) => `${VALIDATION_REFERENCE_URL}/${index + 1}`,
+  );
+}
+
+function validateVideoSubmission(input: NormalizedVideoRequest): void {
+  const descriptor = videoDescriptor(input.model);
+  try {
+    descriptor.normalizeSubmission({
+      prompt: input.prompt,
+      preset: input.preset,
+      duration: input.duration,
+      aspectRatio: input.aspectRatio,
+      resolution: input.resolution,
+      generateAudio: input.generateAudio,
+      imageUrls: validationUrls(input.imageRefs.length),
+      videoUrls: validationUrls(input.videoRefs.length),
+      audioUrls: validationUrls(input.audioRefs.length),
+      firstFrameUrl: input.firstFrame ? VALIDATION_REFERENCE_URL : undefined,
+      lastFrameUrl: input.lastFrame
+        ? `${VALIDATION_REFERENCE_URL}/last-frame`
+        : undefined,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The video request is invalid.";
+    throw invalidSetting(message, "model");
+  }
 }
 
 function videoDescriptor(model: KieVideoModel): OpenAiVideoAdapter {
@@ -607,6 +675,11 @@ export async function handleVideoCreate(
   const requestIdHash = hashRequestId(id);
   const fingerprint = videoRequestFingerprint(input);
 
+  // Adapter and core-schema validation must complete before any paid upload or
+  // journal reservation. The validation pass uses syntactically valid sentinel
+  // URLs and is repeated with uploaded URLs immediately before submission.
+  validateVideoSubmission(input);
+
   const existing = await context.journal.read(requestIdHash);
   if (existing) {
     assertMatchingRequest(existing, input, fingerprint);
@@ -667,6 +740,7 @@ export async function handleVideoCreate(
   try {
     const providerRequest = descriptor.normalizeSubmission({
       prompt: input.prompt,
+      preset: input.preset,
       duration: input.duration,
       aspectRatio: input.aspectRatio,
       resolution: input.resolution,
@@ -917,7 +991,7 @@ export async function handleVideoCallback(
   const token =
     (request.query.token as string) || request.get("X-Callback-Token");
   const record = await context.journal.read(requestIdHash);
-  if (!record || !record.callbackToken) {
+  if (!record?.callbackToken) {
     response
       .status(404)
       .json({ error: { message: "Not found", type: "not_found" } });

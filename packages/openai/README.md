@@ -57,6 +57,11 @@ Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>
 | `kie-gpt-image-2` | Fixed PNG; omit `output_format` or use `png` |
 | `kie-bytedance-video` | Omit `preset` or use `preset=normal` |
 | `kie-bytedance-fast-video` | Same fixed Seedance 2.5 route and preset behavior |
+| `kie-kling-3-video` | Text/image-to-video; `preset=std` or `pro`; native audio via `generate_audio` |
+| `kie-minimax-h3-video` | Text/image/reference-to-video; use the matching `preset` for ambiguous image references |
+| `kie-veo3-video` | Text/image-to-video; `preset=veo3` or `veo3_fast`; fixed provider duration |
+| `kie-wan-2-7-video` | Text/image/reference-to-video; video editing is not exposed |
+| `kie-happyhorse-1-0-video` | Text/image/reference-to-video; video editing is not exposed |
 
 Explicit image formats are verified against the result MIME type and file
 signature. Masks and `background=transparent` are unsupported and fail before

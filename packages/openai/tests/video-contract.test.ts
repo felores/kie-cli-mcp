@@ -11,6 +11,18 @@ import { videoRequestFingerprint } from "../src/video-adapters.js";
 
 const providerBaseUrl = "https://provider.example/api/v1";
 const resultHosts = { allowedResultHosts: ["cdn.example"] };
+const phase3Models = [
+  "kie-kling-3-video",
+  "kie-minimax-h3-video",
+  "kie-veo3-video",
+  "kie-wan-2-7-video",
+  "kie-happyhorse-1-0-video",
+] as const;
+const phase3ResultHosts = {
+  allowedResultHostsByModel: Object.fromEntries(
+    phase3Models.map((model) => [model, ["cdn.example"]]),
+  ),
+};
 const originalFetch = globalThis.fetch;
 const servers: Server[] = [];
 
@@ -562,8 +574,10 @@ describe("KIE OpenAI video contract", () => {
       (f) => f.endsWith(".json") && !f.startsWith("."),
     );
     expect(journalFile).toBeDefined();
+    if (!journalFile)
+      throw new Error("The request journal file was not created.");
     const journalRaw = await import("node:fs/promises").then((fs) =>
-      fs.readFile(join(dataDir, journalFile!), "utf8"),
+      fs.readFile(join(dataDir, journalFile), "utf8"),
     );
     const journal = JSON.parse(journalRaw) as Record<string, unknown>;
     const callbackToken = journal.callbackToken as string;
@@ -922,6 +936,318 @@ describe("KIE OpenAI video contract", () => {
     });
     expect(response.status).toBe(422);
     expect(calls.createBodies).toHaveLength(0);
+    router.close();
+  });
+
+  test.each([
+    {
+      model: "kie-kling-3-video",
+      body: {
+        model: "kie-kling-3-video",
+        prompt: "A cinematic test shot",
+        seconds: 5,
+        size: "1280x720",
+        generate_audio: true,
+        preset: "pro",
+      },
+      providerPath: "/jobs/createTask",
+      expectedModel: "kling-3.0/video",
+    },
+    {
+      model: "kie-minimax-h3-video",
+      body: {
+        model: "kie-minimax-h3-video",
+        prompt: "A cinematic test shot",
+        seconds: 5,
+        size: "1280x720",
+        preset: "text-to-video",
+      },
+      providerPath: "/jobs/createTask",
+      expectedModel: "minimax-h3/text-to-video",
+    },
+    {
+      model: "kie-veo3-video",
+      body: {
+        model: "kie-veo3-video",
+        prompt: "A cinematic test shot",
+        size: "1280x720",
+        preset: "veo3_fast",
+      },
+      providerPath: "/veo/generate",
+      expectedModel: "veo3_fast",
+    },
+    {
+      model: "kie-wan-2-7-video",
+      body: {
+        model: "kie-wan-2-7-video",
+        prompt: "A cinematic test shot",
+        seconds: 5,
+        size: "1280x720",
+        resolution_name: "1080p",
+        preset: "text-to-video",
+      },
+      providerPath: "/jobs/createTask",
+      expectedModel: "wan/2-7-text-to-video",
+    },
+    {
+      model: "kie-happyhorse-1-0-video",
+      body: {
+        model: "kie-happyhorse-1-0-video",
+        prompt: "A cinematic test shot",
+        seconds: 5,
+        size: "1280x720",
+        resolution_name: "1080p",
+        preset: "text-to-video",
+      },
+      providerPath: "/jobs/createTask",
+      expectedModel: "happyhorse/text-to-video",
+    },
+  ] as const)(
+    "supports $model create, poll, content, and idempotency",
+    async (fixture) => {
+      const dataDir = await makeDataDir();
+      const taskId = fixture.model;
+      const createBodies: Record<string, unknown>[] = [];
+      const videoData = new Uint8Array([
+        0x00,
+        0x00,
+        0x00,
+        0x20,
+        ...new Array(28).fill(0x76),
+      ]);
+      jest
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(async (input, init) => {
+          const url = String(input);
+          if (url === `${providerBaseUrl}${fixture.providerPath}`) {
+            createBodies.push(
+              JSON.parse(String(init?.body)) as Record<string, unknown>,
+            );
+            return jsonResponse({ code: 200, data: { taskId } });
+          }
+          if (
+            url.startsWith(`${providerBaseUrl}/jobs/recordInfo`) ||
+            url.startsWith(`${providerBaseUrl}/veo/record-info`)
+          ) {
+            return jsonResponse({
+              code: 200,
+              data: {
+                state: "success",
+                resultJson: JSON.stringify({
+                  resultUrls: [`https://cdn.example/${taskId}.mp4`],
+                }),
+              },
+            });
+          }
+          if (url === `https://cdn.example/${taskId}.mp4`) {
+            return new Response(videoData, {
+              status: 200,
+              headers: { "content-type": "video/mp4" },
+            });
+          }
+          return originalFetch(input, init);
+        });
+
+      const router = createKieOpenAiRouter({
+        apiKey: "test-key",
+        baseUrl: providerBaseUrl,
+        dataDir,
+        ...phase3ResultHosts,
+        pollIntervalMs: 1,
+        pollTimeoutMs: 5_000,
+      });
+      const base = await serve(express().use(router));
+      const headers = {
+        "content-type": "application/json",
+        "Idempotency-Key": `phase3-${fixture.model}`,
+      };
+      const first = await fetch(`${base}/v1/videos`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(fixture.body),
+      });
+      expect(first.status).toBe(200);
+      const created = await responseJson(first);
+      const taskIdFromResponse = created.id as string;
+      const second = await fetch(`${base}/v1/videos`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(fixture.body),
+      });
+      expect(second.status).toBe(200);
+      expect(createBodies).toHaveLength(1);
+
+      const providerBody = createBodies[0];
+      if (fixture.model === "kie-veo3-video") {
+        expect(providerBody.model).toBe(fixture.expectedModel);
+      } else {
+        expect(providerBody.model).toBe(fixture.expectedModel);
+      }
+      const status = await fetch(`${base}/v1/videos/${taskIdFromResponse}`);
+      expect((await responseJson(status)).status).toBe("completed");
+      const content = await fetch(
+        `${base}/v1/videos/${taskIdFromResponse}/content`,
+      );
+      expect(content.status).toBe(200);
+      expect(content.headers.get("content-type")).toBe("video/mp4");
+      expect(new Uint8Array(await content.arrayBuffer())).toEqual(videoData);
+      router.close();
+    },
+  );
+
+  test.each([
+    { model: "kie-kling-3-video", preset: undefined, field: "input_reference" },
+    {
+      model: "kie-minimax-h3-video",
+      preset: "image-to-video",
+      field: "input_reference",
+    },
+    { model: "kie-veo3-video", preset: undefined, field: "first_frame" },
+    {
+      model: "kie-wan-2-7-video",
+      preset: "reference-to-video",
+      field: "input_reference",
+    },
+    {
+      model: "kie-happyhorse-1-0-video",
+      preset: "reference-to-video",
+      field: "input_reference[]",
+    },
+  ] as const)("maps reference uploads for $model", async (fixture) => {
+    const dataDir = await makeDataDir();
+    const uploadBodies: string[] = [];
+    const createBodies: Record<string, unknown>[] = [];
+    const taskId = `ref-${fixture.model}`;
+    jest.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.includes("/api/file-stream-upload")) {
+        uploadBodies.push(url);
+        return jsonResponse({
+          code: 200,
+          data: { fileUrl: `https://upload.example/${uploadBodies.length}` },
+        });
+      }
+      if (url.endsWith("/jobs/createTask") || url.endsWith("/veo/generate")) {
+        createBodies.push(
+          JSON.parse(String(init?.body)) as Record<string, unknown>,
+        );
+        return jsonResponse({ code: 200, data: { taskId } });
+      }
+      if (
+        url.startsWith(`${providerBaseUrl}/jobs/recordInfo`) ||
+        url.startsWith(`${providerBaseUrl}/veo/record-info`)
+      ) {
+        if (fixture.model === "kie-veo3-video") {
+          return jsonResponse({
+            code: 200,
+            data: {
+              successFlag: 1,
+              resultUrls: JSON.stringify([`https://cdn.example/${taskId}.mp4`]),
+            },
+          });
+        }
+        return jsonResponse({
+          code: 200,
+          data: {
+            state: "success",
+            resultJson: JSON.stringify({
+              resultUrls: [`https://cdn.example/${taskId}.mp4`],
+            }),
+          },
+        });
+      }
+      if (url === `https://cdn.example/${taskId}.mp4`) {
+        return new Response(
+          new Uint8Array([0x00, 0x00, 0x00, 0x20, ...new Array(28).fill(0x66)]),
+          { status: 200, headers: { "content-type": "video/mp4" } },
+        );
+      }
+      return originalFetch(input, init);
+    });
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      dataDir,
+      uploadBaseUrl: "https://upload.example",
+      ...phase3ResultHosts,
+    });
+    const base = await serve(express().use(router));
+    const form = new FormData();
+    form.set("model", fixture.model);
+    form.set("prompt", "Reference upload test");
+    if (fixture.model !== "kie-veo3-video") form.set("seconds", "5");
+    if (fixture.model !== "kie-minimax-h3-video") {
+      form.set("size", "1280x720");
+    }
+    if (fixture.preset) form.set("preset", fixture.preset);
+    const image = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    form.append(
+      fixture.field,
+      new Blob([image], { type: "image/png" }),
+      "ref.png",
+    );
+    if (fixture.model === "kie-wan-2-7-video") {
+      const video = new Uint8Array([
+        0x00,
+        0x00,
+        0x00,
+        0x20,
+        ...new Array(28).fill(0x66),
+      ]);
+      form.append(
+        "reference_video",
+        new Blob([video], { type: "video/mp4" }),
+        "ref.mp4",
+      );
+    }
+    const response = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      headers: { "Idempotency-Key": `ref-${fixture.model}` },
+      body: form,
+    });
+    expect(response.status).toBe(200);
+    expect(uploadBodies.length).toBeGreaterThan(0);
+    expect(createBodies).toHaveLength(1);
+    router.close();
+  });
+
+  test("rejects adapter-incompatible references before upload and reservation", async () => {
+    const dataDir = await makeDataDir();
+    const calls = mockProviderForTask("phase3-early", "submit");
+    const router = createKieOpenAiRouter({
+      apiKey: "test-key",
+      baseUrl: providerBaseUrl,
+      dataDir,
+      uploadBaseUrl: "https://upload.example",
+      ...phase3ResultHosts,
+    });
+    const base = await serve(express().use(router));
+    const form = new FormData();
+    form.set("model", "kie-kling-3-video");
+    form.set("prompt", "This must fail before paid work");
+    form.append(
+      "reference_video",
+      new Blob(
+        [new Uint8Array([0x00, 0x00, 0x00, 0x20, ...new Array(28).fill(0x66)])],
+        {
+          type: "video/mp4",
+        },
+      ),
+      "ref.mp4",
+    );
+    const response = await fetch(`${base}/v1/videos`, {
+      method: "POST",
+      body: form,
+    });
+    expect(response.status).toBe(422);
+    expect(errorCode(await responseJson(response))).toBe("unsupported_setting");
+    expect(calls.uploadBodies).toHaveLength(0);
+    expect(calls.createBodies).toHaveLength(0);
+    expect(
+      (await readdir(dataDir)).filter((name) => name.endsWith(".json")),
+    ).toHaveLength(0);
     router.close();
   });
 

@@ -81,6 +81,11 @@ apply. Embedded deployments continue using the host application's authentication
 | `kie-flux-kontext-pro-image` | Flux Kontext Pro | image gen/edit | PNG or JPEG; standard-compatible quality; one reference; Flux Kontext status route |
 | `kie-bytedance-video` | Seedance 2.5 | video | Omitted `preset` or `preset=normal`; both select the same fixed provider route |
 | `kie-bytedance-fast-video` | Seedance 2.5 | video | Legacy alias with the same `normal` preset normalization; it does not select a fast mode |
+| `kie-kling-3-video` | Kling 3.0 | video | Text/image-to-video; `std` or `pro`; image references and native audio |
+| `kie-minimax-h3-video` | MiniMax H3 | video | Text, image, or reference-to-video; `text-to-video`, `image-to-video`, and `reference-to-video` presets |
+| `kie-veo3-video` | Veo 3 | video | Text/image-to-video; `veo3` or `veo3_fast`; Veo status polling |
+| `kie-wan-2-7-video` | Wan 2.7 | video | Text, image, or reference-to-video; editing modes are excluded |
+| `kie-happyhorse-1-0-video` | HappyHorse 1.0 | video | Text, image, or reference-to-video; editing modes are excluded |
 
 Video model IDs intentionally omit `seedance` so consumers use the generic video route, not an Ark-specific branch.
 
@@ -169,6 +174,11 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-flux-kontext-pro-image` | `flux_kontext_image` | generation, edit | one Flux Kontext Pro task and one PNG/JPEG result per requested `n`; one reference and special status parsing |
 | `kie-bytedance-video` | `bytedance_seedance_video` | create video | one task and exactly one video result |
 | `kie-bytedance-fast-video` | `bytedance_seedance_video` | create video | legacy alias of `kie-bytedance-video` |
+| `kie-kling-3-video` | `kling_video` | text/image-to-video | one task and exactly one video result |
+| `kie-minimax-h3-video` | `hailuo_video` | text/image/reference-to-video | one task and exactly one video result |
+| `kie-veo3-video` | `veo3_generate_video` | text/image-to-video | one task and exactly one video result; Veo status route |
+| `kie-wan-2-7-video` | `wan_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
+| `kie-happyhorse-1-0-video` | `happyhorse_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
 
 Reference counts follow each provider/core contract. Multipart uploads also
 apply a transport safety ceiling: Seedream 5 Pro and Flux 2 document 30 MiB per
