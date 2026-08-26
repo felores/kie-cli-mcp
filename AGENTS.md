@@ -262,7 +262,8 @@ if (apiType === 'veo3') {
 - **Published packages** (versioned independently):
   - `@felores/kie-ai-mcp-server` in `packages/mcp` (bin: `kie-ai-mcp-server`)
   - `@felores/kie-cli` in `packages/cli` (bin: `kie-cli`)
-  - `@felores/kie-ai-core` is private and bundled into both published packages.
+  - `@felores/kie-ai-openai-server` in `packages/openai` (bin: `kie-ai-openai-server`)
+  - `@felores/kie-ai-core` is private and bundled into the published packages.
 - **NPM account**: `felores`
 - **Registry**: https://registry.npmjs.org/
 - **2FA**: Enabled (requires OTP for publishing)
@@ -272,16 +273,19 @@ if (apiType === 'veo3') {
 
 ### Release Workflow (Canonical)
 
-1. Bump each affected public package independently: MCP changes require `packages/mcp/package.json` and `packages/mcp/src/index.ts`; CLI changes require `packages/cli/package.json`. Update `package-lock.json`, `CHANGELOG.md`, model/feature references in BOTH READMEs (`README.md` and `README.es.md`), `docs/TOOLS.md` (`npm run docs`), and relevant `docs/kie/` contracts.
-2. Verify locally: `npm run typecheck`, `npm run build`, `npm test`, and `npm pack -w @felores/kie-ai-mcp-server --dry-run` plus `npm pack -w @felores/kie-cli --dry-run` for affected packages.
+1. Bump each affected public package independently: MCP changes require `packages/mcp/package.json` and `packages/mcp/src/index.ts`; CLI changes require `packages/cli/package.json`; OpenAI transport changes require `packages/openai/package.json` and `packages/openai/src/version.ts`. Update `package-lock.json`, `CHANGELOG.md`, model/feature references in BOTH READMEs (`README.md` and `README.es.md`), `docs/TOOLS.md` (`npm run docs`), and relevant `docs/kie/` contracts.
+2. Verify locally: `npm run typecheck`, `npm run build`, `npm test`, and `npm pack --dry-run` for every affected public package.
 3. Commit the release preparation on a branch, push it, open a pull request, and merge only after the required `Verify` check passes. Update local `main`, create and push tag `vX.Y.Z`, then create the GitHub Release with notes from the changelog.
 4. Publish affected packages to npm with a fresh OTP when manual publishing is required. The release workflow also publishes to npm and GitHub Packages (`https://npm.pkg.github.com/`); monitor its run to completion.
-5. A release is complete only when: commits and tag are pushed, the GitHub Release is visible, intended versions resolve from npm, both intended packages have successful GitHub Packages publish steps, and the working tree is clean.
+5. A release is complete only when: commits and tag are pushed, the GitHub Release is visible, intended versions resolve from npm, every intended package has a successful GitHub Packages publish step, and the working tree is clean.
 
-1. **When to bump version**:
-   - **Patch (x.x.X)**: Bug fixes, documentation, internal improvements
-   - **Minor (x.X.0)**: New features, new tools, new parameters (backwards compatible)
-   - **Major (X.0.0)**: Breaking changes, API endpoint changes, removed features
+1. **Choose the smallest proportionate bump for each affected package**:
+   - Judge the package's public user contract, not the provider's model number, internal endpoint, or marketing version.
+   - **Patch (x.x.X)**: Bug fixes, documentation, and internal improvements that preserve the public contract.
+   - **Minor (x.X.0)**: New models, tools, parameters, and routine provider-model replacements under an existing tool or route. Provider-specific parameter churn does not by itself justify an ecosystem-wide major.
+   - **Major (X.0.0)**: Intentional package-wide breaks such as changing the MCP/CLI transport contract or removing widely used public commands/model IDs without a compatibility path. Require explicit human confirmation before any major bump.
+   - For `0.x` packages, use the next minor as the normal compatibility boundary. Do not jump to `1.0.0` solely because a provider model schema changed.
+   - Version public packages independently. Do not synchronize unrelated packages to the same major version.
 
 2. **Files to update** when bumping the MCP server:
    - `packages/mcp/package.json` → `"version": "X.Y.Z"`
