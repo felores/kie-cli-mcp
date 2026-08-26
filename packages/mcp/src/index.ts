@@ -110,7 +110,7 @@ export class KieAiMcpServer {
   // a tool missing from it can still run, it just isn't selectable by category.
   private static readonly ALL_TOOLS = TOOL_REGISTRY.map((t) => t.name);
 
-  static readonly VERSION = "6.0.0";
+  static readonly VERSION = "5.1.0";
 
   constructor() {
     // Initialize client with config from environment

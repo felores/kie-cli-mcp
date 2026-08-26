@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## MCP 6.0.0 / CLI 1.0.0 / OpenAI transport 1.0.0 - 2026-08-25
+## MCP 5.1.0 / CLI 0.9.0 / OpenAI transport 0.7.0 - 2026-08-25
 
 ### Added
 - Added Wan 3.0 multimodal inputs for image, video, audio, document, and webpage references.
