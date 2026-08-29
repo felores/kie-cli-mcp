@@ -207,6 +207,12 @@ kie-cli submit_media_generation --planId <prepared-plan-id> --approve <prepared-
 
 Plans are persisted in the local SQLite database and move atomically from `prepared` to `approved`, `submitting`, and then `submitted` or `failed`. They expire after 15 minutes by default, cannot be modified, and cannot be submitted twice. The request hash detects accidental plan mutation only. An MCP plan is also bound to the server instance that prepared and approved it, so another HTTP session cannot submit it. A submitted batch creates no more than four provider tasks concurrently. Exact credit quotes exist only for verified request dimensions; all other requests are `unknown`. No USD conversion is assumed.
 
+`skills/explainer-video/` builds on it: a full narrated-explainer production pipeline (storyboard JSON → character refs → scene stills → animated clips → voiceover → ffmpeg assembly) with a resumable runner, a storyboard schema, a narrative style guide, and a complete worked example. Install it the same way:
+
+```bash
+cp -r skills/explainer-video ~/.claude/skills/explainer-video
+```
+
 ## Models
 
 A unified, always-current catalog organized by job:
