@@ -518,20 +518,37 @@ describe("HailuoVideoSchema (MiniMax H3)", () => {
   });
 });
 
-describe("SunoGenerateSchema (V5_5)", () => {
-  it("accepts V5_5 duration", () => {
-    expect(
-      SunoGenerateSchema.safeParse({
-        prompt: "A gentle ambient track",
-        customMode: false,
-        instrumental: true,
-        model: "V5_5",
-        duration: 90,
-      }).success,
-    ).toBe(true);
-  });
+describe("SunoGenerateSchema (V6 models)", () => {
+  it.each(["V5_5", "V6", "V6_MINI", "V6_WILD"])(
+    "accepts %s duration",
+    (model) => {
+      expect(
+        SunoGenerateSchema.safeParse({
+          prompt: "A gentle ambient track",
+          customMode: false,
+          instrumental: true,
+          model,
+          duration: 90,
+        }).success,
+      ).toBe(true);
+    },
+  );
 
-  it("rejects duration for models other than V5_5", () => {
+  it.each(["V6", "V6_MINI", "V6_WILD"])(
+    "accepts the %s model without duration",
+    (model) => {
+      expect(
+        SunoGenerateSchema.safeParse({
+          prompt: "A gentle ambient track",
+          customMode: false,
+          instrumental: true,
+          model,
+        }).success,
+      ).toBe(true);
+    },
+  );
+
+  it("rejects duration for models other than V5_5 or V6 models", () => {
     expect(
       SunoGenerateSchema.safeParse({
         prompt: "A gentle ambient track",

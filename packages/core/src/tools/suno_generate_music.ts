@@ -5,7 +5,7 @@ import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 export const sunoGenerateMusicTool: ToolDef<typeof SunoGenerateSchema> = {
   name: "suno_generate_music",
   description:
-    "Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V5_5 supports requested duration.",
+    "Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5, V6, V6_MINI, V6_WILD). V5_5 and V6 models support requested duration.",
   category: "audio",
   schema: SunoGenerateSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -63,8 +63,9 @@ export const sunoGenerateMusicTool: ToolDef<typeof SunoGenerateSchema> = {
         customMode: "Required: Enable advanced customization (true/false)",
         instrumental: "Required: Generate instrumental music (true/false)",
         model:
-          "Required: AI model version (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5)",
-        duration: "Optional: Track duration in seconds (V5_5 only)",
+          "Required: AI model version (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5, V6, V6_MINI, V6_WILD)",
+        duration:
+          "Optional: Track duration in seconds (V5_5, V6, V6_MINI, or V6_WILD)",
         callBackUrl:
           "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
         style: "Optional: Music style/genre (required in custom mode)",

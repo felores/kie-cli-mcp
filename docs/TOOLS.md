@@ -507,7 +507,7 @@ Generate sound effects from text descriptions using ElevenLabs Sound Effects v2 
 
 ### suno_generate_music
 
-Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V5_5 supports requested duration.
+Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5, V6, V6_MINI, V6_WILD). V5_5 and V6 models support requested duration.
 
 #### Parameters
 
@@ -516,11 +516,11 @@ Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V
 | `prompt` | string | yes | Description of the desired audio content. In custom mode: used as exact lyrics (max 5000 chars for V4_5+, V5; 3000 for V3_5, V4). In non-custom mode: core idea for auto-generated lyrics (max 500 chars) |
 | `customMode` | boolean | yes | Enable advanced parameter customization. If true: requires style and title. If false: simplified mode with only prompt required |
 | `instrumental` | boolean | yes | Generate instrumental music (no lyrics). In custom mode: if true, only style and title required; if false, prompt used as exact lyrics |
-| `model` | `V3_5` / `V4` / `V4_5` / `V4_5PLUS` / `V5` / `V5_5` | no | AI model version for generation (default: `"V5"`) |
+| `model` | `V3_5` / `V4` / `V4_5` / `V4_5PLUS` / `V5` / `V5_5` / `V6` / `V6_MINI` / `V6_WILD` | no | AI model version for generation (default: `"V5"`) |
 | `callBackUrl` | string | no | URL to receive task completion updates (optional, will use KIE_AI_CALLBACK_URL env var if not provided) |
 | `style` | string | no | Music style/genre (required in custom mode, max 1000 chars for V4_5+, V5; 200 for V3_5, V4) |
 | `title` | string | no | Track title (required in custom mode, max 80 chars) |
-| `duration` | integer | no | Requested track duration in seconds (available only with V5_5) |
+| `duration` | integer | no | Requested track duration in seconds (available with V5_5, V6, V6_MINI, or V6_WILD) |
 | `negativeTags` | string | no | Music styles to exclude (optional, max 200 chars) |
 | `vocalGender` | `m` / `f` | no | Vocal gender preference (optional, only effective in custom mode) |
 | `styleWeight` | number | no | Strength of style adherence (optional, range 0-1, up to 2 decimal places) |
