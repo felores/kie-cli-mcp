@@ -249,7 +249,7 @@ describe("KieAiClient MiniMax H3 routing", () => {
         reference_video_urls: ["https://example.com/motion.mp4"],
         reference_audio_urls: ["https://example.com/voice.mp3"],
         aspect_ratio: "adaptive",
-        resolution: "768p",
+        resolution: "768P",
       },
     });
   });
