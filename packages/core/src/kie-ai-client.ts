@@ -1209,7 +1209,9 @@ export class KieAiClient {
         input.reference_audio_urls = request.referenceAudioUrls;
       }
       if (request.aspectRatio) input.aspect_ratio = request.aspectRatio;
-      if (request.resolution) input.resolution = request.resolution;
+      // The provider accepts only 768P / 2K; the tool schema uses lowercase 768p.
+      if (request.resolution)
+        input.resolution = request.resolution.toUpperCase();
     } else {
       model = "minimax-h3/text-to-video";
       input.aspect_ratio = request.aspectRatio;
