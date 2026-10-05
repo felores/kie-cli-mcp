@@ -35,6 +35,7 @@ import { veo3GenerateVideoTool } from "./veo3_generate_video.js";
 import { veo3Get1080pVideoTool } from "./veo3_get_1080p_video.js";
 import { waitForTaskTool } from "./wait_for_task.js";
 import { wanAnimateTool } from "./wan_animate.js";
+import { wanImageTool } from "./wan_image.js";
 import { wanVideoTool } from "./wan_video.js";
 import { zImageTool } from "./z_image.js";
 
@@ -84,6 +85,7 @@ export const TOOL_REGISTRY: ToolDef[] = [
   wanAnimateTool,
   wanVideoTool,
   zImageTool,
+  wanImageTool,
 ];
 
 export function getTool(name: string): ToolDef | undefined {

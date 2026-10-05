@@ -1,11 +1,10 @@
-import { z } from "zod";
 import { SunoGenerateSchema } from "../types.js";
 import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
 export const sunoGenerateMusicTool: ToolDef<typeof SunoGenerateSchema> = {
   name: "suno_generate_music",
   description:
-    "Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V5_5 supports requested duration.",
+    "Generate music using Suno V6, V6 Mini, or V6 Wild with lyrics, style, personas, and non-custom media references. Older versions are removed.",
   category: "audio",
   schema: SunoGenerateSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -21,7 +20,7 @@ export const sunoGenerateMusicTool: ToolDef<typeof SunoGenerateSchema> = {
         // Store task in database
         await ctx.db.createTask({
           task_id: response.data.taskId,
-          api_type: "suno",
+          api_type: "suno-v6",
           status: "pending",
         });
 
@@ -35,15 +34,14 @@ export const sunoGenerateMusicTool: ToolDef<typeof SunoGenerateSchema> = {
                   task_id: response.data.taskId,
                   message: "Music generation task created successfully",
                   parameters: {
-                    model: request.model || "V5",
+                    model: request.model || "V6",
                     customMode: request.customMode,
                     instrumental: request.instrumental,
                     callBackUrl: request.callBackUrl,
                   },
                   next_steps: [
                     "Use get_task_status to check generation progress",
-                    "Task completion will be sent to the provided callback URL",
-                    "Generation typically takes 1-3 minutes depending on model and length",
+                    "Use wait_for_task to wait for all generated audio results",
                   ],
                 },
                 null,
@@ -59,17 +57,17 @@ export const sunoGenerateMusicTool: ToolDef<typeof SunoGenerateSchema> = {
       }
     } catch (error) {
       return ctx.formatError("suno_generate_music", error, {
-        prompt: "Required: Description of desired audio content",
+        prompt: "Optional: Audio description or custom lyrics fallback",
+        lyrics: "Optional: Lyrics up to 5000 characters",
         customMode: "Required: Enable advanced customization (true/false)",
         instrumental: "Required: Generate instrumental music (true/false)",
-        model:
-          "Required: AI model version (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5)",
-        duration: "Optional: Track duration in seconds (V5_5 only)",
+        model: "Optional: V6 (default), V6_MINI, V6_WILD",
+        duration: "Optional: 10-360 seconds, custom mode only",
         callBackUrl:
           "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-        style: "Optional: Music style/genre (required in custom mode)",
+        style: "Optional: Music style/genre, up to 1000 characters",
         title: "Optional: Track title (required in custom mode, max 80 chars)",
-        negativeTags: "Optional: Styles to exclude (max 200 chars)",
+        negativeTags: "Optional: Styles to exclude",
         vocalGender:
           "Optional: Vocal gender preference (m/f, custom mode only)",
         styleWeight:

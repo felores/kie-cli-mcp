@@ -7,7 +7,7 @@ export const bytedanceSeedreamImageTool: ToolDef<
 > = {
   name: "bytedance_seedream_image",
   description:
-    "Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.",
+    "Generate, edit, or decompose images into layers using Seedream 5 Pro or Flash. image_urls selects editing; image_url selects layer decomposition. Older versions are removed.",
   category: "image",
   schema: ByteDanceSeedreamImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -22,7 +22,11 @@ export const bytedanceSeedreamImageTool: ToolDef<
       if (response.code === 200 && response.data?.taskId) {
         // Determine mode for user feedback
         const isEdit = !!request.image_urls && request.image_urls.length > 0;
-        const mode = isEdit ? "Image Editing" : "Text-to-Image";
+        const mode = request.image_url
+          ? "Layer Decomposition"
+          : isEdit
+            ? "Image Editing"
+            : "Text-to-Image";
 
         // Store task in database
         await ctx.db.createTask({
@@ -39,16 +43,23 @@ export const bytedanceSeedreamImageTool: ToolDef<
                 {
                   success: true,
                   task_id: response.data.taskId,
-                  message: `ByteDance Seedream ${request.version === "4" ? "V4" : request.version === "5-pro" ? "V5 Pro" : "V5 Lite"} ${mode} task created successfully`,
+                  message: `Seedream ${request.version ?? "5-pro"} ${mode} task created successfully`,
                   parameters: {
                     mode: mode,
-                    prompt:
-                      request.prompt.substring(0, 100) +
-                      (request.prompt.length > 100 ? "..." : ""),
-                    image_size: request.image_size || "1:1",
-                    image_resolution: request.image_resolution || "1K",
-                    max_images: request.max_images || 1,
-                    seed: request.seed !== undefined ? request.seed : -1,
+                    prompt: request.prompt?.substring(0, 100),
+                    version: request.version ?? "5-pro",
+                    aspect_ratio: request.image_url
+                      ? undefined
+                      : (request.aspect_ratio ?? "1:1"),
+                    quality:
+                      request.version !== "5-flash" && !request.image_url
+                        ? (request.quality ?? "basic")
+                        : undefined,
+                    size: request.image_url
+                      ? (request.size ?? "auto")
+                      : request.version === "5-flash"
+                        ? (request.size ?? "1K")
+                        : undefined,
                     ...(isEdit && {
                       image_urls_count: request.image_urls?.length || 0,
                     }),
@@ -77,15 +88,13 @@ export const bytedanceSeedreamImageTool: ToolDef<
       if (error instanceof z.ZodError) {
         return ctx.formatError("bytedance_seedream_image", error, {
           prompt:
-            "Required: Text prompt for image generation or editing (max 10000 characters)",
+            "Generation/edit prompt: 3-5000 characters; optional for layers",
           image_urls:
             "Optional: Array of image URLs for editing mode (1-10 images)",
-          image_size: "Optional: Image aspect ratio (default: 1:1)",
-          image_resolution:
-            "Optional: Image resolution - 1K/2K/4K (default: 1K)",
-          max_images:
-            "Optional: Number of images to generate (1-6, default: 1)",
-          seed: "Optional: Random seed for reproducible results (default: -1 for random)",
+          image_url: "Layer decomposition: single source image URL",
+          version: "5-pro (default) or 5-flash",
+          quality: "Pro generation/edit only: basic (1K) or high (2K)",
+          size: "Flash: 1K/1.5K/2K; layers also accept auto",
           callBackUrl:
             "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
         });
@@ -93,13 +102,10 @@ export const bytedanceSeedreamImageTool: ToolDef<
 
       return ctx.formatError("bytedance_seedream_image", error, {
         prompt:
-          "Required: Text prompt for image generation or editing (max 10000 characters)",
+          "Generation/edit prompt: 3-5000 characters; optional for layers",
         image_urls:
           "Optional: Array of image URLs for editing mode (1-10 images)",
-        image_size: "Optional: Image aspect ratio (default: 1:1)",
-        image_resolution: "Optional: Image resolution - 1K/2K/4K (default: 1K)",
-        max_images: "Optional: Number of images to generate (1-6, default: 1)",
-        seed: "Optional: Random seed for reproducible results (default: -1 for random)",
+        image_url: "Layer decomposition: single source image URL",
         callBackUrl:
           "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
       });

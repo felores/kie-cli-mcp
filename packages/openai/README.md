@@ -51,23 +51,28 @@ Every non-preflight request requires `Authorization: Bearer <LOCAL_BEARER_TOKEN>
 | `kie-nano-banana-image` | `output_format=png`, `jpg`, or `jpeg` (`jpeg` normalizes to `jpg`) |
 | `kie-z-image` | generation only; PNG output and standard ratios |
 | `kie-seedream-5-pro-image` | Generation/editing; PNG or JPEG; 1K/2K; up to 10 references |
-| `kie-qwen-image` | Generation/editing; PNG or JPEG; one reference |
+| `kie-qwen-image` | Qwen3 generation/editing; PNG or JPEG; 1K/2K; up to three references |
 | `kie-flux-2-pro-image` | Generation/editing; fixed PNG; 1K/2K; up to 8 references |
 | `kie-flux-kontext-pro-image` | Generation/editing; PNG or JPEG; one reference |
-| `kie-gpt-image-2` | Fixed PNG; omit `output_format` or use `png` |
+| `kie-gpt-image-2` | GPT Image 2.5 Flare; fixed PNG; omit `output_format` or use `png` |
 | `kie-bytedance-video` | Omit `preset` or use `preset=normal` |
 | `kie-bytedance-fast-video` | Same fixed Seedance 2.5 route and preset behavior |
 | `kie-kling-3-video` | Text/image-to-video; `preset=std` or `pro`; native audio via `generate_audio` |
 | `kie-minimax-h3-video` | Text/image/reference-to-video; use the matching `preset` for ambiguous image references |
 | `kie-veo3-video` | Text/image-to-video; `preset=veo3` or `veo3_fast`; fixed provider duration |
 | `kie-wan-3-0-video` | Text, keyframe, and multimodal reference-to-video; `kie-wan-2-7-video` remains an alias |
-| `kie-happyhorse-1-0-video` | Text/image/reference-to-video; video editing is not exposed |
+| `kie-happyhorse-1-1-video` | HappyHorse 1.1 text/image/reference-to-video; old 1.0 ID is an alias; editing is not exposed |
 | `kie-midjourney-video` | Image-to-video only; exactly one image reference; standard motion mode |
 | `kie-grok-video` | Text/image-to-video; `preset=normal`; one image reference for image mode |
 
 Explicit image formats are verified against the result MIME type and file
 signature. Masks and `background=transparent` are unsupported and fail before
 provider work.
+
+MCP/CLI provide the wider selectors for GPT Sunburst, Seedream Flash/layers,
+Qwen3 Pro, and Wan Prime. Wan Image/Image Pro are excluded from this transport's
+one-result-per-task image contract. Current upgrades have mocked-contract proofs,
+not paid generation results.
 
 Image `size` accepts an explicit model-supported ratio such as `16:9`, or pixel
 dimensions such as `1824x1024`. Explicit ratio strings remain strict. Pixel

@@ -1,5 +1,7 @@
 # Kie Model Integration Plan
 
+This is the historical integration plan. Suno V5.5 is now discontinued and replaced by [V6](kie/suno_v6.md); current Seedream support is [5 Pro](kie/seedream_5-pro.md) and [5 Flash](kie/seedream_5-flash.md). Use [ENDPOINTS.md](ENDPOINTS.md) for current routing, not the historical decisions below.
+
 ## Scope
 
 Integrate six Kie.ai capabilities discovered from the model marketplace. Each integration has a focused commit, schema validation, task persistence when the API is asynchronous, endpoint documentation, and registry coverage.

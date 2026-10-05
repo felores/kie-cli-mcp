@@ -43,6 +43,7 @@ const EXPECTED_TOOL_NAMES = [
   "veo3_get_1080p_video",
   "wait_for_task",
   "wan_animate",
+  "wan_image",
   "wan_video",
   "z_image",
 ].sort();

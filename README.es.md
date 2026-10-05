@@ -28,11 +28,32 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 
 - **Servidor MCP**: `@felores/kie-ai-mcp-server`, para Claude Desktop y otros clientes MCP. Ver **Inicio rápido** abajo.
 - **CLI**: `@felores/kie-cli` (binario `kie-cli`), para la terminal, sin cliente MCP: `npm i -g @felores/kie-cli`, luego `kie-cli --help`. Ver [`packages/cli/README.md`](packages/cli/README.md).
-- **Transporte OpenAI**: `@felores/kie-ai-openai-server`, un servidor HTTP local que expone modelos seleccionados de imagen y video mediante rutas con formato OpenAI. La versión 0.7 agrega Wan 3.0 y conserva el ID de Wan 2.7 como alias de compatibilidad. Ver [`docs/openai-transport.md`](docs/openai-transport.md).
+- **Transporte OpenAI**: `@felores/kie-ai-openai-server`, un servidor HTTP local para modelos seleccionados de imagen y video. La versión 0.8 actualiza GPT Image a 2.5 Flare, Qwen a Qwen3 y HappyHorse a 1.1, conservando IDs de compatibilidad. Ver [`docs/openai-transport.md`](docs/openai-transport.md).
 
 El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
 
-## ✨ Novedades en MCP 5.1.0
+## Novedades en MCP 5.2.0
+
+- Suno V6/Mini/Wild, GPT Image 2.5 Flare/Sunburst, Seedream 5 Pro/Flash y capas, Qwen3/Pro y HappyHorse 1.1 reemplazan las versiones retiradas.
+- `wan_video` agrega Wan 3.0 Prime. La nueva herramienta `wan_image` soporta Wan 2.7 Image/Pro, hasta nueve referencias, salida secuencial, paletas y edición por cajas.
+- Los cambios del núcleo compartido llegan a CLI 0.10 y a los adaptadores OpenAI seleccionados en transporte 0.8. Se conservan la consulta de tareas históricas y los alias de transporte, sin generar con rutas antiguas. Los precios no verificados siguen como `unknown`.
+
+Ejemplos de migración:
+
+```bash
+kie-cli suno_generate_music --customMode --instrumental --model V6 --style "Ambient piano" --title "Quiet"
+kie-cli gpt_image_2 --model sunburst --prompt "A glass perfume bottle" --background transparent
+kie-cli bytedance_seedream_image --version 5-flash --size 1.5K --prompt "A botanical poster"
+kie-cli bytedance_seedream_image --version 5-pro --image_url https://example.com/product.png
+kie-cli qwen_image --model qwen3-pro --resolution 2K --prompt "A product photo"
+kie-cli happyhorse_video --image_urls https://example.com/scene.png --duration 5
+kie-cli wan_video --model wan/3-0-video-prime --prompt "A mountain lake at sunrise"
+kie-cli wan_image --model wan/2-7-image-pro --resolution 4K --n 1 --prompt "A city map"
+```
+
+Suno rechaza solicitudes no personalizadas que solo traen un prompt. Qwen usa `image_urls` para editar y rechaza los controles de inferencia retirados. Seedream Flash usa `size`, Pro usa `quality` y una `image_url` selecciona capas. Ver los [contratos actuales](docs/ENDPOINTS.md).
+
+### MCP 5.1
 
 - **Wan 3.0.** `wan_video` ahora usa el modelo unificado `wan/3-0-video` con
   texto, fotogramas inicial/final, hasta 10 imágenes, 5 videos, 5 audios,
@@ -206,7 +227,7 @@ Un catálogo unificado y siempre actualizado, organizado por trabajo:
 | **Google Veo 3 / 3.1** | Generación cinematográfica con audio sincronizado y salida 1080p | `veo3_generate_video` |
 | **Gemini Omni** | Videos con personajes y voces reutilizables | `gemini_omni` |
 | **MiniMax H3 (Hailuo 03)** | Texto, primer o último fotograma y referencias multimodales a video | `hailuo_video` |
-| **Wan 3.0** y **HappyHorse** | Referencias multimodales, generación larga y flujos de video | `wan_video`, `happyhorse_video` |
+| **Wan 3.0 / Prime** y **HappyHorse 1.1** | Referencias multimodales y generación de video | `wan_video`, `happyhorse_video` |
 
 ### Edición de video y avatares
 
@@ -217,12 +238,12 @@ Un catálogo unificado y siempre actualizado, organizado por trabajo:
 
 ### Generación y edición de imágenes
 
-- **Nano Banana 2 / Lite**, **GPT Image 2**, **ByteDance Seedream V4 / V5 Lite / V5 Pro**, **Flux Kontext / Flux 2**, **Qwen** y **Z-Image**: generación y edición de imágenes
+- **Nano Banana 2 / Lite**, **GPT Image 2.5**, **Seedream 5 Pro / Flash**, **Qwen3 / Pro**, **Wan 2.7 Image / Pro**, **Flux Kontext / Flux 2** y **Z-Image**: generación y edición de imágenes
 - **Ideogram**, **Recraft** y **Topaz**: reencuadre, remoción de fondo y upscaling
 
 ### Audio
 
-- **Suno V5 / V5.5**: generación de música con voces realistas y control de duración
+- **Suno V6 / Mini / Wild**: generación de música con letras, personas, referencias de medios y duración personalizada
 - **ElevenLabs**: texto a voz y efectos de sonido
 
 Cada herramienta tiene **detección inteligente de modo**: una sola herramienta hace generar / editar / upscale según los parámetros que pasas.
@@ -286,7 +307,7 @@ kie-cli nano_banana_image --prompt "a red panda coding at night, neon" --resolut
 kie-cli wait_for_task --task_id <id> --json
 
 # Música, sin letra personalizada
-kie-cli suno_generate_music --prompt "Upbeat electronic, energetic" --customMode --model V5 --title "Energy Boost"
+kie-cli suno_generate_music --style "Upbeat electronic, energetic" --customMode --instrumental --model V6 --title "Energy Boost"
 
 # Voz
 kie-cli elevenlabs_tts --text "Welcome to the future of content creation!" --voice Rachel --model turbo

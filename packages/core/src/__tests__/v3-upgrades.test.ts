@@ -284,7 +284,7 @@ describe("GrokImagineSchema (Grok Imagine Image 2.0)", () => {
 // ByteDance Seedream Schema Tests
 // ──────────────────────────────────────────────
 
-describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
+describe("ByteDanceSeedreamImageSchema (5 Pro and Flash)", () => {
   it("accepts Seedream 5 Pro generation", () => {
     const result = ByteDanceSeedreamImageSchema.safeParse({
       prompt: "A clear product infographic",
@@ -295,39 +295,30 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
     expect(result.success).toBe(true);
   });
   describe("version selection", () => {
-    it("defaults to 5-lite when version omitted (client treats non-'4' as V5 Lite)", () => {
+    it("defaults to 5-pro when version omitted", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({
         prompt: "A landscape",
       });
       expect(result.success).toBe(true);
       if (result.success) {
-        // Zod .default().optional() returns undefined when field omitted
-        // Client code treats this correctly: isV5Lite = request.version !== "4"
-        // undefined !== "4" => true => V5 Lite is used
-        expect(result.data.version !== "4").toBe(true);
+        expect(result.data.version).toBe("5-pro");
       }
     });
 
-    it("accepts version 4", () => {
+    it("rejects version 4", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({
         prompt: "A landscape",
         version: "4",
       });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.version).toBe("4");
-      }
+      expect(result.success).toBe(false);
     });
 
-    it("accepts version 5-lite explicitly", () => {
+    it("rejects version 5-lite", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({
         prompt: "A landscape",
         version: "5-lite",
       });
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.version).toBe("5-lite");
-      }
+      expect(result.success).toBe(false);
     });
 
     it("rejects old version 4.5", () => {
@@ -347,11 +338,11 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
     });
   });
 
-  describe("V5 Lite parameters", () => {
-    it("accepts aspect_ratio and quality for V5 Lite", () => {
+  describe("V5 Pro parameters", () => {
+    it("accepts aspect_ratio and quality for V5 Pro", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({
         prompt: "A portrait",
-        version: "5-lite",
+        version: "5-pro",
         aspect_ratio: "3:4",
         quality: "high",
       });
@@ -361,7 +352,7 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
     it("accepts image_urls for edit mode", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({
         prompt: "Edit this",
-        version: "5-lite",
+        version: "5-pro",
         image_urls: ["https://example.com/img.png"],
       });
       expect(result.success).toBe(true);
@@ -369,7 +360,7 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
   });
 
   describe("V4 parameters", () => {
-    it("accepts V4-specific params with version 4", () => {
+    it("rejects V4-specific params with version 4", () => {
       const result = ByteDanceSeedreamImageSchema.safeParse({
         prompt: "A landscape",
         version: "4",
@@ -378,7 +369,7 @@ describe("ByteDanceSeedreamImageSchema (V5 Lite)", () => {
         max_images: 4,
         seed: 42,
       });
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
     });
   });
 });
@@ -518,20 +509,22 @@ describe("HailuoVideoSchema (MiniMax H3)", () => {
   });
 });
 
-describe("SunoGenerateSchema (V5_5)", () => {
-  it("accepts V5_5 duration", () => {
+describe("SunoGenerateSchema (V6)", () => {
+  it("accepts V6 duration in custom mode", () => {
     expect(
       SunoGenerateSchema.safeParse({
         prompt: "A gentle ambient track",
-        customMode: false,
+        customMode: true,
+        title: "Ambient",
+        style: "Ambient piano",
         instrumental: true,
-        model: "V5_5",
+        model: "V6",
         duration: 90,
       }).success,
     ).toBe(true);
   });
 
-  it("rejects duration for models other than V5_5", () => {
+  it("rejects discontinued models", () => {
     expect(
       SunoGenerateSchema.safeParse({
         prompt: "A gentle ambient track",

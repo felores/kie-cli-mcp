@@ -5,7 +5,7 @@ import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 export const wanVideoTool: ToolDef<typeof Wan30VideoSchema> = {
   name: "wan_video",
   description:
-    "Generate videos using Alibaba Wan 3.0 with text, first/last frames, images, videos, audio, documents, or webpage references",
+    "Generate videos using Alibaba Wan 3.0 standard or high-speed Prime with text, first/last frames, images, videos, audio, documents, or webpage references",
   category: "video",
   schema: Wan30VideoSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -45,6 +45,7 @@ export const wanVideoTool: ToolDef<typeof Wan30VideoSchema> = {
                   message: `Wan 3.0 ${mode} task created successfully`,
                   parameters: {
                     mode,
+                    model: request.model ?? "wan/3-0-video",
                     prompt:
                       request.prompt &&
                       request.prompt.substring(0, 100) +
