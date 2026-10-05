@@ -16,7 +16,7 @@ const phase3Models = [
   "kie-minimax-h3-video",
   "kie-veo3-video",
   "kie-wan-3-0-video",
-  "kie-happyhorse-1-0-video",
+  "kie-happyhorse-1-1-video",
 ] as const;
 const phase3ResultHosts = {
   allowedResultHostsByModel: Object.fromEntries(
@@ -1013,7 +1013,7 @@ describe("KIE OpenAI video contract", () => {
         preset: "text-to-video",
       },
       providerPath: "/jobs/createTask",
-      expectedModel: "happyhorse/text-to-video",
+      expectedModel: "happyhorse-1-1/text-to-video",
     },
   ] as const)(
     "supports $model create, poll, content, and idempotency",

@@ -246,7 +246,7 @@ describe("KIE OpenAI image contract", () => {
     });
     expect(valid.status).toBe(200);
     expect(createdBodies[0]).toMatchObject({
-      model: "gpt-image-2-text-to-image",
+      model: "gpt-image-2-5-flare-text-to-image",
       input: { prompt: "A blue kite", aspect_ratio: "16:9", resolution: "4K" },
     });
 
@@ -269,7 +269,7 @@ describe("KIE OpenAI image contract", () => {
     });
     expect(edit.status).toBe(200);
     expect(createdBodies[1]).toMatchObject({
-      model: "gpt-image-2-image-to-image",
+      model: "gpt-image-2-5-flare-image-to-image",
       input: {
         prompt: "Add a yellow tail",
         input_urls: ["https://uploaded.example/gpt-source.png"],
@@ -446,7 +446,7 @@ describe("KIE OpenAI image contract", () => {
     expect(responses[2]).toEqual(responses[0]);
     expect(createdBodies).toHaveLength(1);
     expect(createdBodies[0]).toMatchObject({
-      model: "gpt-image-2-text-to-image",
+      model: "gpt-image-2-5-flare-text-to-image",
       input: {
         prompt: "A cinematic landscape",
         aspect_ratio: "16:9",
@@ -1701,16 +1701,14 @@ describe("KIE OpenAI image contract", () => {
       ...Array.from({ length: 2 }, () => ({
         url: `${providerBaseUrl}/jobs/createTask`,
         body: {
-          model: "qwen/text-to-image",
+          model: "qwen3/text-to-image",
           input: {
             prompt: "A geometric botanical poster",
-            image_size: "square_hd",
-            num_inference_steps: 30,
-            guidance_scale: 2.5,
-            enable_safety_checker: false,
+            image_size: "1:1",
+            resolution: "1K",
+            prompt_extend: false,
+            nsfw_checker: false,
             output_format: "png",
-            negative_prompt: " ",
-            acceleration: "none",
           },
         },
       })),
@@ -1865,18 +1863,15 @@ describe("KIE OpenAI image contract", () => {
       {
         url: `${providerBaseUrl}/jobs/createTask`,
         body: {
-          model: "qwen/image-edit",
+          model: "qwen3/image-to-image",
           input: {
             prompt: "Turn the subject into a paper collage",
-            image_size: "square_hd",
-            num_inference_steps: 25,
-            guidance_scale: 4,
-            enable_safety_checker: false,
+            image_size: "1:1",
+            resolution: "1K",
+            prompt_extend: false,
+            nsfw_checker: false,
             output_format: "png",
-            negative_prompt: "blurry, ugly",
-            acceleration: "none",
-            image_url: "https://uploaded.example/ref-2.png",
-            sync_mode: false,
+            image_urls: ["https://uploaded.example/ref-2.png"],
           },
         },
       },
@@ -2036,7 +2031,7 @@ describe("KIE OpenAI image contract", () => {
     );
     const invalidGeneration = [
       { model: "kie-seedream-5-pro-image", quality: "high" },
-      { model: "kie-qwen-image", quality: "hd" },
+      { model: "kie-qwen-image", quality: "high" },
       { model: "kie-flux-2-pro-image", quality: "high" },
       { model: "kie-flux-2-pro-image", output_format: "jpg" },
       { model: "kie-flux-kontext-pro-image", quality: "hd" },
@@ -2063,7 +2058,7 @@ describe("KIE OpenAI image contract", () => {
 
     const limits: Array<[string, number]> = [
       ["kie-seedream-5-pro-image", 11],
-      ["kie-qwen-image", 2],
+      ["kie-qwen-image", 4],
       ["kie-flux-2-pro-image", 9],
       ["kie-flux-kontext-pro-image", 2],
     ];

@@ -73,10 +73,10 @@ apply. Embedded deployments continue using the host application's authentication
 | Public model ID | KIE mapping | Type | Transport compatibility |
 |---|---|---|---|
 | `kie-nano-banana-image` | Nano Banana 2 | image gen/edit | `output_format=png`, `jpg`, or `jpeg`; `jpeg` maps to Kie `jpg`; up to 14 image references |
-| `kie-gpt-image-2` | GPT Image 2 text-to-image or image-to-image | image gen/edit | Fixed PNG output; omitted or explicit `output_format=png`; up to 16 image references |
+| `kie-gpt-image-2` | GPT Image 2.5 Flare text-to-image or image-to-image | image gen/edit | Fixed PNG output; omitted or explicit `output_format=png`; up to 16 image references |
 | `kie-z-image` | Z-Image | image generation | Standard image ratios; one task per requested `n`; accepts `quality=auto`, `low`, or `standard`; fixed PNG output accepts `output_format=png` |
 | `kie-seedream-5-pro-image` | Seedream 5 Pro | image gen/edit | PNG or JPEG; 1K/2K; up to 10 references |
-| `kie-qwen-image` | Qwen Image | image gen/edit | PNG or JPEG; standard-compatible quality; one reference |
+| `kie-qwen-image` | Qwen3 | image gen/edit | PNG or JPEG; 1K/2K; up to three references; prompt rewriting disabled |
 | `kie-flux-2-pro-image` | Flux 2 Pro | image gen/edit | Fixed PNG; 1K/2K; up to 8 references |
 | `kie-flux-kontext-pro-image` | Flux Kontext Pro | image gen/edit | PNG or JPEG; standard-compatible quality; one reference; Flux Kontext status route |
 | `kie-bytedance-video` | Seedance 2.5 | video | Omitted `preset` or `preset=normal`; both select the same fixed provider route |
@@ -85,17 +85,24 @@ apply. Embedded deployments continue using the host application's authentication
 | `kie-minimax-h3-video` | MiniMax H3 | video | Text, image, or reference-to-video; `text-to-video`, `image-to-video`, and `reference-to-video` presets |
 | `kie-veo3-video` | Veo 3 | video | Text/image-to-video; `veo3` or `veo3_fast`; Veo status polling |
 | `kie-wan-3-0-video` | Wan 3.0 | video | Text, keyframe, or multimodal reference-to-video; `kie-wan-2-7-video` is an alias |
-| `kie-happyhorse-1-0-video` | HappyHorse 1.0 | video | Text, image, or reference-to-video; editing modes are excluded |
+| `kie-happyhorse-1-1-video` | HappyHorse 1.1 | video | Text, image, or reference-to-video; `kie-happyhorse-1-0-video` is an alias; image mode omits aspect ratio; editing is excluded |
 | `kie-midjourney-video` | Midjourney | video | Image-to-video only; one uploaded image; Midjourney status normalization |
 | `kie-grok-video` | Grok Imagine | video | Text/image-to-video; `preset=normal`; one uploaded image for image mode |
 
 Video model IDs intentionally omit `seedance` so consumers use the generic video route, not an Ark-specific branch.
 
+Compatibility IDs do not select retired provider models. MCP/CLI expose the full current selectors, including GPT Sunburst, Seedream Flash/layers, Qwen3 Pro, and Wan Prime. Wan Image/Image Pro are explicitly excluded from OpenAI because they can return multiple images per task. Suno is an audio tool and is not part of this transport.
+
+Operators using `allowedResultHostsByModel` must migrate the HappyHorse key to
+`kie-happyhorse-1-1-video`. Host overrides accept canonical model IDs only; the
+old 1.0 ID remains valid for client generation requests, not configuration keys.
+
 `output_format` is optional. An explicit format is checked against the downloaded
-result MIME type and file signature. Kie's GPT Image 2 request schema exposes no
-format selector, so the transport accepts only its fixed PNG contract and does not
-invent JPEG or WebP conversion. A real 1K smoke task through each GPT Image 2
-route on 2026-08-24 returned `image/png` with a valid PNG signature.
+result MIME type and file signature. Kie's GPT Image 2.5 request schema exposes no
+format selector, so the transport keeps a PNG-only contract and does not invent
+JPEG or WebP conversion. Current upgrades are verified with mocked provider
+contracts. Historical GPT Image 2 smoke results do not verify 2.5. No paid
+generation was performed for this upgrade.
 
 Image `size` accepts explicit ratios and pixel dimensions. Explicit ratio
 strings are reduced and must exactly match a ratio declared by the selected

@@ -29,6 +29,7 @@ describe("OpenAI adapter registry", () => {
       "kie-veo3-video",
       "kie-wan-3-0-video",
       "kie-wan-2-7-video",
+      "kie-happyhorse-1-1-video",
       "kie-happyhorse-1-0-video",
       "kie-midjourney-video",
       "kie-grok-video",
@@ -245,7 +246,7 @@ describe("OpenAI adapter registry", () => {
       },
       "kie-qwen-image": {
         formats: ["png", "jpg", "jpeg"],
-        references: 1,
+        references: 3,
         transportReferenceMiB: 10,
         providerReferenceMiB: 10,
         status: "jobs",

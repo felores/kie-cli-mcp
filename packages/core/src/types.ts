@@ -165,18 +165,45 @@ export const Veo3GenerateSchema = z.object({
 });
 
 export const SunoGenerateSchema = z
-  .object({
+  .strictObject({
     prompt: z
       .string()
-      .min(1)
       .max(5000)
+      .optional()
       .describe(
-        "Description of the desired audio content. In custom mode: used as exact lyrics (max 5000 chars for V4_5+, V5; 3000 for V3_5, V4). In non-custom mode: core idea for auto-generated lyrics (max 500 chars)",
+        "Optional lyrics fallback in custom mode; core idea in non-custom mode (max 3000 chars). Prompt alone is not sufficient.",
+      ),
+    lyrics: z
+      .string()
+      .max(5000)
+      .optional()
+      .describe(
+        "Lyrics, up to 5000 characters; takes priority over prompt in custom mode",
+      ),
+    image_urls: z
+      .array(z.string().url())
+      .min(1)
+      .max(5)
+      .optional()
+      .describe("Non-custom mode image references, up to 5"),
+    video_urls: z
+      .array(z.string().url())
+      .min(1)
+      .max(1)
+      .optional()
+      .describe("Non-custom mode video reference, up to 1"),
+    audio_urls: z
+      .array(z.string().url())
+      .min(1)
+      .max(10)
+      .optional()
+      .describe(
+        "Non-custom mode audio references; all attachments together must not exceed 10",
       ),
     customMode: z
       .boolean()
       .describe(
-        "Enable advanced parameter customization. If true: requires style and title. If false: simplified mode with only prompt required",
+        "Custom mode requires title and at least one of style, lyrics, or negativeTags. Non-custom mode requires style, lyrics, or media references.",
       ),
     instrumental: z
       .boolean()
@@ -184,8 +211,8 @@ export const SunoGenerateSchema = z
         "Generate instrumental music (no lyrics). In custom mode: if true, only style and title required; if false, prompt used as exact lyrics",
       ),
     model: z
-      .enum(["V3_5", "V4", "V4_5", "V4_5PLUS", "V5", "V5_5"])
-      .default("V5")
+      .enum(["V6", "V6_MINI", "V6_WILD"])
+      .default("V6")
       .optional()
       .describe("AI model version for generation"),
     callBackUrl: z
@@ -199,9 +226,7 @@ export const SunoGenerateSchema = z
       .string()
       .max(1000)
       .optional()
-      .describe(
-        "Music style/genre (required in custom mode, max 1000 chars for V4_5+, V5; 200 for V3_5, V4)",
-      ),
+      .describe("Music style/genre, up to 1000 characters"),
     title: z
       .string()
       .max(80)
@@ -209,17 +234,29 @@ export const SunoGenerateSchema = z
       .describe("Track title (required in custom mode, max 80 chars)"),
     duration: z
       .number()
-      .int()
-      .positive()
+      .min(10)
+      .max(360)
       .optional()
       .describe(
-        "Requested track duration in seconds (available only with V5_5)",
+        "Requested track duration in seconds, 10-360, custom mode only; provider default is 20",
       ),
-    negativeTags: z
-      .string()
-      .max(200)
+    negativeTags: z.string().optional().describe("Music styles to exclude"),
+    variety: z
+      .number()
+      .int()
+      .min(0)
+      .max(4)
       .optional()
-      .describe("Music styles to exclude (optional, max 200 chars)"),
+      .describe("Custom mode variation, 0-4; provider default is 1"),
+    personaId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("Existing persona or voice ID"),
+    personaModel: z
+      .enum(["style_persona", "voice_persona"])
+      .optional()
+      .describe("Persona model"),
     vocalGender: z
       .enum(["m", "f"])
       .optional()
@@ -254,25 +291,72 @@ export const SunoGenerateSchema = z
         "Balance weight for audio features (optional, range 0-1, up to 2 decimal places)",
       ),
   })
-  .refine(
-    (data) => {
-      // Callback URL is now optional - validation removed
-      if (data.customMode) {
-        if (data.instrumental) {
-          if (!data.style || !data.title) return false;
-        } else {
-          if (!data.style || !data.title || !data.prompt) return false;
-        }
+  .superRefine((data, ctx) => {
+    const mediaCount =
+      (data.image_urls?.length ?? 0) +
+      (data.video_urls?.length ?? 0) +
+      (data.audio_urls?.length ?? 0);
+    if (data.customMode) {
+      if (!data.title?.trim())
+        ctx.addIssue({
+          code: "custom",
+          path: ["title"],
+          message: "Custom mode requires title",
+        });
+      if (
+        !data.style?.trim() &&
+        !data.lyrics?.trim() &&
+        !data.negativeTags?.trim()
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Custom mode requires style, lyrics, or negativeTags",
+        });
+      if (mediaCount)
+        ctx.addIssue({
+          code: "custom",
+          message: "Media references are only supported in non-custom mode",
+        });
+    } else {
+      if ((data.prompt?.length ?? 0) > 3000)
+        ctx.addIssue({
+          code: "custom",
+          path: ["prompt"],
+          message: "Non-custom prompt must not exceed 3000 characters",
+        });
+      const attachments =
+        mediaCount +
+        Number(Boolean(data.style?.trim())) +
+        Number(Boolean(data.lyrics?.trim()));
+      if (!attachments || attachments > 10)
+        ctx.addIssue({
+          code: "custom",
+          message:
+            "Non-custom mode requires 1-10 attachments: style, lyrics, or media references",
+        });
+      for (const key of [
+        "duration",
+        "vocalGender",
+        "styleWeight",
+        "weirdnessConstraint",
+        "audioWeight",
+        "variety",
+      ] as const) {
+        if (data[key] !== undefined)
+          ctx.addIssue({
+            code: "custom",
+            path: [key],
+            message: `${key} is only supported in custom mode`,
+          });
       }
-      if (data.duration !== undefined && data.model !== "V5_5") return false;
-      return true;
-    },
-    {
-      message:
-        "In customMode: style and title are always required, prompt is required when instrumental is false. duration is only available with V5_5.",
-      path: [],
-    },
-  );
+    }
+    if (data.instrumental && data.audioWeight !== undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: ["audioWeight"],
+        message: "audioWeight requires vocals",
+      });
+  });
 
 export const ElevenLabsTTSSchema = z.object({
   text: z
@@ -589,6 +673,11 @@ export const RunwayAlephVideoSchema = z.object({
 
 export const Wan30VideoSchema = z
   .object({
+    model: z
+      .enum(["wan/3-0-video", "wan/3-0-video-prime"])
+      .default("wan/3-0-video")
+      .optional()
+      .describe("Wan 3.0 standard or high-speed Prime"),
     prompt: z
       .string()
       .min(1)
@@ -713,94 +802,272 @@ export const Wan30VideoSchema = z
     }
   });
 
-export const ByteDanceSeedreamImageSchema = z.object({
-  prompt: z
-    .string()
-    .min(1)
-    .max(5000)
-    .describe(
-      "Text prompt for image generation or editing. V4: max 5000 chars, V5 Lite: max 3000 chars (API returns 500 error if exceeded)",
-    ),
-  image_urls: z
-    .array(z.string().url())
-    .min(1)
-    .max(14)
-    .optional()
-    .describe(
-      "Array of image URLs for editing mode (optional - if not provided, uses text-to-image). V4: max 10, V4.5: max 14",
-    ),
-  // Version selection: V4, Seedream 5.0 Lite, or Seedream 5.0 Pro
-  version: z
-    .enum(["4", "5-lite", "5-pro"])
-    .default("5-lite")
-    .optional()
-    .describe(
-      "Seedream version: '4' for V4, '5-lite' for V5 Lite (default), or '5-pro' for controlled 1K/2K generation and editing",
-    ),
-  // V4 parameters
-  image_size: z
-    .enum([
-      "square",
-      "square_hd",
-      "portrait_4_3",
-      "portrait_3_2",
-      "portrait_16_9",
-      "landscape_4_3",
-      "landscape_3_2",
-      "landscape_16_9",
-      "landscape_21_9",
-    ])
-    .default("square_hd")
-    .optional()
-    .describe("Image aspect ratio (V4 only)"),
-  image_resolution: z
-    .enum(["1K", "2K", "4K"])
-    .default("1K")
-    .optional()
-    .describe("Image resolution (V4 only)"),
-  max_images: z
-    .number()
-    .int()
-    .min(1)
-    .max(6)
-    .default(1)
-    .optional()
-    .describe("Number of images to generate (V4 only)"),
-  seed: z
-    .number()
-    .optional()
-    .describe(
-      "Random seed for reproducible results (V4 only, use -1 for random)",
-    ),
-  // V5 Lite parameters (same as V4.5: aspect_ratio, quality)
-  aspect_ratio: z
-    .enum(["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"])
-    .default("1:1")
-    .optional()
-    .describe("Aspect ratio for V5 Lite output (V5 Lite only)"),
-  quality: z
-    .enum(["basic", "high"])
-    .default("basic")
-    .optional()
-    .describe(
-      "Output quality for V5 Lite (V5 Lite only): 'basic' = 2K, 'high' = 3K resolution",
-    ),
-  output_format: z
-    .enum(["png", "jpeg"])
-    .optional()
-    .describe("Output format for Seedream 5 Pro: png or jpeg"),
-  nsfw_checker: z
-    .boolean()
-    .optional()
-    .describe("Enable NSFW filtering for Seedream 5 Pro"),
-  callBackUrl: z
-    .string()
-    .url()
-    .optional()
-    .describe(
-      "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-    ),
-});
+export const ByteDanceSeedreamImageSchema = z
+  .strictObject({
+    version: z
+      .enum(["5-pro", "5-flash"])
+      .default("5-pro")
+      .optional()
+      .describe("Seedream 5 Pro or Flash; older versions are removed"),
+    operation: z
+      .enum(["generate", "layer-decomposition"])
+      .optional()
+      .describe(
+        "Defaults to layer-decomposition with image_url, otherwise generate/edit",
+      ),
+    prompt: z
+      .string()
+      .max(5000)
+      .optional()
+      .describe(
+        "3-5000 characters for generation/editing; optional for layer decomposition",
+      ),
+    image_urls: z
+      .array(z.string().url())
+      .min(1)
+      .max(10)
+      .optional()
+      .describe("Up to 10 reference images for editing"),
+    image_url: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Single source image for layer decomposition; cannot be combined with image_urls",
+      ),
+    aspect_ratio: z
+      .enum(["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"])
+      .optional()
+      .describe("Generation/edit aspect ratio, default 1:1"),
+    quality: z
+      .enum(["basic", "high"])
+      .optional()
+      .describe("Pro generation/edit only: basic = 1K, high = 2K"),
+    size: z
+      .enum(["auto", "1K", "1.5K", "2K"])
+      .optional()
+      .describe(
+        "Flash generation/edit size, default 1K; layer decomposition size, default auto",
+      ),
+    output_format: z
+      .enum(["png", "jpeg"])
+      .optional()
+      .describe(
+        "Generation default png; layer base image default jpeg, separated layers are PNG",
+      ),
+    nsfw_checker: z
+      .boolean()
+      .optional()
+      .describe(
+        "Generation/edit content filtering; unavailable for layer decomposition",
+      ),
+    callBackUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe("Optional callback URL, with KIE_AI_CALLBACK_URL fallback"),
+  })
+  .superRefine((data, ctx) => {
+    const layers =
+      data.operation === "layer-decomposition" ||
+      (!data.operation && Boolean(data.image_url));
+    if (layers) {
+      if (!data.image_url)
+        ctx.addIssue({
+          code: "custom",
+          path: ["image_url"],
+          message: "Layer decomposition requires image_url",
+        });
+      for (const key of [
+        "image_urls",
+        "aspect_ratio",
+        "quality",
+        "nsfw_checker",
+      ] as const) {
+        if (data[key] !== undefined)
+          ctx.addIssue({
+            code: "custom",
+            path: [key],
+            message: `${key} is not supported for layer decomposition`,
+          });
+      }
+      if (
+        data.version === "5-flash" &&
+        data.prompt !== undefined &&
+        data.prompt.length < 3
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["prompt"],
+          message:
+            "Flash layer prompt must contain at least 3 characters when provided",
+        });
+    } else {
+      if (!data.prompt || data.prompt.length < 3)
+        ctx.addIssue({
+          code: "custom",
+          path: ["prompt"],
+          message: "Generation/editing requires a prompt of 3-5000 characters",
+        });
+      if (data.image_url)
+        ctx.addIssue({
+          code: "custom",
+          path: ["image_url"],
+          message: "image_url is only supported for layer decomposition",
+        });
+      if (data.version === "5-flash") {
+        if (data.quality !== undefined || data.size === "auto")
+          ctx.addIssue({
+            code: "custom",
+            message:
+              "Flash generation uses size 1K/1.5K/2K, not quality or auto",
+          });
+      } else if (data.size !== undefined)
+        ctx.addIssue({
+          code: "custom",
+          path: ["size"],
+          message: "Pro generation uses quality, not size",
+        });
+    }
+  });
+
+export const WanImageSchema = z
+  .strictObject({
+    model: z
+      .enum(["wan/2-7-image", "wan/2-7-image-pro"])
+      .default("wan/2-7-image")
+      .optional()
+      .describe("Wan 2.7 Image standard or Pro"),
+    prompt: z
+      .string()
+      .min(1)
+      .max(5000)
+      .describe("Image generation/editing prompt, up to 5000 characters"),
+    input_urls: z
+      .array(z.string().url())
+      .min(1)
+      .max(9)
+      .optional()
+      .describe("Up to 9 input images; omit for text-to-image"),
+    aspect_ratio: z
+      .enum(["1:1", "16:9", "4:3", "21:9", "3:4", "9:16", "8:1", "1:8"])
+      .optional()
+      .describe("Output ratio for text-to-image only"),
+    enable_sequential: z
+      .boolean()
+      .default(false)
+      .optional()
+      .describe("Enable group/sequential image generation"),
+    n: z
+      .number()
+      .int()
+      .min(1)
+      .max(12)
+      .optional()
+      .describe(
+        "1-4 in standard mode, 1-12 in sequential mode; default 4 or 12 respectively",
+      ),
+    resolution: z
+      .enum(["1K", "2K", "4K"])
+      .default("2K")
+      .optional()
+      .describe(
+        "Output resolution; Pro 4K is only available for non-sequential text-to-image",
+      ),
+    thinking_mode: z
+      .boolean()
+      .optional()
+      .describe("Available only for non-sequential text-to-image"),
+    color_palette: z
+      .array(
+        z.strictObject({
+          hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+          ratio: z.string().regex(/^\d{1,3}\.\d{2}%$/),
+        }),
+      )
+      .min(3)
+      .max(10)
+      .optional()
+      .describe("3-10 colors with xx.xx% ratios; non-sequential mode only"),
+    bbox_list: z
+      .array(
+        z
+          .array(
+            z.tuple([
+              z.number().int(),
+              z.number().int(),
+              z.number().int(),
+              z.number().int(),
+            ]),
+          )
+          .max(2),
+      )
+      .optional()
+      .describe(
+        "Editing boxes, one list per input image, up to two [x1,y1,x2,y2] boxes per image",
+      ),
+    watermark: z.boolean().optional().describe("Add a watermark"),
+    seed: z
+      .number()
+      .int()
+      .min(0)
+      .max(2147483647)
+      .optional()
+      .describe("Random seed"),
+    nsfw_checker: z.boolean().optional().describe("Enable content filtering"),
+    callBackUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe("Optional callback URL, with KIE_AI_CALLBACK_URL fallback"),
+  })
+  .superRefine((data, ctx) => {
+    const editing = Boolean(data.input_urls?.length);
+    if (!data.enable_sequential && (data.n ?? 4) > 4)
+      ctx.addIssue({
+        code: "custom",
+        path: ["n"],
+        message: "Non-sequential mode supports at most 4 images",
+      });
+    if (data.thinking_mode && (editing || data.enable_sequential))
+      ctx.addIssue({
+        code: "custom",
+        path: ["thinking_mode"],
+        message: "Thinking mode requires non-sequential text-to-image",
+      });
+    if (data.color_palette && data.enable_sequential)
+      ctx.addIssue({
+        code: "custom",
+        path: ["color_palette"],
+        message: "Color palettes are unavailable in sequential mode",
+      });
+    if (editing && data.aspect_ratio !== undefined)
+      ctx.addIssue({
+        code: "custom",
+        path: ["aspect_ratio"],
+        message: "aspect_ratio is only supported for text-to-image",
+      });
+    if (
+      data.bbox_list &&
+      (!editing || data.bbox_list.length !== data.input_urls?.length)
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["bbox_list"],
+        message: "bbox_list must have one entry per input image",
+      });
+    if (
+      data.model === "wan/2-7-image-pro" &&
+      data.resolution === "4K" &&
+      (editing || data.enable_sequential)
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["resolution"],
+        message: "Pro 4K requires non-sequential text-to-image",
+      });
+  });
+export type WanImageRequest = z.infer<typeof WanImageSchema>;
 
 export const OmniHumanVideoSchema = z.object({
   image_url: z.string().url().describe("Portrait image URL to animate"),
@@ -1127,50 +1394,34 @@ export type KlingAvatarRequest = z.infer<typeof KlingAvatarSchema>;
 
 // HappyHorse 1.0 Video - Alibaba ATH multi-mode video generation
 export const HappyHorseVideoSchema = z
-  .object({
+  .strictObject({
     mode: z
-      .enum([
-        "text-to-video",
-        "image-to-video",
-        "reference-to-video",
-        "video-edit",
-      ])
+      .enum(["text-to-video", "image-to-video", "reference-to-video"])
       .optional()
       .describe(
-        "Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted.",
+        "HappyHorse 1.1 mode, auto-detected from image_urls or reference_image. Video editing from 1.0 is removed.",
       ),
     prompt: z
       .string()
-      .min(1)
       .max(5000)
-      .describe("Text prompt for video generation (max 5000 characters)"),
+      .optional()
+      .describe(
+        "Required for text/reference-to-video, optional for image-to-video; max 4999 for text, 5000 for other modes",
+      ),
     // I2V
     image_urls: z
       .array(z.string().url())
+      .min(1)
       .max(1)
       .optional()
       .describe("Input image URL for image-to-video mode (max 1)"),
     // R2V
     reference_image: z
       .array(z.string().url())
+      .min(1)
       .max(9)
       .optional()
       .describe("Reference images for reference-to-video mode (up to 9)"),
-    // Video Edit
-    video_url: z
-      .string()
-      .url()
-      .optional()
-      .describe("Video URL to edit (video-edit mode)"),
-    reference_image_edit: z
-      .array(z.string().url())
-      .max(5)
-      .optional()
-      .describe("Reference images for video-edit mode (up to 5)"),
-    audio_setting: z
-      .enum(["auto", "origin"])
-      .optional()
-      .describe("Audio handling for video-edit: auto or origin"),
     // Common
     resolution: z
       .enum(["720p", "1080p"])
@@ -1178,10 +1429,11 @@ export const HappyHorseVideoSchema = z
       .optional()
       .describe("Video resolution"),
     aspect_ratio: z
-      .enum(["16:9", "9:16", "1:1", "4:3", "3:4"])
-      .default("16:9")
+      .enum(["16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "9:21", "21:9"])
       .optional()
-      .describe("Aspect ratio of the generated video"),
+      .describe(
+        "Text/reference mode aspect ratio, default 16:9; not available in image-to-video",
+      ),
     duration: z
       .number()
       .int()
@@ -1190,158 +1442,116 @@ export const HappyHorseVideoSchema = z
       .default(5)
       .optional()
       .describe("Duration in seconds (3-15)"),
-    seed: z
-      .number()
-      .int()
-      .min(0)
-      .max(2147483647)
-      .optional()
-      .describe("Random seed for reproducible results (0-2147483647)"),
-    callBackUrl: z
-      .string()
-      .url()
-      .optional()
-      .describe("Optional: URL for task completion notifications"),
   })
-  .refine(
-    (data) => {
-      const mode =
-        data.mode ||
-        (data.video_url
-          ? "video-edit"
-          : data.reference_image?.length
-            ? "reference-to-video"
-            : data.image_urls?.length
-              ? "image-to-video"
-              : "text-to-video");
-      if (mode === "image-to-video" && !data.image_urls?.length) return false;
-      if (mode === "reference-to-video" && !data.reference_image?.length)
-        return false;
-      if (mode === "video-edit" && !data.video_url) return false;
-      return true;
-    },
-    {
-      message:
-        "Invalid parameter combination for the detected mode. Ensure required inputs are provided.",
-      path: [],
-    },
-  );
+  .superRefine((data, ctx) => {
+    const mode =
+      data.mode ??
+      (data.reference_image?.length
+        ? "reference-to-video"
+        : data.image_urls?.length
+          ? "image-to-video"
+          : "text-to-video");
+    if (mode !== "image-to-video" && !data.prompt?.trim())
+      ctx.addIssue({
+        code: "custom",
+        path: ["prompt"],
+        message: "Text/reference-to-video requires prompt",
+      });
+    if (
+      mode === "text-to-video" &&
+      (data.image_urls ||
+        data.reference_image ||
+        (data.prompt?.length ?? 0) > 4999)
+    )
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Text-to-video accepts no image inputs and at most 4999 prompt characters",
+      });
+    if (
+      mode === "image-to-video" &&
+      (!data.image_urls || data.reference_image || data.aspect_ratio)
+    )
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Image-to-video requires image_urls and accepts neither reference_image nor aspect_ratio",
+      });
+    if (
+      mode === "reference-to-video" &&
+      (!data.reference_image || data.image_urls)
+    )
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Reference-to-video requires reference_image and does not accept image_urls",
+      });
+    if ((data.prompt?.match(/[\u3400-\u9fff]/g)?.length ?? 0) > 2500)
+      ctx.addIssue({
+        code: "custom",
+        path: ["prompt"],
+        message: "Prompt must not exceed 2500 Chinese characters",
+      });
+  });
 
 export type HappyHorseVideoRequest = z.infer<typeof HappyHorseVideoSchema>;
 
-export const QwenImageSchema = z
-  .object({
-    prompt: z
-      .string()
-      .min(1)
-      .describe("Text prompt for image generation or editing"),
-    image_url: z
-      .string()
-      .url()
-      .optional()
-      .describe(
-        "URL of image to edit (optional - if not provided, uses text-to-image)",
-      ), // Required for edit mode, optional for text-to-image
-    image_size: z
-      .enum([
-        "square",
-        "square_hd",
-        "portrait_4_3",
-        "portrait_16_9",
-        "landscape_4_3",
-        "landscape_16_9",
-      ])
-      .default("square_hd")
-      .optional()
-      .describe("Image size"),
-    num_inference_steps: z
-      .number()
-      .int()
-      .min(2)
-      .max(250)
-      .optional()
-      .describe(
-        "Number of inference steps (2-250 for text-to-image, 2-49 for edit)",
-      ),
-    seed: z
-      .number()
-      .optional()
-      .describe("Random seed for reproducible results"),
-    guidance_scale: z
-      .number()
-      .min(0)
-      .max(20)
-      .optional()
-      .describe("CFG scale (0-20, default: 2.5 for text-to-image, 4 for edit)"),
-    enable_safety_checker: z
-      .boolean()
-      .default(false)
-      .optional()
-      .describe("Enable safety checker"),
-    output_format: z
-      .enum(["png", "jpeg"])
-      .default("png")
-      .optional()
-      .describe("Output format"),
-    negative_prompt: z
-      .string()
-      .max(500)
-      .default(" ")
-      .optional()
-      .describe("Negative prompt (max 500 characters)"),
-    acceleration: z
-      .enum(["none", "regular", "high"])
-      .default("none")
-      .optional()
-      .describe("Acceleration level"),
-    // Edit-specific parameters
-    num_images: z
-      .enum(["1", "2", "3", "4"])
-      .optional()
-      .describe("Number of images (1-4, edit mode only)"),
-    sync_mode: z
-      .boolean()
-      .default(false)
-      .optional()
-      .describe("Sync mode (edit mode only)"),
-    callBackUrl: z
-      .string()
-      .url()
-      .optional()
-      .describe(
-        "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-      ),
-  })
-  .refine(
-    (data) => {
-      // Validate edit mode requirements
-      const isEditMode = !!data.image_url;
-
-      if (isEditMode) {
-        // Edit mode specific validations
-        if (
-          data.num_inference_steps &&
-          (data.num_inference_steps < 2 || data.num_inference_steps > 49)
-        ) {
-          return false;
-        }
-        if (data.prompt && data.prompt.length > 2000) {
-          return false;
-        }
-      } else {
-        // Text-to-image mode specific validations
-        if (data.prompt && data.prompt.length > 5000) {
-          return false;
-        }
-      }
-
-      return true;
-    },
-    {
-      message: "Invalid parameters for detected mode",
-      path: [],
-    },
-  );
+export const QwenImageSchema = z.strictObject({
+  model: z
+    .enum(["qwen3", "qwen3-pro"])
+    .default("qwen3")
+    .optional()
+    .describe("Qwen3 standard or Pro; older versions are removed"),
+  prompt: z
+    .string()
+    .min(1)
+    .max(5000)
+    .describe("Positive prompt, up to 5000 characters"),
+  image_urls: z
+    .array(z.string().url())
+    .min(1)
+    .max(3)
+    .optional()
+    .describe("Up to 3 reference image URLs; omit for text-to-image"),
+  resolution: z
+    .enum(["1K", "2K"])
+    .default("1K")
+    .optional()
+    .describe("Output resolution"),
+  image_size: z
+    .enum(["1:1", "3:2", "2:3", "4:3", "3:4", "16:9", "9:16", "21:9"])
+    .default("16:9")
+    .optional()
+    .describe("Output aspect ratio"),
+  output_format: z
+    .enum(["png", "jpeg"])
+    .default("png")
+    .optional()
+    .describe("Image format"),
+  prompt_extend: z
+    .boolean()
+    .default(true)
+    .optional()
+    .describe("Enable intelligent prompt rewriting"),
+  nsfw_checker: z.boolean().optional().describe("Enable content filtering"),
+  negative_prompt: z
+    .string()
+    .max(5000)
+    .optional()
+    .describe("Negative prompt, up to 5000 characters"),
+  seed: z
+    .number()
+    .int()
+    .min(0)
+    .max(2147483647)
+    .optional()
+    .describe("Random seed"),
+  callBackUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe("Optional callback URL, with KIE_AI_CALLBACK_URL fallback"),
+});
 
 export const MidjourneyGenerateSchema = z
   .object({
@@ -1520,39 +1730,73 @@ export const MidjourneyGenerateSchema = z
     },
   );
 
-export const GptImage2Schema = z.object({
-  prompt: z
-    .string()
-    .min(1)
-    .max(20000)
-    .describe(
-      "Text prompt describing the desired image (max 20000 characters)",
-    ),
-  input_urls: z
-    .array(z.string().url())
-    .max(16)
-    .optional()
-    .describe(
-      "Array of up to 16 image URLs for image-to-image mode. Omit for text-to-image.",
-    ),
-  aspect_ratio: z
-    .enum(["auto", "1:1", "9:16", "16:9", "4:3", "3:4"])
-    .default("auto")
-    .optional()
-    .describe("Image aspect ratio"),
-  resolution: z
-    .enum(["1K", "2K", "4K"])
-    .default("1K")
-    .optional()
-    .describe("Output resolution"),
-  callBackUrl: z
-    .string()
-    .url()
-    .optional()
-    .describe(
-      "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
-    ),
-});
+export const GptImage2Schema = z
+  .strictObject({
+    model: z
+      .enum(["flare", "sunburst"])
+      .default("flare")
+      .optional()
+      .describe("GPT Image 2.5 variant; GPT Image 2 routing is removed"),
+    prompt: z
+      .string()
+      .min(1)
+      .max(20000)
+      .describe(
+        "Text prompt describing the desired image (max 20000 characters)",
+      ),
+    input_urls: z
+      .array(z.string().url())
+      .min(1)
+      .max(16)
+      .optional()
+      .describe(
+        "Array of up to 16 image URLs for image-to-image mode. Omit for text-to-image.",
+      ),
+    aspect_ratio: z
+      .enum([
+        "auto",
+        "1:1",
+        "3:2",
+        "2:3",
+        "4:3",
+        "3:4",
+        "16:9",
+        "9:16",
+        "21:9",
+        "27:16",
+        "16:27",
+        "9:8",
+        "8:9",
+      ])
+      .default("auto")
+      .optional()
+      .describe("Image aspect ratio"),
+    resolution: z
+      .enum(["1K", "2K", "4K"])
+      .default("1K")
+      .optional()
+      .describe("Output resolution"),
+    background: z
+      .enum(["transparent", "opaque", "auto"])
+      .optional()
+      .describe("Image background"),
+    callBackUrl: z
+      .string()
+      .url()
+      .optional()
+      .describe(
+        "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
+      ),
+  })
+  .refine(
+    (data) =>
+      !["27:16", "16:27", "9:8", "8:9"].includes(data.aspect_ratio ?? "auto") ||
+      (data.resolution ?? "1K") === "1K",
+    {
+      message: "27:16, 16:27, 9:8 and 8:9 support 1K only",
+      path: ["resolution"],
+    },
+  );
 
 // TypeScript types
 export type NanoBananaImageRequest = z.infer<typeof NanoBananaImageSchema>;
@@ -2130,6 +2374,8 @@ export interface TaskRecord {
     | "nano-banana-image"
     | "veo3"
     | "suno"
+    | "suno-v6"
+    | "wan-image"
     | "elevenlabs-tts"
     | "elevenlabs-sound-effects"
     | "bytedance-seedance-video"

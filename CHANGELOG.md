@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.2.0 / CLI 0.10.0 / OpenAI transport 0.8.0 - 2026-10-04
+
+### Added
+- Suno V6, V6 Mini, and V6 Wild, with lyrics, personas, variety, and non-custom media references.
+- GPT Image 2.5 Flare and Sunburst under `gpt_image_2`, including transparent backgrounds and additional aspect ratios.
+- Seedream 5 Flash and Pro/Flash layer decomposition under `bytedance_seedream_image`.
+- Qwen3 standard and Pro generation/editing, 1K/2K, and up to three references.
+- Wan 3.0 Prime through `wan_video.model` and the new `wan_image` tool for Wan 2.7 Image/Image Pro, sequential generation, palettes, and bounding-box editing.
+- HappyHorse 1.1 text/image/reference-to-video and the OpenAI ID `kie-happyhorse-1-1-video`.
+
+### Changed
+- Replaced old Suno, GPT Image 2, Seedream V4/5 Lite, Qwen, and HappyHorse provider routing. Removed retired selectors and parameters. Wan 2.7 video editing/reference endpoints are not restored.
+- New Suno tasks use unified jobs creation/polling with `suno-v6` persistence. Historical Suno tasks still use the legacy status route.
+- Qwen editing now uses `image_urls`; its `image_size` is an aspect ratio. Seedream Flash uses `size`; Pro generation uses `quality`; one `image_url` selects layer decomposition.
+- Suno non-custom requests require style, lyrics, or media attachments, not a prompt alone. HappyHorse image-to-video accepts an optional prompt and omits aspect ratio and unsupported callback fields.
+- Approval plans record the selected provider variant and Wan image output counts. All unverified prices remain `unknown`.
+- Existing OpenAI GPT/Qwen IDs now route to Flare/Qwen3. The old HappyHorse ID remains an alias to 1.1. Wan image, Prime, Flash, layer decomposition, and other variant selectors remain MCP/CLI-only.
+
 ## MCP 5.1.0 / CLI 0.9.0 / OpenAI transport 0.7.0 - 2026-08-25
 
 ### Added

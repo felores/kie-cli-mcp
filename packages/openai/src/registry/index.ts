@@ -212,7 +212,8 @@ export const OPENAI_ADAPTER_REGISTRY = [
     apiType: "gpt-image-2",
     statusStrategy: "jobs",
     allowedResultHosts: resultHosts,
-    resultHostEvidenceUrl: evidence,
+    resultHostEvidenceUrl:
+      "https://docs.kie.ai/market/gpt/gpt-image-2-5-flare-text-to-image",
     cardinality: oneImage,
     operations: ["generation", "edit"],
     maxReferences: 16,
@@ -306,35 +307,30 @@ export const OPENAI_ADAPTER_REGISTRY = [
     apiType: "qwen-image",
     statusStrategy: "jobs",
     allowedResultHosts: temporaryResultHosts,
-    resultHostEvidenceUrl: "https://docs.kie.ai/market/qwen/image-edit",
+    resultHostEvidenceUrl: "https://docs.kie.ai/market/qwen3/image-to-image",
     cardinality: oneImage,
     operations: ["generation", "edit"],
-    maxReferences: 1,
+    maxReferences: 3,
     maxReferenceBytes: 10 * 1024 * 1024,
     providerMaxReferenceBytes: 10 * 1024 * 1024,
-    referenceLimitEvidenceUrl: "https://docs.kie.ai/market/qwen/image-edit",
-    aspectRatios: commonRatios,
+    referenceLimitEvidenceUrl:
+      "https://docs.kie.ai/market/qwen3/image-to-image",
+    aspectRatios: extendedRatios,
     defaultAspectRatio: "1:1",
     supportsQuality: true,
-    acceptedResolutions: ["1K"],
+    acceptedResolutions: ["1K", "2K"],
     supportsCount: true,
     defaultOutputFormat: png,
     outputFormats: { png, jpg: jpeg, jpeg },
     normalizeSubmission: (input: ImageSubmissionInput) => {
-      const sizeByRatio: Record<string, string> = {
-        "1:1": "square_hd",
-        "4:3": "landscape_4_3",
-        "3:4": "portrait_4_3",
-        "16:9": "landscape_16_9",
-        "9:16": "portrait_16_9",
-      };
       return QwenImageSchema.parse({
         prompt: input.prompt,
-        ...(input.imageUrls[0] ? { image_url: input.imageUrls[0] } : {}),
-        image_size: sizeByRatio[input.aspectRatio],
+        ...(input.imageUrls.length ? { image_urls: input.imageUrls } : {}),
+        image_size: input.aspectRatio,
+        resolution: input.resolution,
         output_format: input.effectiveOutputFormat.providerFormat,
-        enable_safety_checker: false,
-        negative_prompt: input.imageUrls.length ? "blurry, ugly" : " ",
+        prompt_extend: false,
+        nsfw_checker: false,
       });
     },
     submit: (client: KieAiClient, request: unknown) =>
@@ -783,7 +779,8 @@ export const OPENAI_ADAPTER_REGISTRY = [
       client.generateWanVideo(request as never),
   },
   {
-    publicModelId: "kie-happyhorse-1-0-video",
+    publicModelId: "kie-happyhorse-1-1-video",
+    aliases: ["kie-happyhorse-1-0-video"],
     toolName: "happyhorse_video",
     mediaType: "video",
     ownedBy: "kie.ai",
@@ -792,13 +789,15 @@ export const OPENAI_ADAPTER_REGISTRY = [
     allowedResultHosts: resultHosts,
     resultHostEvidenceUrl: evidence,
     cardinality: oneVideo,
+    omitAspectRatioForImageReference: true,
     referenceLimits: {
       maxImageReferences: 9,
       maxVideoReferences: 0,
       maxAudioReferences: 0,
-      maxReferenceBytes: 25 * 1024 * 1024,
-      maxTotalReferenceBytes: 25 * 1024 * 1024,
-      evidenceUrl: "https://docs.kie.ai/market/happyhorse/1-0",
+      maxReferenceBytes: 20 * 1024 * 1024,
+      maxTotalReferenceBytes: 180 * 1024 * 1024,
+      evidenceUrl:
+        "https://docs.kie.ai/market/happyhorse-1-1/reference-to-video",
     },
     operations: ["text-to-video", "image-to-video", "reference-to-video"],
     presets: {
@@ -853,9 +852,10 @@ export const OPENAI_ADAPTER_REGISTRY = [
             ? { reference_image: imageUrls }
             : {}),
         ...(input.resolution ? { resolution: input.resolution } : {}),
-        ...(input.aspectRatio ? { aspect_ratio: input.aspectRatio } : {}),
+        ...(input.aspectRatio && inferredPreset !== "image-to-video"
+          ? { aspect_ratio: input.aspectRatio }
+          : {}),
         ...(input.duration !== undefined ? { duration: input.duration } : {}),
-        ...(input.callbackUrl ? { callBackUrl: input.callbackUrl } : {}),
       });
     },
     submit: (client: KieAiClient, request: unknown) =>
@@ -995,6 +995,8 @@ export const OPENAI_ADAPTER_REGISTRY = [
 ] as const satisfies readonly OpenAiAdapter[];
 
 export const OPENAI_EXCLUSIONS: Readonly<Record<string, string>> = {
+  wan_image:
+    "sequential and multi-image task output is outside the one-image-per-task transport contract",
   topaz_upscale_image:
     "utility transformation is not mapped to standard image routes",
   ideogram_reframe: "reframe transformation has a specialized input contract",
@@ -1010,6 +1012,10 @@ export const OPENAI_EXCLUSIONS: Readonly<Record<string, string>> = {
 export const OPENAI_OPERATION_EXCLUSIONS: Readonly<
   Record<string, Readonly<Record<string, string>>>
 > = {
+  bytedance_seedream_image: {
+    "layer-decomposition":
+      "layer output is outside the standard one-image-per-task transport contract",
+  },
   midjourney_generate: {
     "text-to-image":
       "Midjourney image generation is not mapped to the OpenAI video route",

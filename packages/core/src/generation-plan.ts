@@ -65,9 +65,12 @@ export function resolveGenerationMode(
     case "nano_banana_image":
       return hasValues(args.image_input) ? "image-to-image" : "text-to-image";
     case "bytedance_seedream_image":
+      if (args.image_url || args.operation === "layer-decomposition")
+        return "layer-decomposition";
       return hasValues(args.image_urls) ? "image-to-image" : "text-to-image";
     case "qwen_image":
-      return args.image_url ? "image-to-image" : "text-to-image";
+      return hasValues(args.image_urls) ? "image-to-image" : "text-to-image";
+    case "wan_image":
     case "gpt_image_2":
       return hasValues(args.input_urls) ? "image-to-image" : "text-to-image";
     case "flux_kontext_image":
@@ -141,13 +144,11 @@ export function resolveGenerationMode(
               : "text-to-video";
     case "happyhorse_video":
       if (typeof args.mode === "string") return args.mode;
-      return args.video_url
-        ? "video-edit"
-        : hasValues(args.reference_image)
-          ? "reference-to-video"
-          : hasValues(args.image_urls)
-            ? "image-to-video"
-            : "text-to-video";
+      return hasValues(args.reference_image)
+        ? "reference-to-video"
+        : hasValues(args.image_urls)
+          ? "image-to-video"
+          : "text-to-video";
     case "wan_animate":
       return args.mode === "replace" ? "character-replacement" : "animation";
     case "gemini_omni":
@@ -181,13 +182,33 @@ export function resolveGenerationMode(
 
 function resolveModel(tool: string, parsed: Record<string, unknown>): string {
   const catalog = getCatalogEntry(tool);
-  if (tool === "nano_banana_image" || tool === "veo3_generate_video")
+  if (
+    tool === "nano_banana_image" ||
+    tool === "veo3_generate_video" ||
+    tool === "wan_video" ||
+    tool === "wan_image" ||
+    tool === "suno_generate_music"
+  )
     return String(parsed.model);
+  const mode = resolveGenerationMode(tool, parsed);
+  if (tool === "gpt_image_2")
+    return `gpt-image-2-5-${parsed.model ?? "flare"}-${mode}`;
+  if (tool === "bytedance_seedream_image")
+    return `seedream/${parsed.version ?? "5-pro"}-${mode}`;
+  if (tool === "qwen_image")
+    return `qwen3/${parsed.model === "qwen3-pro" ? "pro-" : ""}${mode}`;
+  if (tool === "happyhorse_video") return `happyhorse-1-1/${mode}`;
   return catalog?.model ?? tool;
 }
 
 function resolveOutputCount(args: Record<string, unknown>): number {
-  for (const key of ["max_images", "num_images", "videoBatchSize", "repeat"]) {
+  for (const key of [
+    "n",
+    "max_images",
+    "num_images",
+    "videoBatchSize",
+    "repeat",
+  ]) {
     const value = args[key];
     const count = typeof value === "number" ? value : Number(value);
     if (Number.isInteger(count) && count > 0) return count;
@@ -250,6 +271,8 @@ export function prepareGenerationPlan(
     );
     const beforeParse = { ...policyApplied, ...requested.args };
     const parsed = tool.schema.parse(beforeParse) as Record<string, unknown>;
+    if (requested.tool === "wan_image" && parsed.n === undefined)
+      parsed.n = parsed.enable_sequential ? 12 : 4;
     const appliedDefaults = {
       ...policyApplied,
       ...toolSchemaDefaults(tool.schema, beforeParse, parsed),

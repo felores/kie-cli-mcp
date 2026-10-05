@@ -1,82 +1,65 @@
-import { z } from "zod";
 import { HappyHorseVideoSchema } from "../types.js";
-import type { ToolContext, ToolDef, ToolResult } from "./types.js";
+import type { ToolDef } from "./types.js";
 
 export const happyhorseVideoTool: ToolDef<typeof HappyHorseVideoSchema> = {
   name: "happyhorse_video",
   description:
-    "Generate videos using Alibaba HappyHorse 1.0 (text-to-video, image-to-video, reference-to-video with up to 9 images, video-edit with native audio)",
+    "Generate HappyHorse 1.1 videos from text, one first-frame image, or up to 9 reference images. Clips are 3-15 seconds at 720p/1080p. HappyHorse 1.0 editing and unsupported fields are removed; poll for results.",
   category: "video",
   schema: HappyHorseVideoSchema,
-  async run(args, ctx: ToolContext): Promise<ToolResult> {
+  async run(args, ctx) {
     try {
       const request = HappyHorseVideoSchema.parse(args);
-      request.callBackUrl = ctx.getCallbackUrl(request.callBackUrl);
-
       const response = await ctx.client.generateHappyHorseVideo(request);
-
-      if (response.code === 200 && response.data?.taskId) {
-        const mode =
-          request.mode ||
-          (request.video_url
-            ? "video-edit"
-            : request.reference_image?.length
-              ? "reference-to-video"
-              : request.image_urls?.length
-                ? "image-to-video"
-                : "text-to-video");
-
-        await ctx.db.createTask({
-          task_id: response.data.taskId,
-          api_type: "happyhorse-video",
-          status: "pending",
-        });
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  success: true,
-                  task_id: response.data.taskId,
-                  message: `HappyHorse 1.0 ${mode} task created successfully`,
-                  parameters: {
-                    mode,
-                    prompt:
-                      request.prompt.substring(0, 100) +
-                      (request.prompt.length > 100 ? "..." : ""),
-                    resolution: request.resolution || "1080p",
-                    aspect_ratio: request.aspect_ratio || "16:9",
-                    duration: request.duration || 5,
-                  },
-                  next_steps: [
-                    `Use get_task_status with task_id: ${response.data.taskId} to check progress`,
-                    'Video will be available when status is "completed"',
-                  ],
+      if (response.code !== 200 || !response.data?.taskId)
+        throw new Error(response.msg || "Failed to create HappyHorse 1.1 task");
+      await ctx.db.createTask({
+        task_id: response.data.taskId,
+        api_type: "happyhorse-video",
+        status: "pending",
+      });
+      const mode =
+        request.mode ??
+        (request.reference_image?.length
+          ? "reference-to-video"
+          : request.image_urls?.length
+            ? "image-to-video"
+            : "text-to-video");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                task_id: response.data.taskId,
+                message: `HappyHorse 1.1 ${mode} task created successfully`,
+                parameters: {
+                  mode,
+                  resolution: request.resolution,
+                  duration: request.duration,
+                  ...(mode !== "image-to-video" && {
+                    aspect_ratio: request.aspect_ratio ?? "16:9",
+                  }),
                 },
-                null,
-                2,
-              ),
-            },
-          ],
-        };
-      } else {
-        throw new Error(response.msg || "Failed to create HappyHorse task");
-      }
+                next_steps: [
+                  "Use get_task_status or wait_for_task with this task_id",
+                ],
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return ctx.formatError("happyhorse_video", error, {
-          prompt: "Required: Text prompt for video generation (max 5000 chars)",
-          mode: "Optional: text-to-video, image-to-video, reference-to-video, video-edit",
-          image_urls: "I2V: Single image URL",
-          reference_image: "R2V: Up to 9 reference image URLs",
-          video_url: "Video Edit: Video URL to edit",
-        });
-      }
       return ctx.formatError("happyhorse_video", error, {
-        prompt: "Required: Text prompt for video generation (max 5000 chars)",
-        mode: "Optional: text-to-video, image-to-video, reference-to-video, video-edit",
+        prompt:
+          "Required for text/reference-to-video, optional for image-to-video",
+        mode: "text-to-video, image-to-video, or reference-to-video",
+        image_urls: "Image-to-video: exactly one image",
+        reference_image: "Reference-to-video: 1-9 images",
+        aspect_ratio: "Text/reference mode only",
       });
     }
   },

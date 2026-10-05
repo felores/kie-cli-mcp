@@ -5,7 +5,7 @@ import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
   name: "gpt_image_2",
   description:
-    "Generate images using GPT Image 2 (text-to-image and image-to-image with up to 16 reference images)",
+    "Generate and edit images using GPT Image 2.5 Flare or Sunburst with up to 16 references, 1K/2K/4K output, and background control. The tool name is retained; old GPT Image 2 routing is removed.",
   category: "image",
   schema: GptImage2Schema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -34,9 +34,11 @@ export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
                 {
                   success: true,
                   task_id: response.data.taskId,
-                  message: `GPT Image 2 ${mode} task created successfully`,
+                  message: `GPT Image 2.5 ${request.model ?? "flare"} ${mode} task created successfully`,
                   parameters: {
                     mode,
+                    model: request.model ?? "flare",
+                    background: request.background,
                     prompt:
                       request.prompt.substring(0, 100) +
                       (request.prompt.length > 100 ? "..." : ""),
@@ -58,7 +60,7 @@ export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
           ],
         };
       } else {
-        throw new Error(response.msg || "Failed to create GPT Image 2 task");
+        throw new Error(response.msg || "Failed to create GPT Image 2.5 task");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -68,7 +70,8 @@ export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
           input_urls:
             "Optional: Array of up to 16 image URLs for image-to-image mode",
           aspect_ratio:
-            "Optional: auto, 1:1, 9:16, 16:9, 4:3, 3:4 (default: auto)",
+            "Optional: supported aspect ratio; 27:16, 16:27, 9:8 and 8:9 are 1K-only",
+          model: "flare (default) or sunburst",
           resolution: "Optional: 1K, 2K, 4K (default: 1K)",
         });
       }
@@ -78,7 +81,7 @@ export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
         input_urls:
           "Optional: Array of up to 16 image URLs for image-to-image mode",
         aspect_ratio:
-          "Optional: auto, 1:1, 9:16, 16:9, 4:3, 3:4 (default: auto)",
+          "Optional: supported aspect ratio; 27:16, 16:27, 9:8 and 8:9 are 1K-only",
         resolution: "Optional: 1K, 2K, 4K (default: 1K)",
       });
     }

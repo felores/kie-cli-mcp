@@ -24,7 +24,9 @@ interface JsonProp {
 /** A property that can't be a flat flag (nested object / array of objects) is taken as a JSON string. */
 function isJsonProp(p: JsonProp): boolean {
   return (
-    p.type === "object" || (p.type === "array" && p.items?.type === "object")
+    p.type === "object" ||
+    (p.type === "array" &&
+      (p.items?.type === "object" || p.items?.type === "array"))
   );
 }
 

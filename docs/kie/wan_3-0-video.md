@@ -1,8 +1,10 @@
 # Wan 3.0 Video API
 
-Verified: 2026-08-25
+Verified: 2026-10-04
 
 Source: <https://docs.kie.ai/market/wan/3-0-video>
+
+The same tool now also supports [Wan 3.0 Prime](https://docs.kie.ai/market/wan/3-0-video-prime.md). Select `wan/3-0-video-prime` through `wan_video.model`; the default is `wan/3-0-video`. Both use the contract below. The selected OpenAI adapter remains standard Wan 3.0; Prime selection is MCP/CLI-only. No Wan 2.7 video endpoints are restored. Pricing remains unknown and verification does not include paid generation.
 
 ## Endpoint
 

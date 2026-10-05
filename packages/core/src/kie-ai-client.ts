@@ -29,8 +29,18 @@ import type {
   TopazUpscaleImageRequest,
   Veo3GenerateRequest,
   WanAnimateRequest,
+  WanImageRequest,
   WanVideoRequest,
   ZImageRequest,
+} from "./types.js";
+import {
+  ByteDanceSeedreamImageSchema,
+  GptImage2Schema,
+  HappyHorseVideoSchema,
+  QwenImageSchema,
+  SunoGenerateSchema,
+  Wan30VideoSchema,
+  WanImageSchema,
 } from "./types.js";
 
 export class KieAiRequestError extends Error {
@@ -462,6 +472,8 @@ export class KieAiClient {
       );
     } else if (
       apiType === "elevenlabs-tts" ||
+      apiType === "suno-v6" ||
+      apiType === "wan-image" ||
       apiType === "elevenlabs-sound-effects" ||
       apiType === "bytedance-seedance-video" ||
       apiType === "bytedance-seedream-image" ||
@@ -538,11 +550,42 @@ export class KieAiClient {
   async generateSunoMusic(
     request: SunoGenerateRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
+    request = SunoGenerateSchema.parse(request);
+    const {
+      callBackUrl,
+      customMode,
+      negativeTags,
+      vocalGender,
+      styleWeight,
+      weirdnessConstraint,
+      audioWeight,
+      personaId,
+      personaModel,
+      ...fields
+    } = request;
     const jobRequest = {
-      ...request,
-      model: request.model || "V5",
+      model: "ai-music-api/generate",
+      input: {
+        ...fields,
+        model: request.model ?? "V6",
+        custom_mode: customMode,
+        ...(negativeTags !== undefined && { negative_tags: negativeTags }),
+        ...(vocalGender !== undefined && { vocal_gender: vocalGender }),
+        ...(styleWeight !== undefined && { style_weight: styleWeight }),
+        ...(weirdnessConstraint !== undefined && {
+          weirdness_constraint: weirdnessConstraint,
+        }),
+        ...(audioWeight !== undefined && { audio_weight: audioWeight }),
+        ...(personaId !== undefined && { persona_id: personaId }),
+        ...(personaModel !== undefined && { persona_model: personaModel }),
+      },
+      callBackUrl: this.callbackUrl(callBackUrl),
     };
-    return this.makeRequest<TaskResponse>("/generate", "POST", jobRequest);
+    return this.makeRequest<TaskResponse>(
+      "/jobs/createTask",
+      "POST",
+      jobRequest,
+    );
   }
 
   async generateElevenLabsTTS(
@@ -670,6 +713,7 @@ export class KieAiClient {
   async generateWanVideo(
     request: WanVideoRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
+    request = Wan30VideoSchema.parse(request);
     const input: Record<string, unknown> = {};
 
     if (request.prompt) input.prompt = request.prompt;
@@ -696,7 +740,7 @@ export class KieAiClient {
     input.audio = request.audio !== false;
 
     const jobRequest = {
-      model: "wan/3-0-video",
+      model: request.model ?? "wan/3-0-video",
       input,
       callBackUrl: this.callbackUrl(request.callBackUrl),
     };
@@ -708,60 +752,44 @@ export class KieAiClient {
     );
   }
 
+  async generateWanImage(
+    request: WanImageRequest,
+  ): Promise<KieAiResponse<TaskResponse>> {
+    request = WanImageSchema.parse(request);
+    const { model, callBackUrl, ...input } = request;
+    input.n = request.n ?? (request.enable_sequential ? 12 : 4);
+    return this.makeRequest<TaskResponse>("/jobs/createTask", "POST", {
+      model: model ?? "wan/2-7-image",
+      input,
+      callBackUrl: this.callbackUrl(callBackUrl),
+    });
+  }
+
   async generateByteDanceSeedreamImage(
     request: ByteDanceSeedreamImageRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
-    // Determine mode based on presence of image_urls
-    const isEdit = !!request.image_urls && request.image_urls.length > 0;
-    const isV5Lite = request.version === "5-lite" || !request.version;
-    const isV5Pro = request.version === "5-pro";
-
-    let model: string;
-    let input: any;
-
-    if (isV5Pro) {
-      if (request.image_urls && request.image_urls.length > 10) {
-        throw new Error("Seedream 5 Pro supports at most 10 reference images");
-      }
-      model = isEdit
-        ? "seedream/5-pro-image-to-image"
-        : "seedream/5-pro-text-to-image";
-      input = {
-        prompt: request.prompt,
-        aspect_ratio: request.aspect_ratio || "1:1",
-        quality: request.quality || "basic",
-        output_format: request.output_format || "png",
-        nsfw_checker: request.nsfw_checker === true,
-      };
-      if (isEdit) input.image_urls = request.image_urls;
-    } else if (isV5Lite) {
-      // Seedream 5.0 Lite
-      model = isEdit
-        ? "seedream/5-lite-image-to-image"
-        : "seedream/5-lite-text-to-image";
-      input = {
-        prompt: request.prompt,
-        aspect_ratio: request.aspect_ratio || "1:1",
-        quality: request.quality || "basic",
-      };
-      if (isEdit) {
-        input.image_urls = request.image_urls;
-      }
+    request = ByteDanceSeedreamImageSchema.parse(request);
+    const layers =
+      request.operation === "layer-decomposition" || Boolean(request.image_url);
+    const mode = layers
+      ? "layer-decomposition"
+      : request.image_urls?.length
+        ? "image-to-image"
+        : "text-to-image";
+    const model = `seedream/${request.version ?? "5-pro"}-${mode}`;
+    const input: Record<string, unknown> = {};
+    if (request.prompt !== undefined) input.prompt = request.prompt;
+    input.output_format = request.output_format ?? (layers ? "jpeg" : "png");
+    if (layers) {
+      input.image_url = request.image_url;
+      input.size = request.size ?? "auto";
     } else {
-      // Seedream V4 (default)
-      model = isEdit
-        ? "bytedance/seedream-v4-edit"
-        : "bytedance/seedream-v4-text-to-image";
-      input = {
-        prompt: request.prompt,
-        image_size: request.image_size || "1:1",
-        image_resolution: request.image_resolution || "1K",
-        max_images: request.max_images || 1,
-        seed: request.seed !== undefined ? request.seed : -1,
-      };
-      if (isEdit) {
-        input.image_urls = request.image_urls;
-      }
+      input.aspect_ratio = request.aspect_ratio ?? "1:1";
+      if (request.version === "5-flash") input.size = request.size ?? "1K";
+      else input.quality = request.quality ?? "basic";
+      if (request.image_urls) input.image_urls = request.image_urls;
+      if (request.nsfw_checker !== undefined)
+        input.nsfw_checker = request.nsfw_checker;
     }
 
     const jobRequest = {
@@ -845,38 +873,17 @@ export class KieAiClient {
   async generateQwenImage(
     request: QwenImageRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
-    // Determine mode based on presence of image_url
-    const isEdit = !!request.image_url;
-    const model = isEdit ? "qwen/image-edit" : "qwen/text-to-image";
-
-    const input: any = {
-      prompt: request.prompt,
-      image_size: request.image_size || "square_hd",
-      num_inference_steps: request.num_inference_steps || (isEdit ? 25 : 30),
-      seed: request.seed,
-      guidance_scale: request.guidance_scale || (isEdit ? 4 : 2.5),
-      enable_safety_checker: request.enable_safety_checker === true,
-      output_format: request.output_format || "png",
-      negative_prompt:
-        request.negative_prompt || (isEdit ? "blurry, ugly" : " "),
-      acceleration: request.acceleration || "none",
-    };
-
-    // Add edit-specific parameters
-    if (isEdit) {
-      input.image_url = request.image_url;
-      if (request.num_images) {
-        input.num_images = request.num_images;
-      }
-      if (request.sync_mode !== undefined) {
-        input.sync_mode = request.sync_mode;
-      }
-    }
+    request = QwenImageSchema.parse(request);
+    const { model: variant, callBackUrl, ...input } = request;
+    const mode = request.image_urls?.length
+      ? "image-to-image"
+      : "text-to-image";
+    const model = `qwen3/${variant === "qwen3-pro" ? "pro-" : ""}${mode}`;
 
     const jobRequest = {
       model,
       input,
-      callBackUrl: this.callbackUrl(request.callBackUrl),
+      callBackUrl: this.callbackUrl(callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(
@@ -977,17 +984,17 @@ export class KieAiClient {
   async generateGptImage2(
     request: GptImage2Request,
   ): Promise<KieAiResponse<TaskResponse>> {
+    request = GptImage2Schema.parse(request);
     const hasInputUrls = request.input_urls && request.input_urls.length > 0;
-    const model = hasInputUrls
-      ? "gpt-image-2-image-to-image"
-      : "gpt-image-2-text-to-image";
+    const model = `gpt-image-2-5-${request.model ?? "flare"}-${hasInputUrls ? "image-to-image" : "text-to-image"}`;
 
-    const input: any = {
+    const input: Record<string, unknown> = {
       prompt: request.prompt,
     };
     if (hasInputUrls) input.input_urls = request.input_urls;
     if (request.aspect_ratio) input.aspect_ratio = request.aspect_ratio;
     if (request.resolution) input.resolution = request.resolution;
+    if (request.background) input.background = request.background;
 
     const jobRequest = {
       model,
@@ -1005,43 +1012,32 @@ export class KieAiClient {
   async generateHappyHorseVideo(
     request: HappyHorseVideoRequest,
   ): Promise<KieAiResponse<TaskResponse>> {
+    request = HappyHorseVideoSchema.parse(request);
     const mode =
       request.mode ||
-      (request.video_url
-        ? "video-edit"
-        : request.reference_image?.length
-          ? "reference-to-video"
-          : request.image_urls?.length
-            ? "image-to-video"
-            : "text-to-video");
+      (request.reference_image?.length
+        ? "reference-to-video"
+        : request.image_urls?.length
+          ? "image-to-video"
+          : "text-to-video");
 
-    const modelMap: Record<string, string> = {
-      "text-to-video": "happyhorse/text-to-video",
-      "image-to-video": "happyhorse/image-to-video",
-      "reference-to-video": "happyhorse/reference-to-video",
-      "video-edit": "happyhorse/video-edit",
-    };
-    const model = modelMap[mode];
+    const model = `happyhorse-1-1/${mode}`;
 
-    const input: any = { prompt: request.prompt };
+    const input: Record<string, unknown> = {};
+    if (request.prompt !== undefined) input.prompt = request.prompt;
 
     if (request.image_urls?.length) input.image_urls = request.image_urls;
     if (request.reference_image?.length)
       input.reference_image = request.reference_image;
-    if (request.video_url) input.video_url = request.video_url;
-    if (request.reference_image_edit?.length)
-      input.reference_image_edit = request.reference_image_edit;
-    if (request.audio_setting) input.audio_setting = request.audio_setting;
-    if (request.seed !== undefined) input.seed = request.seed;
 
     input.resolution = request.resolution || "1080p";
-    input.aspect_ratio = request.aspect_ratio || "16:9";
+    if (mode !== "image-to-video")
+      input.aspect_ratio = request.aspect_ratio || "16:9";
     input.duration = request.duration || 5;
 
     const jobRequest = {
       model,
       input,
-      callBackUrl: this.callbackUrl(request.callBackUrl),
     };
 
     return this.makeRequest<TaskResponse>(

@@ -1,6 +1,6 @@
 # Kie.ai Endpoints & MCP Tools Mapping
 
-> **Last Updated**: 2026-08-22
+> **Last Updated**: 2026-10-04
 > **Purpose**: Track Kie.ai API endpoints and their MCP/CLI tool implementation status.
 
 ## Overview
@@ -29,7 +29,8 @@ Exceptions (handled in `packages/core/src/kie-ai-client.ts`):
 | Tool | Create | Poll |
 |------|--------|------|
 | `veo3_generate_video` / `veo3_get_1080p_video` | `POST /api/v1/veo/generate` | `GET /api/v1/veo/record-info`, `GET /api/v1/veo/get-1080p-video` |
-| `suno_generate_music` | `POST /api/v1/generate` | `GET /api/v1/generate?taskId=...` |
+
+Suno V6 now uses the unified jobs endpoints with model `ai-music-api/generate`. Historical tasks stored with `api_type: "suno"` retain `GET /api/v1/generate/record-info?taskId=...` polling. New tasks use `suno-v6`.
 
 The server only treats `code === 200` in the response body as success (HTTP 200 with `code !== 200` is an application-level failure).
 
@@ -66,9 +67,10 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | Tool | Kie.ai Models | Status |
 |------|---------------|--------|
 | `nano_banana_image` | Nano Banana 2 / Nano Banana 2 Lite (generate/edit) | ✅ |
-| `bytedance_seedream_image` | Seedream V4 / V5 Lite / V5 Pro (text-to-image/edit) | ✅ |
-| `qwen_image` | Qwen (text-to-image/edit) | ✅ |
-| `gpt_image_2` | GPT Image 2 (text/image-to-image) | ✅ |
+| `bytedance_seedream_image` | [Seedream 5 Pro](kie/seedream_5-pro.md) / [5 Flash](kie/seedream_5-flash.md), text/edit/layers | ✅ |
+| `qwen_image` | [Qwen3 / Pro](kie/qwen3_image.md), text/edit | ✅ |
+| `gpt_image_2` | [GPT Image 2.5 Flare / Sunburst](kie/gpt_image-2-5.md), text/edit | ✅ |
+| `wan_image` | [Wan 2.7 Image / Image Pro](kie/wan_2-7-image.md), generation/editing/sequential/bboxes | ✅ |
 | `flux_kontext_image` | Flux Kontext Pro/Max | ✅ |
 | `flux2_image` | Flux 2 Pro/Flex (text/image-to-image) | ✅ |
 | `z_image` | Tongyi-MAI Z-Image (photorealistic) | ✅ |
@@ -84,9 +86,9 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `veo3_get_1080p_video` | Veo 3 1080p retrieval | ✅ |
 | `bytedance_seedance_video` | Seedance 2.5 (text, frame, or multimodal reference-to-video) | ✅ |
 | `runway_aleph_video` | Runway Aleph (video-to-video) | ✅ |
-| `wan_video` | Wan 3.0 (text/keyframes/images/video/audio/file/link-to-video) | ✅ |
+| `wan_video` | [Wan 3.0 / Prime](kie/wan_3-0-video.md), text/keyframes/images/video/audio/file/link-to-video | ✅ |
 | `wan_animate` | Wan Animate (animation/character replace) | ✅ |
-| `happyhorse_video` | HappyHorse 1.0 (T2V/I2V/R2V/video-edit) | ✅ |
+| `happyhorse_video` | [HappyHorse 1.1](kie/happyhorse_1-1.md), text/image/reference-to-video | ✅ |
 | `hailuo_video` | MiniMax H3 (Hailuo 03: text/image/reference-to-video) | ✅ |
 | `kling_video` | Kling 3.0 (text/image-to-video, multi-shot, native audio) | ✅ |
 | `grok_imagine` | xAI Grok Imagine Image 2.0 (text/image-to-image) plus Grok Imagine video and upscale | ✅ |
@@ -98,7 +100,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 ### Audio
 | Tool | Kie.ai Models | Status |
 |------|---------------|--------|
-| `suno_generate_music` | Suno V3.5 / V4 / V4.5 / V4.5+ / V5 / V5.5 | ✅ |
+| `suno_generate_music` | [Suno V6 / Mini / Wild](kie/suno_v6.md) | ✅ |
 | `elevenlabs_tts` | ElevenLabs Text-to-Speech | ✅ |
 | `elevenlabs_ttsfx` | ElevenLabs Sound Effects | ✅ |
 
@@ -161,6 +163,9 @@ Run `npm run pricing:refresh` for a read-only report of the source freshness rec
 ---
 
 ## Changelog
+
+### 2026-10-04
+- Integrated the six requested model families and removed retired provider creation routes and parameters. Added Wan image via the tool scaffold, extended Wan video with Prime, and retained historical status polling and OpenAI compatibility aliases. Wan 2.7 video editing/reference endpoints remain excluded.
 
 ### 2026-06-05 (later)
 - `wait_for_task` now polls the Kie API directly by default and streams MCP

@@ -49,6 +49,20 @@ kie-cli list_tasks --limit 10
 
 ### JSON output
 
+Current model selectors include Suno `V6`/`V6_MINI`/`V6_WILD`, GPT Image 2.5
+`flare`/`sunburst`, Seedream `5-pro`/`5-flash`, Qwen `qwen3`/`qwen3-pro`,
+Wan video `wan/3-0-video`/`wan/3-0-video-prime`, and Wan image
+`wan/2-7-image`/`wan/2-7-image-pro`. HappyHorse now routes only to 1.1.
+Retired provider versions and parameters are rejected.
+
+Nested Wan editing boxes use JSON; `input_urls` stays a normal array flag:
+
+```bash
+kie-cli wan_image --prompt "Replace the marked object" \
+  --input_urls https://example.com/product.png \
+  --bbox_list '[[[10,20,100,120]]]' --n 1
+```
+
 Add `--json` to print the raw tool result (machine-readable, ideal for piping to
 `jq` or other agents):
 

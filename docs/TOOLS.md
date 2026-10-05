@@ -6,7 +6,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 
 ## Contents
 
-- **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [z_image](#z_image)
+- **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [wan_image](#wan_image), [z_image](#z_image)
 - **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [gemini_omni](#gemini_omni), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [omnihuman_video](#omnihuman_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
 - **Audio:** [elevenlabs_tts](#elevenlabs_tts), [elevenlabs_ttsfx](#elevenlabs_ttsfx), [suno_generate_music](#suno_generate_music)
 - **Utility:** [finalize_upload](#finalize_upload), [get_task_status](#get_task_status), [get_upload_url](#get_upload_url), [list_models](#list_models), [list_tasks](#list_tasks), [prepare_media_generation](#prepare_media_generation), [submit_media_generation](#submit_media_generation), [upload_file](#upload_file), [upload_widget](#upload_widget), [wait_for_task](#wait_for_task)
@@ -17,24 +17,23 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 
 ### bytedance_seedream_image
 
-Generate and edit images using ByteDance Seedream V4, V5 Lite, or V5 Pro. V5 Pro provides controlled 1K/2K output, PNG/JPEG export, and up to 10 references.
+Generate, edit, or decompose images into layers using Seedream 5 Pro or Flash. image_urls selects editing; image_url selects layer decomposition. Older versions are removed.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `prompt` | string | yes | Text prompt for image generation or editing. V4: max 5000 chars, V5 Lite: max 3000 chars (API returns 500 error if exceeded) |
-| `image_urls` | array | no | Array of image URLs for editing mode (optional - if not provided, uses text-to-image). V4: max 10, V4.5: max 14 |
-| `version` | `4` / `5-lite` / `5-pro` | no | Seedream version: '4' for V4, '5-lite' for V5 Lite (default), or '5-pro' for controlled 1K/2K generation and editing (default: `"5-lite"`) |
-| `image_size` | `square` / `square_hd` / `portrait_4_3` / `portrait_3_2` / `portrait_16_9` / `landscape_4_3` / `landscape_3_2` / `landscape_16_9` / `landscape_21_9` | no | Image aspect ratio (V4 only) (default: `"square_hd"`) |
-| `image_resolution` | `1K` / `2K` / `4K` | no | Image resolution (V4 only) (default: `"1K"`) |
-| `max_images` | integer | no | Number of images to generate (V4 only) (default: `1`) |
-| `seed` | number | no | Random seed for reproducible results (V4 only, use -1 for random) |
-| `aspect_ratio` | `1:1` / `4:3` / `3:4` / `16:9` / `9:16` / `2:3` / `3:2` / `21:9` | no | Aspect ratio for V5 Lite output (V5 Lite only) (default: `"1:1"`) |
-| `quality` | `basic` / `high` | no | Output quality for V5 Lite (V5 Lite only): 'basic' = 2K, 'high' = 3K resolution (default: `"basic"`) |
-| `output_format` | `png` / `jpeg` | no | Output format for Seedream 5 Pro: png or jpeg |
-| `nsfw_checker` | boolean | no | Enable NSFW filtering for Seedream 5 Pro |
-| `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
+| `version` | `5-pro` / `5-flash` | no | Seedream 5 Pro or Flash; older versions are removed (default: `"5-pro"`) |
+| `operation` | `generate` / `layer-decomposition` | no | Defaults to layer-decomposition with image_url, otherwise generate/edit |
+| `prompt` | string | no | 3-5000 characters for generation/editing; optional for layer decomposition |
+| `image_urls` | array | no | Up to 10 reference images for editing |
+| `image_url` | string | no | Single source image for layer decomposition; cannot be combined with image_urls |
+| `aspect_ratio` | `1:1` / `4:3` / `3:4` / `16:9` / `9:16` / `2:3` / `3:2` / `21:9` | no | Generation/edit aspect ratio, default 1:1 |
+| `quality` | `basic` / `high` | no | Pro generation/edit only: basic = 1K, high = 2K |
+| `size` | `auto` / `1K` / `1.5K` / `2K` | no | Flash generation/edit size, default 1K; layer decomposition size, default auto |
+| `output_format` | `png` / `jpeg` | no | Generation default png; layer base image default jpeg, separated layers are PNG |
+| `nsfw_checker` | boolean | no | Generation/edit content filtering; unavailable for layer decomposition |
+| `callBackUrl` | string | no | Optional callback URL, with KIE_AI_CALLBACK_URL fallback |
 
 ### flux_kontext_image
 
@@ -73,16 +72,18 @@ Generate and edit images using Black Forest Labs' Flux 2 models (Pro/Flex) with 
 
 ### gpt_image_2
 
-Generate images using GPT Image 2 (text-to-image and image-to-image with up to 16 reference images)
+Generate and edit images using GPT Image 2.5 Flare or Sunburst with up to 16 references, 1K/2K/4K output, and background control. The tool name is retained; old GPT Image 2 routing is removed.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
+| `model` | `flare` / `sunburst` | no | GPT Image 2.5 variant; GPT Image 2 routing is removed (default: `"flare"`) |
 | `prompt` | string | yes | Text prompt describing the desired image (max 20000 characters) |
 | `input_urls` | array | no | Array of up to 16 image URLs for image-to-image mode. Omit for text-to-image. |
-| `aspect_ratio` | `auto` / `1:1` / `9:16` / `16:9` / `4:3` / `3:4` | no | Image aspect ratio (default: `"auto"`) |
+| `aspect_ratio` | `auto` / `1:1` / `3:2` / `2:3` / `4:3` / `3:4` / `16:9` / `9:16` / `21:9` / `27:16` / `16:27` / `9:8` / `8:9` | no | Image aspect ratio (default: `"auto"`) |
 | `resolution` | `1K` / `2K` / `4K` | no | Output resolution (default: `"1K"`) |
+| `background` | `transparent` / `opaque` / `auto` | no | Image background |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### ideogram_reframe
@@ -156,25 +157,23 @@ Generate and edit images using Nano Banana 2 or the faster 1K Nano Banana 2 Lite
 
 ### qwen_image
 
-Generate and edit images using Qwen models (unified tool for both text-to-image and image editing)
+Generate and edit images using Qwen3 or Qwen3 Pro. image_urls selects editing with up to 3 references. Supports 1K/2K, prompt rewriting, and PNG/JPEG. Older versions are removed.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `prompt` | string | yes | Text prompt for image generation or editing |
-| `image_url` | string | no | URL of image to edit (optional - if not provided, uses text-to-image) |
-| `image_size` | `square` / `square_hd` / `portrait_4_3` / `portrait_16_9` / `landscape_4_3` / `landscape_16_9` | no | Image size (default: `"square_hd"`) |
-| `num_inference_steps` | integer | no | Number of inference steps (2-250 for text-to-image, 2-49 for edit) |
-| `seed` | number | no | Random seed for reproducible results |
-| `guidance_scale` | number | no | CFG scale (0-20, default: 2.5 for text-to-image, 4 for edit) |
-| `enable_safety_checker` | boolean | no | Enable safety checker (default: `false`) |
-| `output_format` | `png` / `jpeg` | no | Output format (default: `"png"`) |
-| `negative_prompt` | string | no | Negative prompt (max 500 characters) (default: `" "`) |
-| `acceleration` | `none` / `regular` / `high` | no | Acceleration level (default: `"none"`) |
-| `num_images` | `1` / `2` / `3` / `4` | no | Number of images (1-4, edit mode only) |
-| `sync_mode` | boolean | no | Sync mode (edit mode only) (default: `false`) |
-| `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
+| `model` | `qwen3` / `qwen3-pro` | no | Qwen3 standard or Pro; older versions are removed (default: `"qwen3"`) |
+| `prompt` | string | yes | Positive prompt, up to 5000 characters |
+| `image_urls` | array | no | Up to 3 reference image URLs; omit for text-to-image |
+| `resolution` | `1K` / `2K` | no | Output resolution (default: `"1K"`) |
+| `image_size` | `1:1` / `3:2` / `2:3` / `4:3` / `3:4` / `16:9` / `9:16` / `21:9` | no | Output aspect ratio (default: `"16:9"`) |
+| `output_format` | `png` / `jpeg` | no | Image format (default: `"png"`) |
+| `prompt_extend` | boolean | no | Enable intelligent prompt rewriting (default: `true`) |
+| `nsfw_checker` | boolean | no | Enable content filtering |
+| `negative_prompt` | string | no | Negative prompt, up to 5000 characters |
+| `seed` | integer | no | Random seed |
+| `callBackUrl` | string | no | Optional callback URL, with KIE_AI_CALLBACK_URL fallback |
 
 ### recraft_remove_background
 
@@ -198,6 +197,29 @@ Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution wi
 | `image_url` | string | yes | URL of image to upscale (JPEG, PNG, WEBP, max 10MB) |
 | `upscale_factor` | `1` / `2` / `4` / `8` | no | Upscale factor: 1x (enhance only), 2x (default), 4x, or 8x. Max output dimension is 20,000px. (default: `"2"`) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
+
+### wan_image
+
+Generate and edit images using Wan 2.7 Image or Image Pro, with up to 9 references, sequential output, color palettes, and bounding-box editing.
+
+#### Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `model` | `wan/2-7-image` / `wan/2-7-image-pro` | no | Wan 2.7 Image standard or Pro (default: `"wan/2-7-image"`) |
+| `prompt` | string | yes | Image generation/editing prompt, up to 5000 characters |
+| `input_urls` | array | no | Up to 9 input images; omit for text-to-image |
+| `aspect_ratio` | `1:1` / `16:9` / `4:3` / `21:9` / `3:4` / `9:16` / `8:1` / `1:8` | no | Output ratio for text-to-image only |
+| `enable_sequential` | boolean | no | Enable group/sequential image generation (default: `false`) |
+| `n` | integer | no | 1-4 in standard mode, 1-12 in sequential mode; default 4 or 12 respectively |
+| `resolution` | `1K` / `2K` / `4K` | no | Output resolution; Pro 4K is only available for non-sequential text-to-image (default: `"2K"`) |
+| `thinking_mode` | boolean | no | Available only for non-sequential text-to-image |
+| `color_palette` | array | no | 3-10 colors with xx.xx% ratios; non-sequential mode only |
+| `bbox_list` | array | no | Editing boxes, one list per input image, up to two [x1,y1,x2,y2] boxes per image |
+| `watermark` | boolean | no | Add a watermark |
+| `seed` | integer | no | Random seed |
+| `nsfw_checker` | boolean | no | Enable content filtering |
+| `callBackUrl` | string | no | Optional callback URL, with KIE_AI_CALLBACK_URL fallback |
 
 ### z_image
 
@@ -299,24 +321,19 @@ Generate videos using MiniMax H3 (Hailuo 03) with text-to-video, image-to-video,
 
 ### happyhorse_video
 
-Generate videos using Alibaba HappyHorse 1.0 (text-to-video, image-to-video, reference-to-video with up to 9 images, video-edit with native audio)
+Generate HappyHorse 1.1 videos from text, one first-frame image, or up to 9 reference images. Clips are 3-15 seconds at 720p/1080p. HappyHorse 1.0 editing and unsupported fields are removed; poll for results.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `mode` | `text-to-video` / `image-to-video` / `reference-to-video` / `video-edit` | no | Generation mode: text-to-video (default), image-to-video, reference-to-video, or video-edit. Auto-detected from parameters if omitted. |
-| `prompt` | string | yes | Text prompt for video generation (max 5000 characters) |
+| `mode` | `text-to-video` / `image-to-video` / `reference-to-video` | no | HappyHorse 1.1 mode, auto-detected from image_urls or reference_image. Video editing from 1.0 is removed. |
+| `prompt` | string | no | Required for text/reference-to-video, optional for image-to-video; max 4999 for text, 5000 for other modes |
 | `image_urls` | array | no | Input image URL for image-to-video mode (max 1) |
 | `reference_image` | array | no | Reference images for reference-to-video mode (up to 9) |
-| `video_url` | string | no | Video URL to edit (video-edit mode) |
-| `reference_image_edit` | array | no | Reference images for video-edit mode (up to 5) |
-| `audio_setting` | `auto` / `origin` | no | Audio handling for video-edit: auto or origin |
 | `resolution` | `720p` / `1080p` | no | Video resolution (default: `"1080p"`) |
-| `aspect_ratio` | `16:9` / `9:16` / `1:1` / `4:3` / `3:4` | no | Aspect ratio of the generated video (default: `"16:9"`) |
+| `aspect_ratio` | `16:9` / `9:16` / `1:1` / `4:3` / `3:4` / `4:5` / `5:4` / `9:21` / `21:9` | no | Text/reference mode aspect ratio, default 16:9; not available in image-to-video |
 | `duration` | integer | no | Duration in seconds (3-15) (default: `5`) |
-| `seed` | integer | no | Random seed for reproducible results (0-2147483647) |
-| `callBackUrl` | string | no | Optional: URL for task completion notifications |
 
 ### infinitalk_lip_sync
 
@@ -445,12 +462,13 @@ Animate static images or replace characters in videos using Alibaba's Wan 2.2 An
 
 ### wan_video
 
-Generate videos using Alibaba Wan 3.0 with text, first/last frames, images, videos, audio, documents, or webpage references
+Generate videos using Alibaba Wan 3.0 standard or high-speed Prime with text, first/last frames, images, videos, audio, documents, or webpage references
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
+| `model` | `wan/3-0-video` / `wan/3-0-video-prime` | no | Wan 3.0 standard or high-speed Prime (default: `"wan/3-0-video"`) |
 | `prompt` | string | no | Text prompt for video generation (max 20000 characters). Required when no media reference is provided. |
 | `first_frame_url` | string | no | URL of the first-frame image (cannot be mixed with reference_*_urls) |
 | `last_frame_url` | string | no | URL of the last-frame image; requires first_frame_url |
@@ -507,21 +525,28 @@ Generate sound effects from text descriptions using ElevenLabs Sound Effects v2 
 
 ### suno_generate_music
 
-Generate music with AI using Suno models (V3_5, V4, V4_5, V4_5PLUS, V5, V5_5). V5_5 supports requested duration.
+Generate music using Suno V6, V6 Mini, or V6 Wild with lyrics, style, personas, and non-custom media references. Older versions are removed.
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `prompt` | string | yes | Description of the desired audio content. In custom mode: used as exact lyrics (max 5000 chars for V4_5+, V5; 3000 for V3_5, V4). In non-custom mode: core idea for auto-generated lyrics (max 500 chars) |
-| `customMode` | boolean | yes | Enable advanced parameter customization. If true: requires style and title. If false: simplified mode with only prompt required |
+| `prompt` | string | no | Optional lyrics fallback in custom mode; core idea in non-custom mode (max 3000 chars). Prompt alone is not sufficient. |
+| `lyrics` | string | no | Lyrics, up to 5000 characters; takes priority over prompt in custom mode |
+| `image_urls` | array | no | Non-custom mode image references, up to 5 |
+| `video_urls` | array | no | Non-custom mode video reference, up to 1 |
+| `audio_urls` | array | no | Non-custom mode audio references; all attachments together must not exceed 10 |
+| `customMode` | boolean | yes | Custom mode requires title and at least one of style, lyrics, or negativeTags. Non-custom mode requires style, lyrics, or media references. |
 | `instrumental` | boolean | yes | Generate instrumental music (no lyrics). In custom mode: if true, only style and title required; if false, prompt used as exact lyrics |
-| `model` | `V3_5` / `V4` / `V4_5` / `V4_5PLUS` / `V5` / `V5_5` | no | AI model version for generation (default: `"V5"`) |
+| `model` | `V6` / `V6_MINI` / `V6_WILD` | no | AI model version for generation (default: `"V6"`) |
 | `callBackUrl` | string | no | URL to receive task completion updates (optional, will use KIE_AI_CALLBACK_URL env var if not provided) |
-| `style` | string | no | Music style/genre (required in custom mode, max 1000 chars for V4_5+, V5; 200 for V3_5, V4) |
+| `style` | string | no | Music style/genre, up to 1000 characters |
 | `title` | string | no | Track title (required in custom mode, max 80 chars) |
-| `duration` | integer | no | Requested track duration in seconds (available only with V5_5) |
-| `negativeTags` | string | no | Music styles to exclude (optional, max 200 chars) |
+| `duration` | number | no | Requested track duration in seconds, 10-360, custom mode only; provider default is 20 |
+| `negativeTags` | string | no | Music styles to exclude |
+| `variety` | integer | no | Custom mode variation, 0-4; provider default is 1 |
+| `personaId` | string | no | Existing persona or voice ID |
+| `personaModel` | `style_persona` / `voice_persona` | no | Persona model |
 | `vocalGender` | `m` / `f` | no | Vocal gender preference (optional, only effective in custom mode) |
 | `styleWeight` | number | no | Strength of style adherence (optional, range 0-1, up to 2 decimal places) |
 | `weirdnessConstraint` | number | no | Controls experimental/creative deviation (optional, range 0-1, up to 2 decimal places) |

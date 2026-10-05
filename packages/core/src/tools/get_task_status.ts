@@ -241,6 +241,7 @@ export const getTaskStatusTool: ToolDef<typeof GetTaskStatusSchema> = {
           "nano-banana-image",
           "bytedance-seedream-image",
           "qwen-image",
+          "wan-image",
           "gpt-image-2",
           "flux-kontext-image",
           "topaz-upscale",

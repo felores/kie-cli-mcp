@@ -26,27 +26,30 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
   },
   {
     toolName: "bytedance_seedream_image",
-    model: "seedream-5-lite",
-    capabilities: ["image generation", "image editing"],
-    description: "ByteDance Seedream image generation and editing.",
+    model: "seedream-5-pro",
+    capabilities: ["image generation", "image editing", "layer decomposition"],
+    description:
+      "Seedream 5 Pro (5-pro) and Flash (5-flash) generation, editing, and layer decomposition.",
     status: "active",
-    evidenceUrl: marketDocs,
+    evidenceUrl: "https://docs.kie.ai/market/seedream/5-pro-text-to-image",
   },
   {
     toolName: "qwen_image",
-    model: "qwen-image",
+    model: "qwen3",
     capabilities: ["image generation", "image editing"],
-    description: "Qwen image generation and editing.",
+    description:
+      "Qwen3 (qwen3) and Qwen3 Pro (qwen3-pro) image generation and editing.",
     status: "active",
-    evidenceUrl: marketDocs,
+    evidenceUrl: "https://docs.kie.ai/market/qwen3/text-to-image",
   },
   {
     toolName: "gpt_image_2",
-    model: "gpt-image-2",
+    model: "gpt-image-2-5-flare",
     capabilities: ["image generation", "image editing"],
-    description: "GPT Image 2 generation and image-to-image.",
+    description: "GPT Image 2.5 Flare and Sunburst generation and editing.",
     status: "active",
-    evidenceUrl: marketDocs,
+    evidenceUrl:
+      "https://docs.kie.ai/market/gpt/gpt-image-2-5-flare-text-to-image",
   },
   {
     toolName: "flux_kontext_image",
@@ -147,7 +150,7 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
   },
   {
     toolName: "wan_video",
-    model: "wan-3.0",
+    model: "wan/3-0-video",
     capabilities: [
       "text to video",
       "image to video",
@@ -156,9 +159,24 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
       "link to video",
       "audio",
     ],
-    description: "Wan video generation and editing.",
+    description:
+      "Wan 3.0 standard (wan/3-0-video) and Prime (wan/3-0-video-prime) multimodal video generation.",
     status: "active",
     evidenceUrl: "https://docs.kie.ai/market/wan/3-0-video",
+  },
+  {
+    toolName: "wan_image",
+    model: "wan/2-7-image",
+    capabilities: [
+      "image generation",
+      "image editing",
+      "sequential images",
+      "bounding boxes",
+    ],
+    description:
+      "Wan 2.7 Image (wan/2-7-image) and Image Pro (wan/2-7-image-pro) generation, sequential output, and interactive editing.",
+    status: "active",
+    evidenceUrl: "https://docs.kie.ai/market/wan/2-7-image",
   },
   {
     toolName: "wan_animate",
@@ -170,16 +188,12 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
   },
   {
     toolName: "happyhorse_video",
-    model: "happyhorse-1.0",
-    capabilities: [
-      "text to video",
-      "image to video",
-      "reference to video",
-      "video editing",
-    ],
-    description: "HappyHorse video generation and editing.",
+    model: "happyhorse-1.1",
+    capabilities: ["text to video", "image to video", "reference to video"],
+    description:
+      "HappyHorse 1.1 text, image, and reference-to-video generation.",
     status: "active",
-    evidenceUrl: marketDocs,
+    evidenceUrl: "https://docs.kie.ai/market/happyhorse-1-1/text-to-video",
   },
   {
     toolName: "runway_aleph_video",
@@ -239,11 +253,12 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
   },
   {
     toolName: "suno_generate_music",
-    model: "suno-v5",
+    model: "V6",
     capabilities: ["music generation"],
-    description: "Suno music generation.",
+    description:
+      "Suno V6, V6 Mini (V6_MINI), and V6 Wild (V6_WILD) music generation with lyrics and media references.",
     status: "active",
-    evidenceUrl: "https://docs.kie.ai/suno-api/quickstart",
+    evidenceUrl: "https://docs.kie.ai/suno-api/generate-music",
   },
   {
     toolName: "elevenlabs_tts",
