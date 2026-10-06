@@ -187,7 +187,7 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-gpt-image-2` | `gpt_image_2` | generation, edit | one Kie task and exactly one image result per requested `n` item |
 | `kie-z-image` | `z_image` | generation | one task and one PNG result per requested `n`; standard-compatible quality values and `output_format=png` are accepted without forwarding unsupported provider fields |
 | `kie-seedream-5-pro-image` | `bytedance_seedream_image` | generation, edit | one Seedream 5 Pro task and one PNG/JPEG result per requested `n`; 10 references |
-| `kie-qwen-image` | `qwen_image` | generation, edit | one Qwen task and one PNG/JPEG result per requested `n`; one reference |
+| `kie-qwen-image` | `qwen_image` | generation, edit | one Qwen3 task and one PNG/JPEG result per requested `n`; up to three references |
 | `kie-flux-2-pro-image` | `flux2_image` | generation, edit | one Flux 2 Pro task and one fixed PNG result per requested `n`; 8 references |
 | `kie-flux-kontext-pro-image` | `flux_kontext_image` | generation, edit | one Flux Kontext Pro task and one PNG/JPEG result per requested `n`; one reference and special status parsing |
 | `kie-bytedance-video` | `bytedance_seedance_video` | create video | one task and exactly one video result |
@@ -196,7 +196,7 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | `kie-minimax-h3-video` | `hailuo_video` | text/image/reference-to-video | one task and exactly one video result |
 | `kie-veo3-video` | `veo3_generate_video` | text/image-to-video | one task and exactly one video result; Veo status route |
 | `kie-wan-3-0-video` | `wan_video` | text/keyframe/multimodal reference-to-video | one task and exactly one video result |
-| `kie-happyhorse-1-0-video` | `happyhorse_video` | text/image/reference-to-video | one task and exactly one video result; edit mode excluded |
+| `kie-happyhorse-1-1-video` | `happyhorse_video` | text/image/reference-to-video | one task and exactly one video result; old 1.0 ID is an alias; edit mode excluded |
 | `kie-midjourney-video` | `midjourney_generate` | image-to-video | one task and exactly one video result; image modes remain operation exclusions |
 | `kie-grok-video` | `grok_imagine` | text/image-to-video | one task and exactly one video result; image and upscale modes remain operation exclusions |
 

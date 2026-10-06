@@ -78,6 +78,7 @@ export class KieAiMcpServer {
       "bytedance_seedream_image",
       "qwen_image",
       "gpt_image_2",
+      "wan_image",
       "flux_kontext_image",
       "flux2_image",
       "z_image",

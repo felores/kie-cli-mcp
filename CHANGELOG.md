@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## MCP 5.2.0 / CLI 0.10.0 / OpenAI transport 0.8.0 - 2026-10-04
 
+### Fixed
+- Included `wan_image` in MCP discovery when `KIE_AI_TOOL_CATEGORIES=image` is configured.
+
 ### Added
 - Suno V6, V6 Mini, and V6 Wild, with lyrics, personas, variety, and non-custom media references.
 - GPT Image 2.5 Flare and Sunburst under `gpt_image_2`, including transparent backgrounds and additional aspect ratios.

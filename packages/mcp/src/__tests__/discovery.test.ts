@@ -68,6 +68,34 @@ async function connectedClient(directGeneration: boolean): Promise<{
 }
 
 describe("MCP server discovery and output schemas", () => {
+  test("image-category discovery includes Wan image without enabling video tools", async () => {
+    const keys = [
+      "KIE_AI_TOOL_CATEGORIES",
+      "KIE_AI_ENABLED_TOOLS",
+      "KIE_AI_DISABLED_TOOLS",
+    ] as const;
+    const previous = Object.fromEntries(
+      keys.map((key) => [key, process.env[key]]),
+    );
+    process.env.KIE_AI_TOOL_CATEGORIES = "image";
+    delete process.env.KIE_AI_ENABLED_TOOLS;
+    delete process.env.KIE_AI_DISABLED_TOOLS;
+    const runtime = await connectedClient(true);
+    try {
+      const names = (await runtime.client.listTools()).tools.map(
+        (tool) => tool.name,
+      );
+      expect(names).toContain("wan_image");
+      expect(names).not.toContain("wan_video");
+    } finally {
+      await runtime.close();
+      for (const key of keys) {
+        if (previous[key] === undefined) delete process.env[key];
+        else process.env[key] = previous[key];
+      }
+    }
+  });
+
   test("exposes outputSchema for prepare and upload tools by default", async () => {
     const runtime = await connectedClient(false);
     try {
