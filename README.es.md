@@ -32,64 +32,6 @@ El servidor MCP y el CLI se generan desde el mismo registro de herramientas, as�
 
 El servidor MCP corre localmente por **stdio** por defecto, y también puede correr como un **servicio HTTP remoto** (Streamable HTTP) para que una sola instancia compartida atienda a varios clientes por red. Incluye un **Dockerfile y un compose de Coolify** para autohospedaje en un paso ([guía de despliegue](docs/DEPLOY_HTTP.md)). Ver la sección **Transporte remoto / HTTP** abajo.
 
-## Novedades en MCP 5.2.0
-
-- Suno V6/Mini/Wild, GPT Image 2.5 Flare/Sunburst, Seedream 5 Pro/Flash y capas, Qwen3/Pro y HappyHorse 1.1 reemplazan las versiones retiradas.
-- `wan_video` agrega Wan 3.0 Prime. La nueva herramienta `wan_image` soporta Wan 2.7 Image/Pro, hasta nueve referencias, salida secuencial, paletas y edición por cajas.
-- Los cambios del núcleo compartido llegan a CLI 0.10 y a los adaptadores OpenAI seleccionados en transporte 0.8. Se conservan la consulta de tareas históricas y los alias de transporte, sin generar con rutas antiguas. Los precios no verificados siguen como `unknown`.
-
-Ejemplos de migración:
-
-```bash
-kie-cli suno_generate_music --customMode --instrumental --model V6 --style "Ambient piano" --title "Quiet"
-kie-cli gpt_image_2 --model sunburst --prompt "A glass perfume bottle" --background transparent
-kie-cli bytedance_seedream_image --version 5-flash --size 1.5K --prompt "A botanical poster"
-kie-cli bytedance_seedream_image --version 5-pro --image_url https://example.com/product.png
-kie-cli qwen_image --model qwen3-pro --resolution 2K --prompt "A product photo"
-kie-cli happyhorse_video --image_urls https://example.com/scene.png --duration 5
-kie-cli wan_video --model wan/3-0-video-prime --prompt "A mountain lake at sunrise"
-kie-cli wan_image --model wan/2-7-image-pro --resolution 4K --n 1 --prompt "A city map"
-```
-
-Suno rechaza solicitudes no personalizadas que solo traen un prompt. Qwen usa `image_urls` para editar y rechaza los controles de inferencia retirados. Seedream Flash usa `size`, Pro usa `quality` y una `image_url` selecciona capas. Ver los [contratos actuales](docs/ENDPOINTS.md).
-
-### MCP 5.1
-
-- **Wan 3.0.** `wan_video` ahora usa el modelo unificado `wan/3-0-video` con
-  texto, fotogramas inicial/final, hasta 10 imágenes, 5 videos, 5 audios,
-  documentos, páginas web, audio nativo y clips de 2 a 30 segundos.
-- **Release compartido.** El mismo contrato de Wan 3.0 está en CLI 0.9 y en el
-  transporte OpenAI 0.7. La ruta OpenAI acepta `kie-wan-3-0-video` y conserva
-  `kie-wan-2-7-video` como alias de compatibilidad.
-
-### Base de MCP 5.0
-
-Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
-`@modelcontextprotocol/node`) con **Node >= 20** y **zod v4**:
-
-- **Doble era de protocolo.** El servidor negocia la versión del protocolo por
-  cliente: los clientes de la era 2025 siguen funcionando sin cambios,
-  mientras que el vocabulario de 2026-07-28 (`server/discover`, cache hints,
-  extensiones, schemas estructurados, tasks) se sirve apenas el SDK levante su
-  tope de negociación.
-- **Resultados estructurados.** Las llamadas fallidas llegan como `isError:
-  true` con contenido de error estructurado; las herramientas de generación,
-  subida y planificación exponen `structuredContent` (`task_id`, `media_id`,
-  `plan_id`) y anuncian `outputSchema` en `tools/list`.
-- **Schemas de entrada modernos.** El `inputSchema` de cada herramienta se
-  genera como JSON Schema 2020-12, el dialecto que apunta MCP 2026-07-28.
-- **Aprobación MRTR.** En hosts de la era 2026 la aprobación es un flujo
-  `input_required` de varias rondas; los hosts de 2025 conservan la
-  elicitación push.
-- **`server/discover` + cache hints + negociación de extensiones.** El
-  servidor responde discovery con sus versiones soportadas, capacidades e
-  instrucciones, y anuncia la extensión MCP Apps que controla el recurso del
-  widget de subida.
-- **Tasks oficiales de MCP (opt-in).** `KIE_AI_MCP_TASKS=true` expone la
-  capacidad `tasks` y las llamadas `tools/call` en modo tarea respaldadas por
-  un motor en proceso espejado en la base SQLite local; las herramientas de
-  estado legacy siguen disponibles en todos los modos.
-
 ## Carga segura de referencias
 
 - `upload_file` envía Base64 validado directamente a Kie. El CLI también puede
@@ -260,6 +202,64 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
   - `kie://guides/image-models-comparison`, `kie://guides/video-models-comparison`, `kie://guides/quality-optimization`: comparativas de modelos y guías de costo/calidad.
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
+
+## Novedades en MCP 5.2.0
+
+- Suno V6/Mini/Wild, GPT Image 2.5 Flare/Sunburst, Seedream 5 Pro/Flash y capas, Qwen3/Pro y HappyHorse 1.1 reemplazan las versiones retiradas.
+- `wan_video` agrega Wan 3.0 Prime. La nueva herramienta `wan_image` soporta Wan 2.7 Image/Pro, hasta nueve referencias, salida secuencial, paletas y edición por cajas.
+- Los cambios del núcleo compartido llegan a CLI 0.10 y a los adaptadores OpenAI seleccionados en transporte 0.8. Se conservan la consulta de tareas históricas y los alias de transporte, sin generar con rutas antiguas. Los precios no verificados siguen como `unknown`.
+
+Ejemplos de migración:
+
+```bash
+kie-cli suno_generate_music --customMode --instrumental --model V6 --style "Ambient piano" --title "Quiet"
+kie-cli gpt_image_2 --model sunburst --prompt "A glass perfume bottle" --background transparent
+kie-cli bytedance_seedream_image --version 5-flash --size 1.5K --prompt "A botanical poster"
+kie-cli bytedance_seedream_image --version 5-pro --image_url https://example.com/product.png
+kie-cli qwen_image --model qwen3-pro --resolution 2K --prompt "A product photo"
+kie-cli happyhorse_video --image_urls https://example.com/scene.png --duration 5
+kie-cli wan_video --model wan/3-0-video-prime --prompt "A mountain lake at sunrise"
+kie-cli wan_image --model wan/2-7-image-pro --resolution 4K --n 1 --prompt "A city map"
+```
+
+Suno rechaza solicitudes no personalizadas que solo traen un prompt. Qwen usa `image_urls` para editar y rechaza los controles de inferencia retirados. Seedream Flash usa `size`, Pro usa `quality` y una `image_url` selecciona capas. Ver los [contratos actuales](docs/ENDPOINTS.md).
+
+### MCP 5.1
+
+- **Wan 3.0.** `wan_video` ahora usa el modelo unificado `wan/3-0-video` con
+  texto, fotogramas inicial/final, hasta 10 imágenes, 5 videos, 5 audios,
+  documentos, páginas web, audio nativo y clips de 2 a 30 segundos.
+- **Release compartido.** El mismo contrato de Wan 3.0 está en CLI 0.9 y en el
+  transporte OpenAI 0.7. La ruta OpenAI acepta `kie-wan-3-0-video` y conserva
+  `kie-wan-2-7-video` como alias de compatibilidad.
+
+### Base de MCP 5.0
+
+Construido sobre los **paquetes SDK v2** (`@modelcontextprotocol/server`,
+`@modelcontextprotocol/node`) con **Node >= 20** y **zod v4**:
+
+- **Doble era de protocolo.** El servidor negocia la versión del protocolo por
+  cliente: los clientes de la era 2025 siguen funcionando sin cambios,
+  mientras que el vocabulario de 2026-07-28 (`server/discover`, cache hints,
+  extensiones, schemas estructurados, tasks) se sirve apenas el SDK levante su
+  tope de negociación.
+- **Resultados estructurados.** Las llamadas fallidas llegan como `isError:
+  true` con contenido de error estructurado; las herramientas de generación,
+  subida y planificación exponen `structuredContent` (`task_id`, `media_id`,
+  `plan_id`) y anuncian `outputSchema` en `tools/list`.
+- **Schemas de entrada modernos.** El `inputSchema` de cada herramienta se
+  genera como JSON Schema 2020-12, el dialecto que apunta MCP 2026-07-28.
+- **Aprobación MRTR.** En hosts de la era 2026 la aprobación es un flujo
+  `input_required` de varias rondas; los hosts de 2025 conservan la
+  elicitación push.
+- **`server/discover` + cache hints + negociación de extensiones.** El
+  servidor responde discovery con sus versiones soportadas, capacidades e
+  instrucciones, y anuncia la extensión MCP Apps que controla el recurso del
+  widget de subida.
+- **Tasks oficiales de MCP (opt-in).** `KIE_AI_MCP_TASKS=true` expone la
+  capacidad `tasks` y las llamadas `tools/call` en modo tarea respaldadas por
+  un motor en proceso espejado en la base SQLite local; las herramientas de
+  estado legacy siguen disponibles en todos los modos.
 
 ## Ejemplos
 
