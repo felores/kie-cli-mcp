@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "explainer-video-storyboard",
+  "title": "Explainer video storyboard",
+  "type": "object",
+  "required": ["title", "style", "voice", "characters", "scenes"],
+  "properties": {
+    "title": { "type": "string", "description": "Video title (used for output naming)" },
+    "aspect_ratio": { "enum": ["16:9", "9:16", "1:1"], "default": "16:9" },
+    "style": {
+      "type": "string",
+      "description": "STYLE LOCK — the global look emitted at the top of every image prompt and repeated in every animation prompt. Be specific about line quality, shading model, and how named vs background characters are drawn; this is the single biggest lever on cross-scene consistency."
+    },
+    "negative_rules": {
+      "type": ["string", "array"],
+      "items": { "type": "string" },
+      "description": "NEGATIVE RULES emitted on every image prompt, e.g. no duplicate characters, no extra limbs, no warped faces, no photorealism, no 3D rendering, no watermark, no text.",
+      "default": []
+    },
+    "palette": {
+      "type": "string",
+      "description": "Default COLOR PALETTE for scenes that don't override it."
+    },
+    "voice": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "description": "ElevenLabs voice name, e.g. Brian, Rachel, Daniel" },
+        "speed": { "type": "number", "minimum": 0.7, "maximum": 1.2, "default": 1.0 },
+        "stability": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 }
+      }
+    },
+    "music": {
+      "type": "object",
+      "description": "Optional background music bed mixed under the narration",
+      "properties": {
+        "file": { "type": "string", "description": "Local path to a music file" },
+        "volume": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.12 }
+      }
+    },
+    "characters": {
+      "type": "array",
+      "description": "Recurring characters; each gets one reference image reused across scenes",
+      "items": {
+        "type": "object",
+        "required": ["id", "prompt"],
+        "properties": {
+          "id": { "type": "string", "description": "Short id referenced by scenes, e.g. 'A'" },
+          "prompt": { "type": "string", "description": "Reference-sheet prompt (appearance, outfit, age) — style string is appended automatically" },
+          "short": { "type": "string", "description": "One-line description injected into the CHARACTERS block of any scene this character appears in. Keeps identity stable alongside the reference image." }
+        }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "vo", "prompt"],
+        "properties": {
+          "id": { "type": "integer", "description": "Scene number (ordering)" },
+          "label": { "type": "string", "description": "Optional act/beat label, e.g. 'Hook', 'Mechanism'" },
+          "vo": { "type": "string", "description": "Narration line for this scene. Keep under ~35 words (≈14s spoken)" },
+          "prompt": { "type": "string", "description": "SCENE — what is happening in the frame. The STYLE LOCK, CHARACTERS, ASPECT RATIO and NEGATIVE RULES blocks are assembled around it automatically." },
+          "subject_count": { "type": "string", "description": "SUBJECT COUNT, e.g. 'ONE character only — the Field Researcher'. Explicitly capping the cast is the most effective guard against duplicated/extra characters." },
+          "environment": { "type": "string", "description": "ENVIRONMENT in depth layers: foreground / midground / background." },
+          "palette": { "type": "string", "description": "COLOR PALETTE for this scene; overrides the storyboard default. Use it to carry the emotional beat." },
+          "composition": { "type": "string", "description": "COMPOSITION, e.g. 'medium close-up from front', 'wide establishing shot'." },
+          "camera": { "type": "string", "description": "CAMERA move for the animation prompt, e.g. 'slow minimal push-in'. Kept separate from subject motion." },
+          "secondary_motion": { "type": "string", "description": "SECONDARY MOTION — a background element moving independently (flickering lamp, drifting bubbles). This is what separates animation from a slideshow." },
+          "sound_design": { "type": "string", "description": "SOUND DESIGN for models generating native audio. Only emitted when --sound is passed; narration and music are added at assembly." },
+          "negative_rules": {
+            "type": ["string", "array"],
+            "items": { "type": "string" },
+            "description": "Overrides the storyboard-level NEGATIVE RULES for this scene only. Use when a scene legitimately needs something the global list forbids — e.g. a sign or label the joke depends on, where the global rules ban on-screen text."
+          },
+          "characters": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Character ids appearing in this scene (their reference images are passed to the generator)"
+          },
+          "motion": { "type": "string", "description": "Camera/animation direction for the clip, e.g. 'slow lateral tracking'" },
+          "still": {
+            "type": "boolean",
+            "default": false,
+            "description": "If true, this scene is NOT sent to the video model. The still image is given a Ken Burns move locally with ffmpeg instead — free. Use for talking-point scenes; reserve animation for beats where motion carries the joke or the action."
+          },
+          "still_motion": {
+            "enum": ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "static"],
+            "default": "zoom_in",
+            "description": "Ken Burns move for still scenes. Vary it across consecutive stills so the video doesn't feel mechanical."
+          },
+          "min_seconds": { "type": "number", "minimum": 3, "maximum": 15, "default": 4, "description": "Minimum scene length even if narration is shorter" }
+        }
+      }
+    }
+  }
+}
