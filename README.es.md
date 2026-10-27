@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.3.0
+
+- La herramienta de imagen de GPT ahora es `gpt_image`. El modelo sigue siendo GPT Image 2.5 (Flare y Sunburst). Actualiza `KIE_AI_ENABLED_TOOLS` y cualquier plan guardado que nombre el viejo `gpt_image_2`.
+
 ## Novedades en MCP 5.2.0
 
 - Suno V6/Mini/Wild, GPT Image 2.5 Flare/Sunburst, Seedream 5 Pro/Flash y capas, Qwen3/Pro y HappyHorse 1.1 reemplazan las versiones retiradas.
