@@ -77,7 +77,7 @@ export class KieAiMcpServer {
       "nano_banana_image",
       "bytedance_seedream_image",
       "qwen_image",
-      "gpt_image_2",
+      "gpt_image",
       "wan_image",
       "flux_kontext_image",
       "flux2_image",
@@ -910,7 +910,7 @@ export class KieAiMcpServer {
         quality: "professional",
       },
       {
-        name: "gpt_image_2",
+        name: "gpt_image",
         status: "available",
         category: "image",
         quality: "professional",

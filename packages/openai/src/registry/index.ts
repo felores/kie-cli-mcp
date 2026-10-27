@@ -206,7 +206,7 @@ export const OPENAI_ADAPTER_REGISTRY = [
   },
   {
     publicModelId: "kie-gpt-image-2",
-    toolName: "gpt_image_2",
+    toolName: "gpt_image",
     mediaType: "image",
     ownedBy: "kie.ai",
     apiType: "gpt-image-2",

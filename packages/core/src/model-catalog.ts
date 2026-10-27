@@ -43,7 +43,7 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
     evidenceUrl: "https://docs.kie.ai/market/qwen3/text-to-image",
   },
   {
-    toolName: "gpt_image_2",
+    toolName: "gpt_image",
     model: "gpt-image-2-5-flare",
     capabilities: ["image generation", "image editing"],
     description: "GPT Image 2.5 Flare and Sunburst generation and editing.",

@@ -73,7 +73,7 @@ describe("OpenAI adapter registry", () => {
       },
       {
         id: "kie-gpt-image-2",
-        tool: "gpt_image_2",
+        tool: "gpt_image",
         media: "image",
         apiType: "gpt-image-2",
         operations: ["generation", "edit"],

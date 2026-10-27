@@ -16,7 +16,7 @@ const EXPECTED_TOOL_NAMES = [
   "flux_kontext_image",
   "get_task_status",
   "get_upload_url",
-  "gpt_image_2",
+  "gpt_image",
   "gemini_omni",
   "grok_imagine",
   "hailuo_video",

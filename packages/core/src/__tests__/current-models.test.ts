@@ -98,7 +98,7 @@ const routes: RouteCase[] = [
   },
   ...["flare", "sunburst"].flatMap((model) =>
     [false, true].map((edit) => ({
-      tool: "gpt_image_2",
+      tool: "gpt_image",
       model: `gpt-image-2-5-${model}-${edit ? "image-to-image" : "text-to-image"}`,
       apiType: "gpt-image-2",
       args: {
@@ -309,8 +309,8 @@ test.each([
       audioWeight: 0.5,
     },
   ],
-  ["gpt_image_2", { prompt, model: "gpt-image-2" }],
-  ["gpt_image_2", { prompt, aspect_ratio: "27:16", resolution: "2K" }],
+  ["gpt_image", { prompt, model: "gpt-image-2" }],
+  ["gpt_image", { prompt, aspect_ratio: "27:16", resolution: "2K" }],
   ["bytedance_seedream_image", { prompt, version: "5-lite" }],
   ["bytedance_seedream_image", { prompt, image_resolution: "4K" }],
   ["bytedance_seedream_image", { prompt, version: "5-flash", quality: "high" }],
