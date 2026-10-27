@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.3.1
+
+- GPT Image 2.5 Flare y Sunburst a 1K ya cotizan un precio exacto: 6 créditos por imagen. 2K, 4K y la edición siguen en `unknown`.
+
 ## Novedades en MCP 5.3.0
 
 - La herramienta de imagen de GPT ahora es `gpt_image`. El modelo sigue siendo GPT Image 2.5 (Flare y Sunburst). Actualiza `KIE_AI_ENABLED_TOOLS` y cualquier plan guardado que nombre el viejo `gpt_image_2`.

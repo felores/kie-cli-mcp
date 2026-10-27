@@ -21,7 +21,7 @@ export interface RateCardEntry {
   credits(args: Record<string, unknown>): number | undefined;
 }
 
-export const RATE_CARD_VERSION = "2026-08-17";
+export const RATE_CARD_VERSION = "2026-10-27";
 
 export const RATE_CARD: RateCardEntry[] = [
   {
@@ -51,6 +51,20 @@ export const RATE_CARD: RateCardEntry[] = [
       typeof args.duration === "number",
     credits: (args) =>
       typeof args.duration === "number" ? args.duration * 16 : undefined,
+  },
+  {
+    toolName: "gpt_image",
+    scope: "text-to-image",
+    name: "GPT Image 2.5 Flare and Sunburst at 1K",
+    sourceUrl: "https://kie.ai/pricing",
+    sourceFingerprint: "kie-pricing-2026-10-27:gpt-image-2-5-1k:6-per-image",
+    verifiedAt: "2026-10-27",
+    matches: (args, model, mode) =>
+      mode === "text-to-image" &&
+      model.startsWith("gpt-image-2-5-") &&
+      args.resolution === "1K" &&
+      Number(args.outputCount ?? 1) === 1,
+    credits: () => 6,
   },
 ];
 

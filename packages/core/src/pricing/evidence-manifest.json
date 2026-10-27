@@ -1,12 +1,18 @@
 {
   "schemaVersion": 1,
-  "lastReviewedAt": "2026-08-17",
+  "lastReviewedAt": "2026-10-27",
   "reviewedSources": [
     {
       "url": "https://kie.ai/pricing",
       "fingerprint": "manual-review-2026-08-17:kie-pricing",
       "verifiedAt": "2026-08-17",
       "scope": "Kie.ai public credit pricing page"
+    },
+    {
+      "url": "https://kie.ai/pricing",
+      "fingerprint": "manual-review-2026-10-27:kie-pricing",
+      "verifiedAt": "2026-10-27",
+      "scope": "Kie.ai public credit pricing page for GPT Image 2.5"
     },
     {
       "url": "https://docs.kie.ai/market/google/nano-banana-2-lite",
@@ -22,6 +28,16 @@
     }
   ],
   "existingFormulaEvidence": [
+    {
+      "scope": "gpt_image:text-to-image:model=gpt-image-2-5-flare|sunburst:resolution=1K:outputCount=1",
+      "formula": "6 credits per image",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-10-27:gpt-image-2-5-1k:6-per-image",
+      "verifiedAt": "2026-10-27",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
     {
       "scope": "nano_banana_image:text-to-image:model=nano-banana-2-lite:outputCount=1",
       "formula": "4 credits per image",
