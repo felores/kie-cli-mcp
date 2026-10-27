@@ -229,7 +229,7 @@ Migration examples:
 
 ```bash
 kie-cli suno_generate_music --customMode --instrumental --model V6 --style "Ambient piano" --title "Quiet"
-kie-cli gpt_image_2 --model sunburst --prompt "A glass perfume bottle" --background transparent
+kie-cli gpt_image --model sunburst --prompt "A glass perfume bottle" --background transparent
 kie-cli bytedance_seedream_image --version 5-flash --size 1.5K --prompt "A botanical poster"
 kie-cli bytedance_seedream_image --version 5-pro --image_url https://example.com/product.png
 kie-cli qwen_image --model qwen3-pro --resolution 2K --prompt "A product photo"

@@ -184,7 +184,7 @@ Discovery and dispatch use the same resolved adapter registry. An adapter joins 
 | Public model ID | Core tool | Operations | Cardinality |
 |---|---|---|---|
 | `kie-nano-banana-image` | `nano_banana_image` | generation, edit | one Kie task and exactly one image result per requested `n` item |
-| `kie-gpt-image-2` | `gpt_image_2` | generation, edit | one Kie task and exactly one image result per requested `n` item |
+| `kie-gpt-image-2` | `gpt_image` | generation, edit | one Kie task and exactly one image result per requested `n` item |
 | `kie-z-image` | `z_image` | generation | one task and one PNG result per requested `n`; standard-compatible quality values and `output_format=png` are accepted without forwarding unsupported provider fields |
 | `kie-seedream-5-pro-image` | `bytedance_seedream_image` | generation, edit | one Seedream 5 Pro task and one PNG/JPEG result per requested `n`; 10 references |
 | `kie-qwen-image` | `qwen_image` | generation, edit | one Qwen3 task and one PNG/JPEG result per requested `n`; up to three references |

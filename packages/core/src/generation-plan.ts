@@ -71,7 +71,7 @@ export function resolveGenerationMode(
     case "qwen_image":
       return hasValues(args.image_urls) ? "image-to-image" : "text-to-image";
     case "wan_image":
-    case "gpt_image_2":
+    case "gpt_image":
       return hasValues(args.input_urls) ? "image-to-image" : "text-to-image";
     case "flux_kontext_image":
       return args.inputImage ? "image-to-image" : "text-to-image";
@@ -191,7 +191,7 @@ function resolveModel(tool: string, parsed: Record<string, unknown>): string {
   )
     return String(parsed.model);
   const mode = resolveGenerationMode(tool, parsed);
-  if (tool === "gpt_image_2")
+  if (tool === "gpt_image")
     return `gpt-image-2-5-${parsed.model ?? "flare"}-${mode}`;
   if (tool === "bytedance_seedream_image")
     return `seedream/${parsed.version ?? "5-pro"}-${mode}`;

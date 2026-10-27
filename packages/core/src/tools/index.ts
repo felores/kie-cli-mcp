@@ -8,7 +8,7 @@ import { flux2ImageTool } from "./flux2_image.js";
 import { geminiOmniTool } from "./gemini_omni.js";
 import { getTaskStatusTool } from "./get_task_status.js";
 import { getUploadUrlTool } from "./get_upload_url.js";
-import { gptImage2Tool } from "./gpt_image_2.js";
+import { gptImageTool } from "./gpt_image.js";
 import { grokImagineTool } from "./grok_imagine.js";
 import { hailuoVideoTool } from "./hailuo_video.js";
 import { happyhorseVideoTool } from "./happyhorse_video.js";
@@ -57,7 +57,7 @@ export const TOOL_REGISTRY: ToolDef[] = [
   getTaskStatusTool,
   getUploadUrlTool,
   geminiOmniTool,
-  gptImage2Tool,
+  gptImageTool,
   grokImagineTool,
   hailuoVideoTool,
   happyhorseVideoTool,

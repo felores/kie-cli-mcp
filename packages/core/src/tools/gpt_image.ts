@@ -2,10 +2,10 @@ import { z } from "zod";
 import { GptImage2Schema } from "../types.js";
 import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 
-export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
-  name: "gpt_image_2",
+export const gptImageTool: ToolDef<typeof GptImage2Schema> = {
+  name: "gpt_image",
   description:
-    "Generate and edit images using GPT Image 2.5 Flare or Sunburst with up to 16 references, 1K/2K/4K output, and background control. The tool name is retained; old GPT Image 2 routing is removed.",
+    "Generate and edit images using GPT Image 2.5 Flare or Sunburst with up to 16 references, 1K/2K/4K output, and background control. The old `gpt_image_2` name is retired.",
   category: "image",
   schema: GptImage2Schema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -64,7 +64,7 @@ export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return ctx.formatError("gpt_image_2", error, {
+        return ctx.formatError("gpt_image", error, {
           prompt:
             "Required: Text prompt describing the desired image (max 20000 chars)",
           input_urls:
@@ -75,7 +75,7 @@ export const gptImage2Tool: ToolDef<typeof GptImage2Schema> = {
           resolution: "Optional: 1K, 2K, 4K (default: 1K)",
         });
       }
-      return ctx.formatError("gpt_image_2", error, {
+      return ctx.formatError("gpt_image", error, {
         prompt:
           "Required: Text prompt describing the desired image (max 20000 chars)",
         input_urls:

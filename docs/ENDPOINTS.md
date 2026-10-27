@@ -69,7 +69,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `nano_banana_image` | Nano Banana 2 / Nano Banana 2 Lite (generate/edit) | ✅ |
 | `bytedance_seedream_image` | [Seedream 5 Pro](kie/seedream_5-pro.md) / [5 Flash](kie/seedream_5-flash.md), text/edit/layers | ✅ |
 | `qwen_image` | [Qwen3 / Pro](kie/qwen3_image.md), text/edit | ✅ |
-| `gpt_image_2` | [GPT Image 2.5 Flare / Sunburst](kie/gpt_image-2-5.md), text/edit | ✅ |
+| `gpt_image` | [GPT Image 2.5 Flare / Sunburst](kie/gpt_image-2-5.md), text/edit | ✅ |
 | `wan_image` | [Wan 2.7 Image / Image Pro](kie/wan_2-7-image.md), generation/editing/sequential/bboxes | ✅ |
 | `flux_kontext_image` | Flux Kontext Pro/Max | ✅ |
 | `flux2_image` | Flux 2 Pro/Flex (text/image-to-image) | ✅ |
@@ -177,7 +177,7 @@ Run `npm run pricing:refresh` for a read-only report of the source freshness rec
 - Refreshed to the current 28 tools; moved `grok_imagine`, `z_image`,
   `infinitalk_lip_sync` and `kling_avatar` from "needing implementation" to
   implemented; removed the retired `sora_video` and the old `openai_4o_image`
-  (now `gpt_image_2`).
+  (now `gpt_image`).
 - Added the "Endpoint routing" section (most tools use `/jobs/createTask` +
   `/jobs/recordInfo`; veo3 and suno are the exceptions).
 

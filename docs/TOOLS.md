@@ -6,7 +6,7 @@ Every tool below is available in both the MCP server and the `kie-cli` CLI. Para
 
 ## Contents
 
-- **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image_2](#gpt_image_2), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [wan_image](#wan_image), [z_image](#z_image)
+- **Image:** [bytedance_seedream_image](#bytedance_seedream_image), [flux_kontext_image](#flux_kontext_image), [flux2_image](#flux2_image), [gpt_image](#gpt_image), [ideogram_reframe](#ideogram_reframe), [midjourney_generate](#midjourney_generate), [nano_banana_image](#nano_banana_image), [qwen_image](#qwen_image), [recraft_remove_background](#recraft_remove_background), [topaz_upscale_image](#topaz_upscale_image), [wan_image](#wan_image), [z_image](#z_image)
 - **Video:** [bytedance_seedance_video](#bytedance_seedance_video), [gemini_omni](#gemini_omni), [grok_imagine](#grok_imagine), [hailuo_video](#hailuo_video), [happyhorse_video](#happyhorse_video), [infinitalk_lip_sync](#infinitalk_lip_sync), [kling_avatar](#kling_avatar), [kling_video](#kling_video), [omnihuman_video](#omnihuman_video), [runway_aleph_video](#runway_aleph_video), [veo3_generate_video](#veo3_generate_video), [veo3_get_1080p_video](#veo3_get_1080p_video), [wan_animate](#wan_animate), [wan_video](#wan_video)
 - **Audio:** [elevenlabs_tts](#elevenlabs_tts), [elevenlabs_ttsfx](#elevenlabs_ttsfx), [suno_generate_music](#suno_generate_music)
 - **Utility:** [finalize_upload](#finalize_upload), [get_task_status](#get_task_status), [get_upload_url](#get_upload_url), [list_models](#list_models), [list_tasks](#list_tasks), [prepare_media_generation](#prepare_media_generation), [submit_media_generation](#submit_media_generation), [upload_file](#upload_file), [upload_widget](#upload_widget), [wait_for_task](#wait_for_task)
@@ -70,9 +70,9 @@ Generate and edit images using Black Forest Labs' Flux 2 models (Pro/Flex) with 
 | `model_type` | `pro` / `flex` | no | Model variant: 'pro' for fast reliable results, 'flex' for more control and fine-tuning. (default: `"pro"`) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
-### gpt_image_2
+### gpt_image
 
-Generate and edit images using GPT Image 2.5 Flare or Sunburst with up to 16 references, 1K/2K/4K output, and background control. The tool name is retained; old GPT Image 2 routing is removed.
+Generate and edit images using GPT Image 2.5 Flare or Sunburst with up to 16 references, 1K/2K/4K output, and background control. The old `gpt_image_2` name is retired.
 
 #### Parameters
 
