@@ -262,7 +262,11 @@ test.each(routes)(
       new Map(TOOL_REGISTRY.map((item) => [item.name, item])),
     );
     expect(plan.items[0].model).toBe(planModel ?? model);
-    expect(plan.items[0].price.status).toBe("unknown");
+    if (tool === "gpt_image" && !args.input_urls) {
+      expect(plan.items[0].price).toMatchObject({ status: "exact", credits: 6 });
+    } else {
+      expect(plan.items[0].price.status).toBe("unknown");
+    }
     if (tool === "wan_image") expect(plan.items[0].outputCount).toBe(input.n);
     if (tool === "happyhorse_video")
       expect(body).not.toHaveProperty("callBackUrl");

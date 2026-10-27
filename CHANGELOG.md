@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.3.1 / CLI 0.11.1 / OpenAI transport 0.9.1 - 2026-10-27
+
+### Added
+- Exact credit formula for GPT Image 2.5 Flare and Sunburst at 1K: 6 credits per image. The plan quotes it instead of `unknown`; 2K, 4K, and image-to-image remain `unknown`.
+
 ## MCP 5.3.0 / CLI 0.11.0 / OpenAI transport 0.9.0 - 2026-10-27
 
 ### Changed

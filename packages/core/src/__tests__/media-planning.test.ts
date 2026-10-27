@@ -432,7 +432,34 @@ describe("media planning", () => {
         "nano-banana-2-lite",
         "image-to-image",
       ),
-    ).toEqual({ status: "unknown", rateCardVersion: "2026-08-17" });
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
+    const gpt = priceRequest(
+      "gpt_image",
+      { resolution: "1K", outputCount: 1 },
+      "gpt-image-2-5-flare-text-to-image",
+      "text-to-image",
+    );
+    expect(gpt).toMatchObject({
+      status: "exact",
+      credits: 6,
+      verifiedAt: "2026-10-27",
+    });
+    expect(
+      priceRequest(
+        "gpt_image",
+        { resolution: "4K", outputCount: 1 },
+        "gpt-image-2-5-sunburst-text-to-image",
+        "text-to-image",
+      ),
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
+    expect(
+      priceRequest(
+        "gpt_image",
+        { resolution: "1K", outputCount: 1 },
+        "gpt-image-2-5-flare-image-to-image",
+        "image-to-image",
+      ),
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
     const hailuo = priceRequest(
       "hailuo_video",
       { duration: 6, resolution: "768p" },
@@ -447,14 +474,14 @@ describe("media planning", () => {
         "minimax-h3",
         "reference-to-video",
       ),
-    ).toEqual({ status: "unknown", rateCardVersion: "2026-08-17" });
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
     expect(
       RATE_CARD.every(
         (entry) =>
           entry.verifiedAt && entry.sourceFingerprint && entry.sourceUrl,
       ),
     ).toBe(true);
-    expect(RATE_CARD).toHaveLength(2);
+    expect(RATE_CARD).toHaveLength(3);
 
     const plan = prepareGenerationPlan(
       [
