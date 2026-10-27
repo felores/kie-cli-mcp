@@ -263,7 +263,10 @@ test.each(routes)(
     );
     expect(plan.items[0].model).toBe(planModel ?? model);
     if (tool === "gpt_image" && !args.input_urls) {
-      expect(plan.items[0].price).toMatchObject({ status: "exact", credits: 6 });
+      expect(plan.items[0].price).toMatchObject({
+        status: "exact",
+        credits: 6,
+      });
     } else {
       expect(plan.items[0].price.status).toBe("unknown");
     }
