@@ -219,6 +219,10 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
   - `ui://kie/upload.html`: sandboxed MCP Apps upload widget.
 
+## What's new in MCP 5.3.0
+
+- The GPT Image tool is now `gpt_image`. The model is still GPT Image 2.5 (Flare and Sunburst). Update `KIE_AI_ENABLED_TOOLS` and any saved plan that names the old `gpt_image_2`.
+
 ## What's new in MCP 5.2.0
 
 - Suno V6/Mini/Wild, GPT Image 2.5 Flare/Sunburst, Seedream 5 Pro/Flash and layers, Qwen3/Pro, and HappyHorse 1.1 replace retired provider versions.
@@ -414,7 +418,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.2.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.3.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
