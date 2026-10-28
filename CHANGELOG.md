@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.3.2 / CLI 0.11.2 / OpenAI transport 0.9.2 - 2026-10-27
+
+### Added
+- GPT Image 2.5 now quotes 2K at 10 credits and 4K at 16 credits per image, and image-to-image at the same per-resolution price. 1K stays at 6 credits.
+
 ## MCP 5.3.1 / CLI 0.11.1 / OpenAI transport 0.9.1 - 2026-10-27
 
 ### Added
