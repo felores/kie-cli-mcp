@@ -87,5 +87,6 @@ not scrape pages to invent rates, add estimates, or add a fixed USD conversion.
 
 Current exact formulas are intentionally limited to the routes listed in
 `packages/core/src/pricing/rate-card.ts`: Nano Banana 2 Lite, GPT Image 2.5 at 1K,
-2K, and 4K, Qwen z-image, Recraft Remove Background, Wan 2.7 Image, and MiniMax H3
-reference-to-video at 768p. Every other request is `unknown` until verified.
+2K, and 4K, Qwen z-image, Recraft Remove Background, Wan 2.7 Image, ByteDance
+Seedance 2.5 without reference video, and MiniMax H3 reference-to-video at 768p.
+Every other request is `unknown` until verified.

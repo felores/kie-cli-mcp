@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.5.0
+
+- Fórmula exacta para ByteDance Seedance 2.5 sin video de referencia: 28, 63 y 158 créditos por segundo a 480p, 720p y 1080p, multiplicado por la duración generada.
+
 ## Novedades en MCP 5.4.0
 
 - Fórmulas exactas para Qwen z-image (0.8 por imagen), Recraft Remove Background (1 por imagen) y Wan 2.7 Image (4.8 estándar y 12 Pro, por imagen).
