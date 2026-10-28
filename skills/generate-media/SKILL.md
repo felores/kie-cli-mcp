@@ -85,7 +85,7 @@ fingerprint, verification date, and existing test-file references. Code-review a
 separate tested edit remain required before copying a proposal into `rate-card.ts`. Do
 not scrape pages to invent rates, add estimates, or add a fixed USD conversion.
 
-Current exact formulas are intentionally limited to Nano Banana 2 Lite at four credits
-per image, GPT Image 2.5 Flare and Sunburst at six credits per image at 1K, ten at 2K,
-and sixteen at 4K, and MiniMax H3 reference-to-video at 768p, at 16 credits per
-second. Every other request is `unknown` until verified.
+Current exact formulas are intentionally limited to the routes listed in
+`packages/core/src/pricing/rate-card.ts`: Nano Banana 2 Lite, GPT Image 2.5 at 1K,
+2K, and 4K, Qwen z-image, Recraft Remove Background, Wan 2.7 Image, and MiniMax H3
+reference-to-video at 768p. Every other request is `unknown` until verified.

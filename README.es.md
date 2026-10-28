@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.4.0
+
+- Fórmulas exactas para Qwen z-image (0.8 por imagen), Recraft Remove Background (1 por imagen) y Wan 2.7 Image (4.8 estándar y 12 Pro, por imagen).
+
 ## Novedades en MCP 5.3.2
 
 - GPT Image 2.5 ya cotiza 2K a 10 créditos y 4K a 16 créditos por imagen, y la edición al mismo precio por resolución. 1K sigue en 6 créditos.

@@ -267,6 +267,12 @@ test.each(routes)(
         status: "exact",
         credits: 6,
       });
+    } else if (tool === "wan_image") {
+      const perImage = plan.items[0].model === "wan/2-7-image-pro" ? 12 : 4.8;
+      expect(plan.items[0].price).toMatchObject({
+        status: "exact",
+        credits: perImage * plan.items[0].outputCount,
+      });
     } else {
       expect(plan.items[0].price.status).toBe("unknown");
     }

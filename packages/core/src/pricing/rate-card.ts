@@ -21,7 +21,7 @@ export interface RateCardEntry {
   credits(args: Record<string, unknown>): number | undefined;
 }
 
-export const RATE_CARD_VERSION = "2026-10-27";
+export const RATE_CARD_VERSION = "2026-10-28";
 
 const GPT_IMAGE_CREDITS: Record<string, number> = {
   "1K": 6,
@@ -31,6 +31,11 @@ const GPT_IMAGE_CREDITS: Record<string, number> = {
 
 function isGptImageResolution(value: unknown): boolean {
   return typeof value === "string" && value in GPT_IMAGE_CREDITS;
+}
+
+function perImage(credits: number) {
+  return (args: Record<string, unknown>) =>
+    credits * Number(args.outputCount ?? 1);
 }
 
 export const RATE_CARD: RateCardEntry[] = [
@@ -89,6 +94,47 @@ export const RATE_CARD: RateCardEntry[] = [
       isGptImageResolution(args.resolution) &&
       Number(args.outputCount ?? 1) === 1,
     credits: (args) => GPT_IMAGE_CREDITS[String(args.resolution)],
+  },
+  {
+    toolName: "wan_image",
+    scope: "text-to-image",
+    name: "Wan 2.7 Image Pro",
+    sourceUrl: "https://kie.ai/pricing",
+    sourceFingerprint: "kie-pricing-2026-10-28:wan-2-7-image-pro:12-per-image",
+    verifiedAt: "2026-10-28",
+    matches: (_args, model) => model === "wan/2-7-image-pro",
+    credits: perImage(12),
+  },
+  {
+    toolName: "wan_image",
+    scope: "text-to-image",
+    name: "Wan 2.7 Image",
+    sourceUrl: "https://kie.ai/pricing",
+    sourceFingerprint: "kie-pricing-2026-10-28:wan-2-7-image:4.8-per-image",
+    verifiedAt: "2026-10-28",
+    matches: (_args, model) => model === "wan/2-7-image",
+    credits: perImage(4.8),
+  },
+  {
+    toolName: "z_image",
+    scope: "text-to-image",
+    name: "Qwen z-image",
+    sourceUrl: "https://kie.ai/pricing",
+    sourceFingerprint: "kie-pricing-2026-10-28:z-image:0.8-per-image",
+    verifiedAt: "2026-10-28",
+    matches: (_args, model) => model === "z-image",
+    credits: () => 0.8,
+  },
+  {
+    toolName: "recraft_remove_background",
+    scope: "background-removal",
+    name: "Recraft Remove Background",
+    sourceUrl: "https://kie.ai/pricing",
+    sourceFingerprint:
+      "kie-pricing-2026-10-28:recraft-remove-background:1-per-image",
+    verifiedAt: "2026-10-28",
+    matches: (_args, model) => model === "recraft-remove-background",
+    credits: () => 1,
   },
 ];
 

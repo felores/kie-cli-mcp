@@ -432,7 +432,7 @@ describe("media planning", () => {
         "nano-banana-2-lite",
         "image-to-image",
       ),
-    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-28" });
     const gpt = priceRequest(
       "gpt_image",
       { resolution: "1K", outputCount: 1 },
@@ -468,6 +468,33 @@ describe("media planning", () => {
         "image-to-image",
       ),
     ).toMatchObject({ status: "exact", credits: 6 });
+    expect(
+      priceRequest("z_image", { outputCount: 1 }, "z-image", "text-to-image"),
+    ).toMatchObject({ status: "exact", credits: 0.8 });
+    expect(
+      priceRequest(
+        "recraft_remove_background",
+        { outputCount: 1 },
+        "recraft-remove-background",
+        "text-to-image",
+      ),
+    ).toMatchObject({ status: "exact", credits: 1 });
+    expect(
+      priceRequest(
+        "wan_image",
+        { outputCount: 4 },
+        "wan/2-7-image",
+        "text-to-image",
+      ),
+    ).toMatchObject({ status: "exact", credits: 19.2 });
+    expect(
+      priceRequest(
+        "wan_image",
+        { outputCount: 2 },
+        "wan/2-7-image-pro",
+        "image-to-image",
+      ),
+    ).toMatchObject({ status: "exact", credits: 24 });
     const hailuo = priceRequest(
       "hailuo_video",
       { duration: 6, resolution: "768p" },
@@ -482,14 +509,14 @@ describe("media planning", () => {
         "minimax-h3",
         "reference-to-video",
       ),
-    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-28" });
     expect(
       RATE_CARD.every(
         (entry) =>
           entry.verifiedAt && entry.sourceFingerprint && entry.sourceUrl,
       ),
     ).toBe(true);
-    expect(RATE_CARD).toHaveLength(4);
+    expect(RATE_CARD).toHaveLength(8);
 
     const plan = prepareGenerationPlan(
       [

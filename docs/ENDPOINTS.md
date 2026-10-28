@@ -156,7 +156,7 @@ To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + 
 
 ## Pricing reference
 
-`packages/core/src/pricing/rate-card.ts` contains only verified credit formulas. Nano Banana 2 Lite is four credits per image, GPT Image 2.5 Flare and Sunburst are six credits per image at 1K, ten at 2K, and sixteen at 4K, and MiniMax H3 reference-to-video at 768p is 16 credits per second. All other requests are `unknown`; the project has no fixed USD conversion. Run `npm run pricing:audit` for read-only coverage and staleness reporting.
+`packages/core/src/pricing/rate-card.ts` contains only verified credit formulas. Current routes: Nano Banana 2 Lite (4 credits per image), GPT Image 2.5 (6, 10, and 16 credits at 1K, 2K, and 4K per image), Qwen z-image (0.8), Recraft Remove Background (1), Wan 2.7 Image (4.8 standard and 12 Pro, per image), and MiniMax H3 reference-to-video at 768p (16 credits per second). All other requests are `unknown`; the project has no fixed USD conversion. Run `npm run pricing:audit` for read-only coverage and staleness reporting.
 
 Run `npm run pricing:refresh` for a read-only report of the source freshness recorded in `packages/core/src/pricing/evidence-manifest.json`; it does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is the only mutation boundary. With no proposal file, it reports an explicit no-op. With `--proposals <file>`, it validates every exact-credit proposal has an HTTPS source URL, fingerprint, ISO verification date, route scope, and existing test-file references before recording proposals in that manifest only. It never changes rate-card TypeScript or creates a USD conversion automatically.
 
