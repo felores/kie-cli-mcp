@@ -219,6 +219,10 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
   - `ui://kie/upload.html`: sandboxed MCP Apps upload widget.
 
+## What's new in MCP 5.5.0
+
+- Exact credit formula for ByteDance Seedance 2.5 without reference video: 28, 63, and 158 credits per second at 480p, 720p, and 1080p, multiplied by the generated duration.
+
 ## What's new in MCP 5.4.0
 
 - Exact credit formulas for Qwen z-image (0.8 per image), Recraft Remove Background (1 per image), and Wan 2.7 Image (4.8 standard and 12 Pro, per image).
@@ -430,7 +434,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.4.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.5.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via

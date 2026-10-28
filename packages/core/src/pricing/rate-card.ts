@@ -38,6 +38,42 @@ function perImage(credits: number) {
     credits * Number(args.outputCount ?? 1);
 }
 
+const SEEDANCE_RATES: Record<string, number> = {
+  "480p": 28,
+  "720p": 63,
+  "1080p": 158,
+};
+
+function seedanceRate(value: unknown): number | undefined {
+  return typeof value === "string"
+    ? SEEDANCE_RATES[value.toLowerCase()]
+    : undefined;
+}
+
+function seedanceEntry(scope: string): RateCardEntry {
+  return {
+    toolName: "bytedance_seedance_video",
+    scope,
+    name: "ByteDance Seedance 2.5 without reference video",
+    sourceUrl: "https://kie.ai/seedance-2-5",
+    sourceFingerprint:
+      "kie-seedance-2-5-2026-10-28:per-second-without-video:28-63-158",
+    verifiedAt: "2026-10-28",
+    matches: (args, model) =>
+      model === "bytedance/seedance-2-5" &&
+      seedanceRate(args.resolution) !== undefined &&
+      typeof args.duration === "number" &&
+      !(
+        Array.isArray(args.reference_video_urls) &&
+        args.reference_video_urls.length > 0
+      ),
+    credits: (args) => {
+      const rate = seedanceRate(args.resolution);
+      return rate === undefined ? undefined : rate * Number(args.duration);
+    },
+  };
+}
+
 export const RATE_CARD: RateCardEntry[] = [
   {
     toolName: "nano_banana_image",
@@ -136,6 +172,9 @@ export const RATE_CARD: RateCardEntry[] = [
     matches: (_args, model) => model === "recraft-remove-background",
     credits: () => 1,
   },
+  seedanceEntry("text-to-video"),
+  seedanceEntry("image-to-video"),
+  seedanceEntry("reference-to-video"),
 ];
 
 export function priceRequest(

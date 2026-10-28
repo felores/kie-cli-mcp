@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.5.0 / CLI 0.13.0 / OpenAI transport 0.11.0 - 2026-10-28
+
+### Added
+- Exact credit formula for ByteDance Seedance 2.5 without reference video: 28, 63, and 158 credits per second at 480p, 720p, and 1080p, multiplied by the generated duration. Requests with reference videos stay `unknown` because the input duration is not known before upload.
+
 ## MCP 5.4.0 / CLI 0.12.0 / OpenAI transport 0.10.0 - 2026-10-28
 
 ### Added

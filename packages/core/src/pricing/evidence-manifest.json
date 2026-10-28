@@ -9,6 +9,12 @@
       "scope": "Kie.ai public credit pricing page"
     },
     {
+      "url": "https://kie.ai/seedance-2-5",
+      "fingerprint": "manual-review-2026-10-28:seedance-2-5",
+      "verifiedAt": "2026-10-28",
+      "scope": "Seedance 2.5 per-second pricing without reference video"
+    },
+    {
       "url": "https://kie.ai/pricing",
       "fingerprint": "manual-review-2026-10-28:kie-pricing",
       "verifiedAt": "2026-10-28",
@@ -34,6 +40,16 @@
     }
   ],
   "existingFormulaEvidence": [
+    {
+      "scope": "bytedance_seedance_video:text-to-video|image-to-video|reference-to-video:model=bytedance/seedance-2-5:without reference video",
+      "formula": "28 credits per second at 480p, 63 at 720p, 158 at 1080p, multiplied by the generated duration",
+      "sourceUrl": "https://kie.ai/seedance-2-5",
+      "sourceFingerprint": "kie-seedance-2-5-2026-10-28:per-second-without-video:28-63-158",
+      "verifiedAt": "2026-10-28",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
     {
       "scope": "z_image:text-to-image:model=z-image:outputCount=1",
       "formula": "0.8 credits per image",

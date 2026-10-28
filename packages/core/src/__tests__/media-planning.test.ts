@@ -495,6 +495,34 @@ describe("media planning", () => {
         "image-to-image",
       ),
     ).toMatchObject({ status: "exact", credits: 24 });
+    expect(
+      priceRequest(
+        "bytedance_seedance_video",
+        { resolution: "720p", duration: 5 },
+        "bytedance/seedance-2-5",
+        "text-to-video",
+      ),
+    ).toMatchObject({ status: "exact", credits: 315 });
+    expect(
+      priceRequest(
+        "bytedance_seedance_video",
+        { resolution: "1080P", duration: 10 },
+        "bytedance/seedance-2-5",
+        "image-to-video",
+      ),
+    ).toMatchObject({ status: "exact", credits: 1580 });
+    expect(
+      priceRequest(
+        "bytedance_seedance_video",
+        {
+          resolution: "720p",
+          duration: 5,
+          reference_video_urls: ["https://example.com/a.mp4"],
+        },
+        "bytedance/seedance-2-5",
+        "reference-to-video",
+      ),
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-28" });
     const hailuo = priceRequest(
       "hailuo_video",
       { duration: 6, resolution: "768p" },
@@ -516,7 +544,7 @@ describe("media planning", () => {
           entry.verifiedAt && entry.sourceFingerprint && entry.sourceUrl,
       ),
     ).toBe(true);
-    expect(RATE_CARD).toHaveLength(8);
+    expect(RATE_CARD).toHaveLength(11);
 
     const plan = prepareGenerationPlan(
       [
