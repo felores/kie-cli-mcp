@@ -86,6 +86,6 @@ separate tested edit remain required before copying a proposal into `rate-card.t
 not scrape pages to invent rates, add estimates, or add a fixed USD conversion.
 
 Current exact formulas are intentionally limited to Nano Banana 2 Lite at four credits
-per image, GPT Image 2.5 Flare and Sunburst at 1K at six credits per image, and MiniMax
-H3 reference-to-video at 768p, at 16 credits per second. Every other request is
-`unknown` until verified.
+per image, GPT Image 2.5 Flare and Sunburst at six credits per image at 1K, ten at 2K,
+and sixteen at 4K, and MiniMax H3 reference-to-video at 768p, at 16 credits per
+second. Every other request is `unknown` until verified.

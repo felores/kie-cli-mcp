@@ -262,7 +262,7 @@ test.each(routes)(
       new Map(TOOL_REGISTRY.map((item) => [item.name, item])),
     );
     expect(plan.items[0].model).toBe(planModel ?? model);
-    if (tool === "gpt_image" && !args.input_urls) {
+    if (tool === "gpt_image") {
       expect(plan.items[0].price).toMatchObject({
         status: "exact",
         credits: 6,

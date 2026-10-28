@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.3.2
+
+- GPT Image 2.5 ya cotiza 2K a 10 créditos y 4K a 16 créditos por imagen, y la edición al mismo precio por resolución. 1K sigue en 6 créditos.
+
 ## Novedades en MCP 5.3.1
 
 - GPT Image 2.5 Flare y Sunburst a 1K ya cotizan un precio exacto: 6 créditos por imagen. 2K, 4K y la edición siguen en `unknown`.

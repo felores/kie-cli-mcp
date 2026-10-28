@@ -23,6 +23,16 @@ export interface RateCardEntry {
 
 export const RATE_CARD_VERSION = "2026-10-27";
 
+const GPT_IMAGE_CREDITS: Record<string, number> = {
+  "1K": 6,
+  "2K": 10,
+  "4K": 16,
+};
+
+function isGptImageResolution(value: unknown): boolean {
+  return typeof value === "string" && value in GPT_IMAGE_CREDITS;
+}
+
 export const RATE_CARD: RateCardEntry[] = [
   {
     toolName: "nano_banana_image",
@@ -55,16 +65,30 @@ export const RATE_CARD: RateCardEntry[] = [
   {
     toolName: "gpt_image",
     scope: "text-to-image",
-    name: "GPT Image 2.5 Flare and Sunburst at 1K",
+    name: "GPT Image 2.5 Flare and Sunburst",
     sourceUrl: "https://kie.ai/pricing",
-    sourceFingerprint: "kie-pricing-2026-10-27:gpt-image-2-5-1k:6-per-image",
+    sourceFingerprint: "kie-pricing-2026-10-27:gpt-image-2-5:6-10-16-per-image",
     verifiedAt: "2026-10-27",
     matches: (args, model, mode) =>
       mode === "text-to-image" &&
       model.startsWith("gpt-image-2-5-") &&
-      args.resolution === "1K" &&
+      isGptImageResolution(args.resolution) &&
       Number(args.outputCount ?? 1) === 1,
-    credits: () => 6,
+    credits: (args) => GPT_IMAGE_CREDITS[String(args.resolution)],
+  },
+  {
+    toolName: "gpt_image",
+    scope: "image-to-image",
+    name: "GPT Image 2.5 Flare and Sunburst",
+    sourceUrl: "https://kie.ai/pricing",
+    sourceFingerprint: "kie-pricing-2026-10-27:gpt-image-2-5:6-10-16-per-image",
+    verifiedAt: "2026-10-27",
+    matches: (args, model, mode) =>
+      mode === "image-to-image" &&
+      model.startsWith("gpt-image-2-5-") &&
+      isGptImageResolution(args.resolution) &&
+      Number(args.outputCount ?? 1) === 1,
+    credits: (args) => GPT_IMAGE_CREDITS[String(args.resolution)],
   },
 ];
 

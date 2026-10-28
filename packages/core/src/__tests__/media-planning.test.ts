@@ -447,11 +447,19 @@ describe("media planning", () => {
     expect(
       priceRequest(
         "gpt_image",
+        { resolution: "2K", outputCount: 1 },
+        "gpt-image-2-5-sunburst-text-to-image",
+        "text-to-image",
+      ),
+    ).toMatchObject({ status: "exact", credits: 10 });
+    expect(
+      priceRequest(
+        "gpt_image",
         { resolution: "4K", outputCount: 1 },
         "gpt-image-2-5-sunburst-text-to-image",
         "text-to-image",
       ),
-    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
+    ).toMatchObject({ status: "exact", credits: 16 });
     expect(
       priceRequest(
         "gpt_image",
@@ -459,7 +467,7 @@ describe("media planning", () => {
         "gpt-image-2-5-flare-image-to-image",
         "image-to-image",
       ),
-    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-27" });
+    ).toMatchObject({ status: "exact", credits: 6 });
     const hailuo = priceRequest(
       "hailuo_video",
       { duration: 6, resolution: "768p" },
@@ -481,7 +489,7 @@ describe("media planning", () => {
           entry.verifiedAt && entry.sourceFingerprint && entry.sourceUrl,
       ),
     ).toBe(true);
-    expect(RATE_CARD).toHaveLength(3);
+    expect(RATE_CARD).toHaveLength(4);
 
     const plan = prepareGenerationPlan(
       [
