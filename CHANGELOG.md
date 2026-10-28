@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.4.0 / CLI 0.12.0 / OpenAI transport 0.10.0 - 2026-10-28
+
+### Added
+- Exact credit formulas for Qwen z-image (0.8 per image), Recraft Remove Background (1 per image), and Wan 2.7 Image (4.8 standard and 12 Pro, per image).
+
 ## MCP 5.3.2 / CLI 0.11.2 / OpenAI transport 0.9.2 - 2026-10-27
 
 ### Added

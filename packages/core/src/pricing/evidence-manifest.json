@@ -1,12 +1,18 @@
 {
   "schemaVersion": 1,
-  "lastReviewedAt": "2026-10-27",
+  "lastReviewedAt": "2026-10-28",
   "reviewedSources": [
     {
       "url": "https://kie.ai/pricing",
       "fingerprint": "manual-review-2026-08-17:kie-pricing",
       "verifiedAt": "2026-08-17",
       "scope": "Kie.ai public credit pricing page"
+    },
+    {
+      "url": "https://kie.ai/pricing",
+      "fingerprint": "manual-review-2026-10-28:kie-pricing",
+      "verifiedAt": "2026-10-28",
+      "scope": "Kie.ai public credit pricing page for the image routes"
     },
     {
       "url": "https://kie.ai/pricing",
@@ -28,6 +34,46 @@
     }
   ],
   "existingFormulaEvidence": [
+    {
+      "scope": "z_image:text-to-image:model=z-image:outputCount=1",
+      "formula": "0.8 credits per image",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-10-28:z-image:0.8-per-image",
+      "verifiedAt": "2026-10-28",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
+    {
+      "scope": "recraft_remove_background:background-removal:model=recraft-remove-background:outputCount=1",
+      "formula": "1 credit per image",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-10-28:recraft-remove-background:1-per-image",
+      "verifiedAt": "2026-10-28",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
+    {
+      "scope": "wan_image:text-to-image:model=wan/2-7-image:outputCount=1",
+      "formula": "4.8 credits per image",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-10-28:wan-2-7-image:4.8-per-image",
+      "verifiedAt": "2026-10-28",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
+    {
+      "scope": "wan_image:text-to-image:model=wan/2-7-image-pro:outputCount=1",
+      "formula": "12 credits per image",
+      "sourceUrl": "https://kie.ai/pricing",
+      "sourceFingerprint": "kie-pricing-2026-10-28:wan-2-7-image-pro:12-per-image",
+      "verifiedAt": "2026-10-28",
+      "tests": [
+        "packages/core/src/__tests__/media-planning.test.ts"
+      ]
+    },
     {
       "scope": "gpt_image:text-to-image|image-to-image:model=gpt-image-2-5-flare|sunburst:resolution=1K|2K|4K:outputCount=1",
       "formula": "6 credits at 1K, 10 at 2K, 16 at 4K, per image",

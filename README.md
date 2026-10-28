@@ -219,6 +219,10 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
   - `ui://kie/upload.html`: sandboxed MCP Apps upload widget.
 
+## What's new in MCP 5.4.0
+
+- Exact credit formulas for Qwen z-image (0.8 per image), Recraft Remove Background (1 per image), and Wan 2.7 Image (4.8 standard and 12 Pro, per image).
+
 ## What's new in MCP 5.3.2
 
 - GPT Image 2.5 now quotes 2K at 10 credits and 4K at 16 credits per image, and image-to-image at the same per-resolution price. 1K stays at 6 credits.
@@ -426,7 +430,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.3.2"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.4.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
