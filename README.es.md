@@ -203,6 +203,11 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.6.0
+
+- Los planes preparados muestran el precio de cada ítem en créditos y en USD ($0.005 por crédito publicado por Kie, marcado como conversión), y el plan completo se devuelve en el resultado de preparación. Los precios desconocidos siguen como `unknown`.
+- Los clientes sin elicitación de formulario aprueban en el chat: `submit_media_generation` acepta `approve` igual a `planId` después de que el usuario confirma el plan mostrado.
+
 ## Novedades en MCP 5.5.0
 
 - Fórmula exacta para ByteDance Seedance 2.5 sin video de referencia: 28, 63 y 158 créditos por segundo a 480p, 720p y 1080p, multiplicado por la duración generada.
