@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "crypto";
 import type { z } from "zod";
 import { getCatalogEntry } from "./model-catalog.js";
-import { type PriceState, priceRequest } from "./pricing/rate-card.js";
+import {
+  creditsToUsd,
+  type PriceState,
+  priceRequest,
+  type UsdConversion,
+} from "./pricing/rate-card.js";
 import type { ToolDef } from "./tools/types.js";
 
 export interface PreparedPlanItem {
@@ -23,7 +28,11 @@ export interface PreparedGenerationPlan {
   defaultProfile: "safe";
   maxConcurrency: number;
   items: PreparedPlanItem[];
-  total: { credits?: number; status: "exact" | "unknown" };
+  total: {
+    credits?: number;
+    usd?: UsdConversion;
+    status: "exact" | "unknown";
+  };
   requestHash: string;
 }
 
@@ -309,7 +318,11 @@ export function prepareGenerationPlan(
     maxConcurrency,
     items,
     total: exact
-      ? { credits: totalCredits, status: "exact" as const }
+      ? {
+          credits: totalCredits,
+          usd: creditsToUsd(totalCredits ?? 0),
+          status: "exact" as const,
+        }
       : { status: "unknown" as const },
   };
   return {

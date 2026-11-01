@@ -57,7 +57,7 @@ The server only treats `code === 200` in the response body as success (HTTP 200 
 | `wait_for_task` | Block until a task finishes (polls Kie directly, streams `notifications/progress`); optional callback rendezvous |
 | `list_models` | Search source-backed model catalog metadata by capability or text |
 | `prepare_media_generation` | Persist a resolved, quoted plan, then request host form approval when supported without provider calls |
-| `submit_media_generation` | Submit one approved plan once, with at most four concurrent creates |
+| `submit_media_generation` | Submit one approved plan once, with at most four concurrent creates. Clients without form elicitation may pass `approve` equal to `planId` after the user confirms the shown plan in chat; it atomically approves a prepared plan, and a mismatch is rejected |
 | `upload_file` | Upload validated Base64 directly or read a CLI local path beneath `KIE_CLI_UPLOAD_ROOTS` |
 | `get_upload_url` | Mint bounded temporary HTTP capability URLs when the remote MCP transport is explicitly configured |
 | `finalize_upload` | App-only server-side resolution of an opaque `media_id` into a temporary Kie URL |
@@ -156,9 +156,9 @@ To add a model: `npm run add-tool -- <name> <category>`, then fill the schema + 
 
 ## Pricing reference
 
-`packages/core/src/pricing/rate-card.ts` contains only verified credit formulas. Current routes: Nano Banana 2 Lite (4 credits per image), GPT Image 2.5 (6, 10, and 16 credits at 1K, 2K, and 4K per image), Qwen z-image (0.8), Recraft Remove Background (1), Wan 2.7 Image (4.8 standard and 12 Pro, per image), ByteDance Seedance 2.5 without reference video (28, 63, and 158 credits per second at 480p, 720p, and 1080p), and MiniMax H3 reference-to-video at 768p (16 credits per second). All other requests are `unknown`; the project has no fixed USD conversion. Run `npm run pricing:audit` for read-only coverage and staleness reporting.
+`packages/core/src/pricing/rate-card.ts` contains only verified credit formulas. Current routes: Nano Banana 2 Lite (4 credits per image), GPT Image 2.5 (6, 10, and 16 credits at 1K, 2K, and 4K per image), Qwen z-image (0.8), Recraft Remove Background (1), Wan 2.7 Image (4.8 standard and 12 Pro, per image), ByteDance Seedance 2.5 without reference video (28, 63, and 158 credits per second at 480p, 720p, and 1080p), and MiniMax H3 reference-to-video at 768p (16 credits per second). All other requests are `unknown`; USD is derived from verified credits at Kie's published $0.005 per credit (source: kie.ai/pricing) and shown labelled as a conversion; unknown prices have no USD. Run `npm run pricing:audit` for read-only coverage and staleness reporting.
 
-Run `npm run pricing:refresh` for a read-only report of the source freshness recorded in `packages/core/src/pricing/evidence-manifest.json`; it does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is the only mutation boundary. With no proposal file, it reports an explicit no-op. With `--proposals <file>`, it validates every exact-credit proposal has an HTTPS source URL, fingerprint, ISO verification date, route scope, and existing test-file references before recording proposals in that manifest only. It never changes rate-card TypeScript or creates a USD conversion automatically.
+Run `npm run pricing:refresh` for a read-only report of the source freshness recorded in `packages/core/src/pricing/evidence-manifest.json`; it does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is the only mutation boundary. With no proposal file, it reports an explicit no-op. With `--proposals <file>`, it validates every exact-credit proposal has an HTTPS source URL, fingerprint, ISO verification date, route scope, and existing test-file references before recording proposals in that manifest only. It never changes rate-card TypeScript or changes the USD conversion constant.
 
 ---
 

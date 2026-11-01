@@ -35,6 +35,7 @@ function pendingResult(
       plan_id: plan.id,
       status: "prepared",
       approved: false,
+      plan,
     },
   };
 }
@@ -58,6 +59,7 @@ function approvalRequiredResult(
             status: "prepared",
             approved: false,
             input_required: true,
+            plan,
             message:
               "Host approval required. The MCP host will present the approval form.",
           },
@@ -71,6 +73,7 @@ function approvalRequiredResult(
       status: "prepared",
       approved: false,
       input_required: true,
+      plan,
     },
     _meta: { "kie/approval-plan": plan },
   };
@@ -158,6 +161,7 @@ export const prepareMediaGenerationTool: ToolDef<
           plan_id: plan.id,
           status: "approved",
           approved: true,
+          plan,
         },
       };
     } catch (error) {

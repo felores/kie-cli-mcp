@@ -135,6 +135,18 @@ describe("MCP media planning integration", () => {
         status: "prepared",
       });
       expect(providerCall).not.toHaveBeenCalled();
+      expect(elicitationRequests[0].message).toContain("$0.02 USD");
+      expect(elicitationRequests[0].message).toContain(
+        "https://kie.ai/pricing",
+      );
+      expect(
+        (unconfirmed.plan as { items: Array<{ price: unknown }> }).items[0]
+          .price,
+      ).toMatchObject({
+        status: "exact",
+        credits: 4,
+        usd: { amount: 0.02, currency: "USD" },
+      });
 
       const blockedSubmission = resultPayload(
         (await client.callTool({
@@ -198,5 +210,125 @@ describe("MCP media planning integration", () => {
       else process.env.KIE_AI_DB_PATH = previousDatabasePath;
       rmSync(databaseDirectory, { recursive: true, force: true });
     }
+  });
+
+  async function withClient(
+    capabilities: Record<string, unknown>,
+    run: (ctx: {
+      call: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<Record<string, unknown>>;
+      providerCall: jest.Mock;
+    }) => Promise<void>,
+  ) {
+    const dir = mkdtempSync(join(tmpdir(), "kie-mcp-chat-approval-"));
+    const prevKey = process.env.KIE_AI_API_KEY;
+    const prevDb = process.env.KIE_AI_DB_PATH;
+    process.env.KIE_AI_API_KEY = "test-key-no-network";
+    process.env.KIE_AI_DB_PATH = join(dir, "tasks.db");
+    const app = new KieAiMcpServer();
+    const providerCall = jest.fn(async () => ({
+      code: 200,
+      msg: "ok",
+      data: { taskId: "local-provider-task" },
+    }));
+    (
+      app as unknown as {
+        client: { generateNanoBananaImage: typeof providerCall };
+      }
+    ).client.generateNanoBananaImage = providerCall;
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client(
+      { name: "chat-approval-test", version: "1.0.0" },
+      { capabilities },
+    );
+    if (capabilities.elicitation)
+      client.setRequestHandler("elicitation/create", async () => ({
+        action: "decline",
+      }));
+    const server = app.createServer();
+    try {
+      await Promise.all([
+        server.connect(serverTransport),
+        client.connect(clientTransport),
+      ]);
+      await run({
+        providerCall,
+        call: async (name, args) =>
+          resultPayload(
+            (await client.callTool({ name, arguments: args })) as {
+              content: Array<{ type: string; text: string }>;
+            },
+          ),
+      });
+    } finally {
+      await client.close();
+      await server.close();
+      await (app as unknown as { db: { close(): Promise<void> } }).db.close();
+      if (prevKey === undefined) delete process.env.KIE_AI_API_KEY;
+      else process.env.KIE_AI_API_KEY = prevKey;
+      if (prevDb === undefined) delete process.env.KIE_AI_DB_PATH;
+      else process.env.KIE_AI_DB_PATH = prevDb;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const prepareArgs = {
+    items: [{ tool: "nano_banana_image", args: { prompt: "A red panda" } }],
+  };
+
+  test("a client without elicitation approves in chat with approve equal to planId", async () => {
+    await withClient({}, async ({ call, providerCall }) => {
+      const prepared = await call("prepare_media_generation", prepareArgs);
+      expect(prepared).toMatchObject({ approved: false, status: "prepared" });
+      const planId = prepared.planId as string;
+
+      const missing = await call("submit_media_generation", { planId });
+      expect(missing).toMatchObject({ success: false });
+      const mismatched = await call("submit_media_generation", {
+        planId,
+        approve: "00000000-0000-4000-8000-000000000000",
+      });
+      expect(mismatched).toMatchObject({
+        success: false,
+        error: expect.stringContaining("approve must equal planId"),
+      });
+      expect(providerCall).not.toHaveBeenCalled();
+
+      const submitted = await call("submit_media_generation", {
+        planId,
+        approve: planId,
+      });
+      expect(submitted).toMatchObject({ success: true, planId });
+      expect(providerCall).toHaveBeenCalledTimes(1);
+
+      const again = await call("submit_media_generation", {
+        planId,
+        approve: planId,
+      });
+      expect(again).toMatchObject({ success: false });
+      expect(providerCall).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  test("a form-capable client cannot skip its declined form with approve", async () => {
+    await withClient(
+      { elicitation: { form: {} } },
+      async ({ call, providerCall }) => {
+        const prepared = await call("prepare_media_generation", prepareArgs);
+        const planId = prepared.planId as string;
+        const result = await call("submit_media_generation", {
+          planId,
+          approve: planId,
+        });
+        expect(result).toMatchObject({
+          success: false,
+          error: expect.stringContaining("Chat approval is not available"),
+        });
+        expect(providerCall).not.toHaveBeenCalled();
+      },
+    );
   });
 });

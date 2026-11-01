@@ -11,8 +11,20 @@ import {
 
 function priceSummary(plan: PreparedGenerationPlan): string {
   return plan.total.status === "exact"
-    ? `${plan.total.credits} credits total (verified exact quote)`
+    ? `${plan.total.credits} credits total, about $${plan.total.usd?.amount} USD (conversion at $${plan.total.usd?.usdPerCredit} per credit, source ${plan.total.usd?.sourceUrl}; verified exact credit quote)`
     : "total price unknown because one or more request dimensions lack a verified formula";
+}
+
+/** Whether the client can answer the approval form (the preferred path). */
+export function supportsPlanElicitation(
+  server: Pick<
+    Server,
+    "getClientCapabilities" | "getNegotiatedProtocolVersion"
+  >,
+): boolean {
+  return (
+    isModernEra(server) || Boolean(server.getClientCapabilities()?.elicitation)
+  );
 }
 
 export function formatPlanApprovalMessage(
@@ -22,7 +34,7 @@ export function formatPlanApprovalMessage(
     .map((item) => {
       const price =
         item.price.status === "exact"
-          ? `${item.price.credits} credits`
+          ? `${item.price.credits} credits ($${item.price.usd?.amount} USD)`
           : "price unknown";
       return [
         `${item.index + 1}. ${item.tool}: ${item.model}, ${item.mode}, ${item.outputCount} output(s), ${price}`,

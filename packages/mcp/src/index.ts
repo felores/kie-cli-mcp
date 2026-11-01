@@ -41,6 +41,7 @@ import { startHttpServer } from "./http-transport.js";
 import {
   approvalInputRequired,
   requestMcpPlanApproval,
+  supportsPlanElicitation,
 } from "./plan-approval.js";
 import {
   type CallerPrincipal,
@@ -393,6 +394,7 @@ export class KieAiMcpServer {
         )._meta?.progressToken;
         const requestContext: ToolContext = {
           ...scopedContext,
+          allowChatApproval: !supportsPlanElicitation(server),
           requestPlanApproval: (plan) =>
             requestMcpPlanApproval(server, plan, serverCtx),
         };

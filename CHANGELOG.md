@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+- Prepared plans now show each item's price in USD as well as credits, derived from Kie's published credit value of $0.005 per credit (source: kie.ai/pricing) and labelled as a conversion. Unknown prices stay `unknown` and carry no USD. The full plan, including effective settings, applied defaults, and price, is now returned in the `prepare_media_generation` result (`structuredContent.plan` and text), not only in the approval form.
+- `submit_media_generation` accepts `approve` equal to `planId` for MCP clients that do not advertise elicitation. It atomically approves a prepared plan and submits it, mirroring the CLI `--approve`. All other guards are unchanged: expiry, single submit, hash check, server-context binding, four concurrent creates, and rejection of a mismatched `approve`. Clients that can show the form cannot use `approve` to skip it.
+
+### Changed
+- The `generate-media` skill no longer forbids presenting USD, and describes chat approval for clients without form elicitation.
+
+### Fixed
+- Clients without elicitation no longer leave every plan unapproved forever.
+
 ## MCP 5.5.0 / CLI 0.13.0 / OpenAI transport 0.11.0 - 2026-10-28
 
 ### Added

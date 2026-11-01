@@ -2593,6 +2593,13 @@ export type PrepareMediaGenerationRequest = z.infer<
 
 export const SubmitMediaGenerationSchema = z.object({
   planId: z.string().uuid().describe("Approved plan ID to submit exactly once"),
+  approve: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "Chat approval fallback for clients without form elicitation: must equal planId. Pass it only after the user saw the full plan with price and said yes in chat for this exact plan.",
+    ),
 });
 export type SubmitMediaGenerationRequest = z.infer<
   typeof SubmitMediaGenerationSchema

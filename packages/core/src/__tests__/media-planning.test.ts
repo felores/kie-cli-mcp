@@ -559,7 +559,91 @@ describe("media planning", () => {
     expect(plan.items[0].price).toMatchObject({ status: "exact", credits: 4 });
     expect(plan.items[1].price.status).toBe("unknown");
     expect(plan.total).toEqual({ status: "unknown" });
-    expect(JSON.stringify(plan)).not.toContain("USD");
+    expect(plan.items[0].price.usd).toMatchObject({
+      amount: 0.02,
+      currency: "USD",
+      usdPerCredit: 0.005,
+      sourceUrl: "https://kie.ai/pricing",
+    });
+    expect(plan.items[0].price.usd?.basis).toContain("Conversion");
+    // Unknown prices are never estimated, in credits or in USD.
+    expect(plan.items[1].price.usd).toBeUndefined();
+    expect(plan.total.usd).toBeUndefined();
+  });
+
+  test("converts verified GPT Image 2.5 credits to USD at Kie's published credit value", () => {
+    const usd = (resolution: string) =>
+      priceRequest(
+        "gpt_image",
+        { resolution, outputCount: 1 },
+        "gpt-image-2-5-sunburst-text-to-image",
+        "text-to-image",
+      );
+    expect(usd("1K")).toMatchObject({
+      credits: 6,
+      usd: { amount: 0.03, currency: "USD" },
+    });
+    expect(usd("2K")).toMatchObject({
+      credits: 10,
+      usd: { amount: 0.05 },
+    });
+    expect(usd("4K")).toMatchObject({
+      credits: 16,
+      usd: { amount: 0.08 },
+    });
+    expect(
+      priceRequest("gpt_image", { resolution: "8K" }, "x", "text-to-image"),
+    ).toEqual({ status: "unknown", rateCardVersion: "2026-10-28" });
+  });
+
+  test("prepare result exposes the full priced plan in structuredContent and text", async () => {
+    const { db, cleanup } = testDatabase();
+    try {
+      const ctx = {
+        db,
+        approvalContext: "test",
+        getTool,
+        formatError: (_n: string, e: unknown) => {
+          throw e;
+        },
+      } as unknown as ToolContext;
+      const result = await prepareMediaGenerationTool.run(
+        {
+          items: [
+            {
+              tool: "gpt_image",
+              args: {
+                prompt: "A fox",
+                model: "sunburst",
+                resolution: "2K",
+              },
+            },
+          ],
+        },
+        ctx,
+      );
+      const plan = (
+        result.structuredContent as {
+          plan: {
+            items: Array<Record<string, unknown>>;
+            total: Record<string, unknown>;
+          };
+        }
+      ).plan;
+      expect(plan.items[0]).toMatchObject({
+        tool: "gpt_image",
+        effectiveSettings: expect.objectContaining({ resolution: "2K" }),
+        price: { status: "exact", credits: 10, usd: { amount: 0.05 } },
+      });
+      expect(plan.total).toMatchObject({
+        credits: 10,
+        usd: { amount: 0.05 },
+      });
+      expect(result.structuredContent).toMatchObject({ approved: false });
+      expect(readResult(result).plan).toBeDefined();
+    } finally {
+      await cleanup();
+    }
   });
 
   test("audits exact formulas by eligible provider route instead of treating partial tools as covered", () => {
