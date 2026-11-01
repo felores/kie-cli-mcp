@@ -219,6 +219,11 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
   - `ui://kie/upload.html`: sandboxed MCP Apps upload widget.
 
+## What's new in MCP 5.6.0
+
+- Prepared plans show each item's price in credits and in USD (Kie's published $0.005 per credit, labelled as a conversion), and the full plan is returned in the prepare result. Unknown prices stay `unknown`.
+- Clients without form elicitation approve in chat: `submit_media_generation` accepts `approve` equal to `planId` after the user confirms the shown plan.
+
 ## What's new in MCP 5.5.0
 
 - Exact credit formula for ByteDance Seedance 2.5 without reference video: 28, 63, and 158 credits per second at 480p, 720p, and 1080p, multiplied by the generated duration.
@@ -434,7 +439,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.5.0"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.6.0"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
