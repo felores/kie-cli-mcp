@@ -631,6 +631,7 @@ Submit a single unexpired, unchanged plan approved in this caller context exactl
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `planId` | string | yes | Approved plan ID to submit exactly once |
+| `approve` | string | no | Chat approval fallback for clients without form elicitation: must equal planId. Pass it only after the user saw the full plan with price and said yes in chat for this exact plan. |
 
 ### upload_file
 
