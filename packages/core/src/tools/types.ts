@@ -88,6 +88,11 @@ export interface ToolContext {
   validateWidgetGrant?(grant: string): boolean;
   /** Public origin allowlisted in the MCP Apps resource CSP. */
   getUploadPublicOrigin?(): string | undefined;
+  /**
+   * True when the transport lets the user approve in chat: set by the MCP
+   * adapter only for clients that cannot show the approval form.
+   */
+  allowChatApproval?: boolean;
   /** Requests transport-specific approval for a persisted generation plan. */
   requestPlanApproval?(
     plan: PreparedGenerationPlan,

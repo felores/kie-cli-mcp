@@ -74,7 +74,10 @@ export const submitMediaGenerationTool: ToolDef<
   schema: SubmitMediaGenerationSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
     try {
-      const { planId } = SubmitMediaGenerationSchema.parse(args);
+      const { planId, approve } = SubmitMediaGenerationSchema.parse(args);
+      if (approve !== undefined && approve !== planId) {
+        throw new Error("approve must equal planId.");
+      }
       const stored = await ctx.db.getGenerationPlan(planId);
       if (!stored) throw new Error("Prepared plan not found.");
       const { plan } = stored;
@@ -95,9 +98,28 @@ export const submitMediaGenerationTool: ToolDef<
       }
       if (new Date(plan.expiresAt).getTime() <= Date.now())
         throw new Error("Prepared plan has expired.");
+      if (stored.status === "prepared" && approve === planId) {
+        if (!ctx.allowChatApproval) {
+          throw new Error(
+            "Chat approval is not available: this client approves plans through the host form.",
+          );
+        }
+        if (
+          !(await ctx.db.approveGenerationPlan(
+            planId,
+            stored.requestHash,
+            ctx.approvalContext,
+          ))
+        ) {
+          throw new Error(
+            "Plan could not be approved because it expired, changed, or is bound to another approval context.",
+          );
+        }
+        stored.status = "approved";
+      }
       if (stored.status !== "approved") {
         throw new Error(
-          "Plan is not approved, has already been submitted, or is being submitted.",
+          "Plan is not approved, has already been submitted, or is being submitted. Without form elicitation, pass approve equal to planId after the user confirms the shown plan in chat.",
         );
       }
       const unavailableTools = [
@@ -181,6 +203,8 @@ export const submitMediaGenerationTool: ToolDef<
       return ctx.formatError("submit_media_generation", error, {
         planId:
           "Required: an unexpired, approved plan ID returned by prepare_media_generation",
+        approve:
+          "Optional chat approval: equals planId, only after the user confirmed the shown plan",
       });
     }
   },

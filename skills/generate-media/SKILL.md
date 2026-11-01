@@ -25,16 +25,22 @@ safeguards. Do not request that bypass for a user-requested generation.
    It does not create provider tasks.
 3. Present the complete returned plan. For each item, show the tool, model, mode,
    user settings, applied defaults, effective settings, output count where applicable,
-   reference inputs, and price state. Do not present USD unless the user configured an
-   account-specific conversion outside this skill.
+   reference inputs, and price state. For verified exact prices, also show the USD conversion
+   (credits at $0.005 per credit, source https://kie.ai/pricing) and label it a
+   conversion. Unknown prices stay `unknown`; never estimate them in credits or USD.
 4. For MCP, the server asks the host to confirm the resolved plan in a form. The MCP
    client must advertise the `elicitation.form` capability and handle the request. Only
    an accepted form with `confirm: true` changes the persisted plan to `approved`. Do
    not interpret an earlier request to generate as approval of an unseen plan. If the
-   host declines, cancels, does not confirm, or lacks form elicitation, do not submit
-   the prepared plan.
-5. After host approval only, call `submit_media_generation` with the returned `planId`.
-   Do not supply replacement request arguments or caller-controlled approval fields.
+   host declines, cancels, or does not confirm, do not submit the prepared plan.
+   If the client does not advertise form elicitation (the Claude desktop Code tab is
+   one), approve in chat: show the user the full plan with credits and USD, ask for a
+   clear yes to that exact plan, and only then pass `approve` equal to `planId` in the
+   next step.
+5. After host approval, or after the user's clear yes in chat for the shown plan, call
+   `submit_media_generation` with the returned `planId` (plus `approve` equal to `planId`
+   only for the chat fallback; never when a form was declined). Do not supply
+   replacement request arguments.
    A plan expires, its hash detects accidental mutation only, and it can be submitted
     only once. An MCP plan is bound to the server context that prepared and approved
     it, so another HTTP session cannot submit it. Submission creates at most four
@@ -83,7 +89,7 @@ it can write only `packages/core/src/pricing/evidence-manifest.json`, never rate
 TypeScript. Each exact-credit proposal must include its scope, HTTPS source URL,
 fingerprint, verification date, and existing test-file references. Code-review and a
 separate tested edit remain required before copying a proposal into `rate-card.ts`. Do
-not scrape pages to invent rates, add estimates, or add a fixed USD conversion.
+not scrape pages to invent rates, add estimates, or change the fixed USD conversion ($0.005 per credit, `KIE_CREDIT_USD`).
 
 Current exact formulas are intentionally limited to the routes listed in
 `packages/core/src/pricing/rate-card.ts`: Nano Banana 2 Lite, GPT Image 2.5 at 1K,

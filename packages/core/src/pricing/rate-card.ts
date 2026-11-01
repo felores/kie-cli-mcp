@@ -1,8 +1,32 @@
 export type PriceStatus = "exact" | "estimated" | "unknown";
 
+/** Kie's published credit value: "Each credit is valued at $0.005 USD." */
+export const KIE_CREDIT_USD = 0.005;
+export const KIE_CREDIT_USD_SOURCE = "https://kie.ai/pricing";
+
+export interface UsdConversion {
+  amount: number;
+  currency: "USD";
+  usdPerCredit: number;
+  basis: string;
+  sourceUrl: string;
+}
+
+/** Converts verified credits to USD. Never call this for unknown prices. */
+export function creditsToUsd(credits: number): UsdConversion {
+  return {
+    amount: Number((credits * KIE_CREDIT_USD).toFixed(4)),
+    currency: "USD",
+    usdPerCredit: KIE_CREDIT_USD,
+    basis: `Conversion at Kie's published credit value of $${KIE_CREDIT_USD} per credit, not a provider-quoted USD price.`,
+    sourceUrl: KIE_CREDIT_USD_SOURCE,
+  };
+}
+
 export interface PriceState {
   status: PriceStatus;
   credits?: number;
+  usd?: UsdConversion;
   sourceUrl?: string;
   sourceFingerprint?: string;
   verifiedAt?: string;
@@ -194,6 +218,7 @@ export function priceRequest(
   return {
     status: "exact",
     credits,
+    usd: creditsToUsd(credits),
     sourceUrl: entry.sourceUrl,
     sourceFingerprint: entry.sourceFingerprint,
     verifiedAt: entry.verifiedAt,

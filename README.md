@@ -51,7 +51,7 @@ Version 4 makes cost control a server-side workflow instead of an agent instruct
 
 | Surface | Prepare | Human approval | Submit |
 | --- | --- | --- | --- |
-| MCP | `prepare_media_generation` | Host `elicitation.form` confirmation | `submit_media_generation` |
+| MCP | `prepare_media_generation` | Host `elicitation.form` confirmation, or `approve` = plan ID after a chat yes when the client has no elicitation | `submit_media_generation` |
 | CLI | `prepare_media_generation` | `--approve <plan-id>` | `submit_media_generation` |
 
 Preparation validates one to six requests, resolves model settings and policy defaults, records pricing as `exact` only for verified formulas and `unknown` otherwise, and creates no provider task. A plan is persistent, expires after 15 minutes by default, is bound to its MCP server session, and can be submitted only once. See [Media planning and approval](#media-planning-and-approval) for the complete flow.
@@ -151,7 +151,7 @@ Use `list_models` to search source-backed capabilities, then prepare one to six 
 }
 ```
 
-For MCP clients that advertise and handle the `elicitation.form` capability, preparation shows the complete resolved plan and price summary in a host confirmation form. Only an accepted form with `confirm: true` records the plan as approved. Declined, cancelled, unconfirmed, and unsupported elicitations leave the plan prepared and unapproved. Submit only the resulting approved plan ID:
+For MCP clients that advertise and handle the `elicitation.form` capability, preparation shows the complete resolved plan and price summary in a host confirmation form. Only an accepted form with `confirm: true` records the plan as approved. Declined, cancelled, and unconfirmed forms leave the plan unapproved. Clients that do not advertise `elicitation` (for example the Claude desktop Code tab) approve in chat instead: the agent shows the full plan with its credit and USD price, and only after the user clearly says yes for that exact plan, calls `submit_media_generation` with `approve` equal to `planId`. This mirrors the CLI `--approve <plan-id>`, atomically moves the plan from `prepared` to `approved`, and submits it. A missing or mismatched `approve` is rejected, and clients that can show the form cannot use `approve` to skip it. Submit only the resulting approved plan ID:
 
 ```json
 {
@@ -164,13 +164,13 @@ For MCP clients that advertise and handle the `elicitation.form` capability, pre
 
 The CLI has no MCP host. It requires an explicit `--approve <plan-id>` value matching `--planId`; this atomically changes a prepared plan to approved before submission.
 
-Pricing refresh is read-only by default: `npm run pricing:refresh` reports the tracked source evidence freshness and does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is an explicit metadata-only boundary. It is an intentional no-op without eligible validated formula proposals; with `--proposals <file>`, it can record the proposed deterministic credits formula plus its source URL, fingerprint, verification date, scope, and test evidence in the rate-card evidence manifest. It never edits executable formulas or derives USD conversions automatically.
+Pricing refresh is read-only by default: `npm run pricing:refresh` reports the tracked source evidence freshness and does not fetch, scrape, or write. `npm run pricing:refresh -- --apply` is an explicit metadata-only boundary. It is an intentional no-op without eligible validated formula proposals; with `--proposals <file>`, it can record the proposed deterministic credits formula plus its source URL, fingerprint, verification date, scope, and test evidence in the rate-card evidence manifest. It never edits executable formulas or the USD conversion constant.
 
 ```bash
 kie-cli submit_media_generation --planId <prepared-plan-id> --approve <prepared-plan-id> --json
 ```
 
-Plans are persisted in the local SQLite database and move atomically from `prepared` to `approved`, `submitting`, and then `submitted` or `failed`. They expire after 15 minutes by default, cannot be modified, and cannot be submitted twice. The request hash detects accidental plan mutation only. An MCP plan is also bound to the server instance that prepared and approved it, so another HTTP session cannot submit it. A submitted batch creates no more than four provider tasks concurrently. Exact credit quotes exist only for verified request dimensions; all other requests are `unknown`. No USD conversion is assumed.
+Plans are persisted in the local SQLite database and move atomically from `prepared` to `approved`, `submitting`, and then `submitted` or `failed`. They expire after 15 minutes by default, cannot be modified, and cannot be submitted twice. The request hash detects accidental plan mutation only. An MCP plan is also bound to the server instance that prepared and approved it, so another HTTP session cannot submit it. A submitted batch creates no more than four provider tasks concurrently. Exact credit quotes exist only for verified request dimensions; all other requests are `unknown`. Exact quotes also carry a USD conversion at Kie's published credit value of $0.005 per credit (source: kie.ai/pricing), labelled as a conversion; unknown prices carry no USD.
 
 ## Models
 
@@ -320,7 +320,7 @@ Prepare the paid request first. This does not start generation:
 }
 ```
 
-The MCP host then presents the returned plan, resolved settings, and price summary with `elicitation.form`. Approve that host form with `confirm: true`; the approved response includes a `planId`. Then submit that approved plan:
+The MCP host then presents the returned plan, resolved settings, and price summary with `elicitation.form`. Approve that host form with `confirm: true`; the approved response includes a `planId`. Then submit that approved plan. Without form elicitation, show the user the plan and price, wait for a clear yes in chat, and submit with `"approve": "<plan-id>"` alongside `planId`:
 
 ```json
 {

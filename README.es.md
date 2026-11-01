@@ -139,7 +139,7 @@ Usa `list_models` para buscar capacidades con fuentes y luego prepara de una a s
 }
 ```
 
-En clientes MCP que anuncian y manejan `elicitation.form`, la preparación muestra el plan resuelto y el resumen de precio en un formulario de confirmación del host. Solo un formulario aceptado con `confirm: true` aprueba el plan. Rechazos, cancelaciones, confirmaciones incompletas o elicitaciones no compatibles dejan el plan preparado y sin aprobar. Envía solo el ID de un plan aprobado:
+En clientes MCP que anuncian y manejan `elicitation.form`, la preparación muestra el plan resuelto y el resumen de precio en un formulario de confirmación del host. Solo un formulario aceptado con `confirm: true` aprueba el plan. Rechazos, cancelaciones y confirmaciones incompletas dejan el plan sin aprobar. Los clientes que no anuncian `elicitation` (por ejemplo la pestaña Code de Claude desktop) aprueban en el chat: el agente muestra el plan completo con su precio en créditos y USD y, solo cuando el usuario dice sí con claridad a ese plan exacto, llama a `submit_media_generation` con `approve` igual a `planId`. Equivale a `--approve <plan-id>` del CLI, pasa el plan de `prepared` a `approved` de forma atómica y lo envía. Un `approve` ausente o distinto se rechaza, y los clientes que pueden mostrar el formulario no pueden usar `approve` para saltarlo. Envía solo el ID de un plan aprobado:
 
 ```json
 {
@@ -306,7 +306,7 @@ Primero prepara la solicitud pagada. Esto no inicia una generación:
 }
 ```
 
-El host MCP presenta el plan devuelto, los ajustes resueltos y el resumen de precio con `elicitation.form`. Aprueba ese formulario del host con `confirm: true`; la respuesta aprobada incluye un `planId`. Luego envía ese plan aprobado:
+El host MCP presenta el plan devuelto, los ajustes resueltos y el resumen de precio con `elicitation.form`. Aprueba ese formulario del host con `confirm: true`; la respuesta aprobada incluye un `planId`. Luego envía ese plan aprobado. Sin elicitación de formulario, muestra el plan y el precio al usuario, espera un sí claro en el chat y envía con `"approve": "<plan-id>"` junto a `planId`:
 
 ```json
 {
