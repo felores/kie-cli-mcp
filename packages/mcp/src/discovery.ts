@@ -44,12 +44,58 @@ const TASK_OUTPUT_SCHEMA = z.toJSONSchema(
 
 const UPLOAD_OUTPUT_SCHEMA = z.toJSONSchema(z.object({ media_id: z.string() }));
 
+const USD_CONVERSION = z.object({
+  amount: z.number(),
+  currency: z.literal("USD"),
+  usdPerCredit: z.number(),
+  basis: z.string(),
+  sourceUrl: z.string(),
+});
+
+// Mirrors PreparedGenerationPlan in packages/core/src/generation-plan.ts.
+// The output-schema integration test fails when the two drift apart.
+const PLAN = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  expiresAt: z.string(),
+  defaultProfile: z.string(),
+  maxConcurrency: z.number(),
+  items: z.array(
+    z.object({
+      index: z.number(),
+      tool: z.string(),
+      model: z.string(),
+      mode: z.string(),
+      outputCount: z.number(),
+      userSettings: z.record(z.string(), z.unknown()),
+      appliedDefaults: z.record(z.string(), z.unknown()),
+      effectiveSettings: z.record(z.string(), z.unknown()),
+      price: z.object({
+        status: z.enum(["exact", "estimated", "unknown"]),
+        credits: z.number().optional(),
+        usd: USD_CONVERSION.optional(),
+        sourceUrl: z.string().optional(),
+        sourceFingerprint: z.string().optional(),
+        verifiedAt: z.string().optional(),
+        rateCardVersion: z.string(),
+      }),
+    }),
+  ),
+  total: z.object({
+    status: z.enum(["exact", "unknown"]),
+    credits: z.number().optional(),
+    usd: USD_CONVERSION.optional(),
+  }),
+  requestHash: z.string(),
+});
+
 const PREPARE_OUTPUT_SCHEMA = z.toJSONSchema(
   z.object({
     plan_id: z.string(),
     status: z.enum(["prepared", "approved"]),
     approved: z.boolean(),
     input_required: z.boolean().optional(),
+    plan: PLAN,
   }),
 );
 
