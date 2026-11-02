@@ -79,8 +79,8 @@
 **Type**: Avatar Video
 
 **Models**:
-- `kling/v1-avatar-standard` - 720p output
-- `kling/ai-avatar-v1-pro` - 1080p output
+- `kling/ai-avatar-standard` - 720p output
+- `kling/ai-avatar-pro` - 1080p output
 
 **Parameters**:
 - `image_url` (string, required): Avatar image URL

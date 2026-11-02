@@ -42,7 +42,7 @@ export const elevenlabsTtsTool: ToolDef<typeof ElevenLabsTTSSchema> = {
                     text:
                       request.text.substring(0, 100) +
                       (request.text.length > 100 ? "..." : ""),
-                    voice: request.voice || "Rachel",
+                    voice: request.voice || "James",
                     speed: request.speed || 1,
                     stability: request.stability || 0.5,
                     similarity_boost: request.similarity_boost || 0.75,
@@ -78,7 +78,7 @@ export const elevenlabsTtsTool: ToolDef<typeof ElevenLabsTTSSchema> = {
           model:
             "Optional: TTS model - turbo (faster, default) or multilingual (supports context)",
           voice:
-            "Optional: Voice to use (default: Rachel). Available: Rachel, Aria, Roger, Sarah, Laura, Charlie, George, Callum, River, Liam, Charlotte, Alice, Matilda, Will, Jessica, Eric, Chris, Brian, Daniel, Lily, Bill",
+            "Optional: Kie.ai voice ID (default: James). The names Aria, Laura, Callum, Liam, and Brian are accepted as aliases.",
           stability: "Optional: Voice stability (0-1, default: 0.5)",
           similarity_boost: "Optional: Similarity boost (0-1, default: 0.75)",
           style: "Optional: Style exaggeration (0-1, default: 0)",
@@ -98,7 +98,7 @@ export const elevenlabsTtsTool: ToolDef<typeof ElevenLabsTTSSchema> = {
       return ctx.formatError("elevenlabs_tts", error, {
         text: "Required: The text to convert to speech (max 5000 characters)",
         model: "Optional: TTS model - turbo (default) or multilingual",
-        voice: "Optional: Voice to use (default: Rachel)",
+        voice: "Optional: Kie.ai voice ID (default: James)",
         callBackUrl: "Optional: URL for task completion notifications",
       });
     }

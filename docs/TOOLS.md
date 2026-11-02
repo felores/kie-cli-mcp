@@ -188,14 +188,14 @@ Remove backgrounds from images using Recraft AI background removal model
 
 ### topaz_upscale_image
 
-Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution with high-fidelity detail restoration, natural texture reconstruction, and improved clarity. Supports 1x-8x upscaling (max output 20,000px per side). Pricing: 10 credits (≤2K), 20 credits (4K), 40 credits (8K).
+Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution with high-fidelity detail restoration, natural texture reconstruction, and improved clarity. Supports 1x, 2x, and 4x upscaling (max output 20,000px per side). Pricing: 10 credits (≤2K), 20 credits (4K), 40 credits (8K).
 
 #### Parameters
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
 | `image_url` | string | yes | URL of image to upscale (JPEG, PNG, WEBP, max 10MB) |
-| `upscale_factor` | `1` / `2` / `4` / `8` | no | Upscale factor: 1x (enhance only), 2x (default), 4x, or 8x. Max output dimension is 20,000px. (default: `"2"`) |
+| `upscale_factor` | `1` / `2` / `4` | no | Upscale factor: 1x (enhance only), 2x (default), or 4x. Max output dimension is 20,000px. (default: `"2"`) |
 | `callBackUrl` | string | no | Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided) |
 
 ### wan_image
@@ -497,7 +497,7 @@ Generate speech from text using ElevenLabs TTS models (Turbo 2.5 by default, wit
 | --- | --- | --- | --- |
 | `text` | string | yes | The text to convert to speech (max 5000 characters) |
 | `model` | `turbo` / `multilingual` | no | TTS model to use - turbo (faster, default) or multilingual (supports context) (default: `"turbo"`) |
-| `voice` | `Rachel` / `Aria` / `Roger` / `Sarah` / `Laura` / `Charlie` / `George` / `Callum` / `River` / `Liam` / `Charlotte` / `Alice` / `Matilda` / `Will` / `Jessica` / `Eric` / `Chris` / `Brian` / `Daniel` / `Lily` / `Bill` | no | Voice to use for speech generation (default: `"Rachel"`) |
+| `voice` | string | no | Kie.ai ElevenLabs voice ID (20 characters, listed on the Kie.ai ElevenLabs model page). The names Aria, Laura, Callum, Liam, and Brian are accepted as aliases. Default: James. (default: `"EkK5I93UQWFDigLMpZcX"`) |
 | `stability` | number | no | Voice stability (0-1, step 0.01) (default: `0.5`) |
 | `similarity_boost` | number | no | Similarity boost (0-1, step 0.01) (default: `0.75`) |
 | `style` | number | no | Style exaggeration (0-1, step 0.01) (default: `0`) |
