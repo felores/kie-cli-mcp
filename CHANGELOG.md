@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.6.2 - 2026-11-01
+
+### Fixed
+- `wait_for_task` and other task results now put `result_urls` in `structuredContent`, not only in the text. Clients that prefer structured content, such as Claude Desktop, received only `task_id` and `status` after a completed task, so the result URLs never reached them. `TASK_OUTPUT_SCHEMA` lists `result_urls` as optional so strict clients accept the result. CLI and OpenAI transport are unchanged.
+
 ## MCP 5.6.1 - 2026-11-01
 
 ### Fixed

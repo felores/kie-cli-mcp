@@ -29,6 +29,25 @@ describe("normalizeToolResult", () => {
     });
   });
 
+  test("exposes result_urls when the envelope carries a list of strings", () => {
+    const urls = ["https://example.com/a.png", "https://example.com/b.png"];
+    const result = normalizeToolResult(
+      textResult({ task_id: "t-1", status: "completed", result_urls: urls }),
+    );
+    expect(result.structuredContent).toEqual({
+      task_id: "t-1",
+      status: "completed",
+      result_urls: urls,
+    });
+  });
+
+  test("ignores result_urls that is not a list of strings", () => {
+    const result = normalizeToolResult(
+      textResult({ task_id: "t-2", result_urls: [1, 2] }),
+    );
+    expect(result.structuredContent).toEqual({ task_id: "t-2" });
+  });
+
   test("leaves richer structured results untouched", () => {
     const original = textResult(
       { task_id: "x" },
