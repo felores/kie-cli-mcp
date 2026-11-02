@@ -5,7 +5,7 @@ import type { ToolContext, ToolDef, ToolResult } from "./types.js";
 export const topazUpscaleImageTool: ToolDef<typeof TopazUpscaleImageSchema> = {
   name: "topaz_upscale_image",
   description:
-    "Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution with high-fidelity detail restoration, natural texture reconstruction, and improved clarity. Supports 1x-8x upscaling (max output 20,000px per side). Pricing: 10 credits (≤2K), 20 credits (4K), 40 credits (8K).",
+    "Upscale and enhance images using Topaz Labs AI upscaler. Increases resolution with high-fidelity detail restoration, natural texture reconstruction, and improved clarity. Supports 1x, 2x, and 4x upscaling (max output 20,000px per side). Pricing: 10 credits (≤2K), 20 credits (4K), 40 credits (8K).",
   category: "image",
   schema: TopazUpscaleImageSchema,
   async run(args, ctx: ToolContext): Promise<ToolResult> {
@@ -62,7 +62,7 @@ export const topazUpscaleImageTool: ToolDef<typeof TopazUpscaleImageSchema> = {
           image_url:
             "Required: URL of image to upscale (JPEG, PNG, WEBP, max 10MB)",
           upscale_factor:
-            'Optional: Upscale factor "1", "2" (default), "4", or "8". Max output dimension is 20,000px.',
+            'Optional: Upscale factor "1", "2" (default), or "4". Max output dimension is 20,000px.',
           callBackUrl:
             "Optional: URL for task completion notifications (uses KIE_AI_CALLBACK_URL env var if not provided)",
         });
@@ -70,7 +70,7 @@ export const topazUpscaleImageTool: ToolDef<typeof TopazUpscaleImageSchema> = {
 
       return ctx.formatError("topaz_upscale_image", error, {
         image_url: "Required: URL of image to upscale",
-        upscale_factor: 'Optional: Upscale factor "1", "2", "4", or "8"',
+        upscale_factor: 'Optional: Upscale factor "1", "2", or "4"',
         callBackUrl: "Optional: URL for task completion notifications",
       });
     }

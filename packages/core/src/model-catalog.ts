@@ -199,9 +199,10 @@ export const MODEL_CATALOG: ModelCatalogEntry[] = [
     toolName: "runway_aleph_video",
     model: "runway-aleph",
     capabilities: ["video editing"],
-    description: "Runway Aleph video transformation.",
-    status: "active",
-    evidenceUrl: "https://docs.kie.ai/runway-api/quickstart",
+    description:
+      "Runway Aleph video transformation. Discontinued on Kie.ai; tasks are not expected to run.",
+    status: "paused",
+    evidenceUrl: "https://docs.kie.ai/runway-api/generate-aleph-video",
   },
   {
     toolName: "grok_imagine",

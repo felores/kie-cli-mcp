@@ -1003,7 +1003,6 @@ export const OPENAI_EXCLUSIONS: Readonly<Record<string, string>> = {
   recraft_remove_background:
     "transparent-background workflow is outside this contract",
   wan_animate: "character animation has a specialized media contract",
-  runway_aleph_video: "video transformation is not standard create-video",
   infinitalk_lip_sync: "avatar workflow requires image and audio contracts",
   kling_avatar: "avatar workflow requires image and audio contracts",
   omnihuman_video: "avatar workflow requires image and audio contracts",

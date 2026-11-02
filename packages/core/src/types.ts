@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+// Kie.ai takes ElevenLabs voice IDs, not names (James is the Kie.ai default).
+export const ELEVENLABS_DEFAULT_VOICE_ID = "EkK5I93UQWFDigLMpZcX";
+// Only names that map to exactly one voice in the Kie.ai voice list.
+export const ELEVENLABS_VOICE_ALIASES: Record<string, string> = {
+  Aria: "TC0Zp7WVFzhA8zpTlRqV",
+  Laura: "FGY2WhTYpPnrIDTdsKH5",
+  Callum: "N2lVS1w4EtoT3dr4eOWO",
+  Liam: "TX3LPaxmHKxFdv7VOQHJ",
+  Brian: "nPczCjzI2devNBz1zQrb",
+};
+
 // Zod schemas for request validation
 // Nano Banana 2 - powered by Gemini 3.1 Flash Image
 export const NanoBananaImageSchema = z
@@ -372,32 +383,13 @@ export const ElevenLabsTTSSchema = z.object({
       "TTS model to use - turbo (faster, default) or multilingual (supports context)",
     ),
   voice: z
-    .enum([
-      "Rachel",
-      "Aria",
-      "Roger",
-      "Sarah",
-      "Laura",
-      "Charlie",
-      "George",
-      "Callum",
-      "River",
-      "Liam",
-      "Charlotte",
-      "Alice",
-      "Matilda",
-      "Will",
-      "Jessica",
-      "Eric",
-      "Chris",
-      "Brian",
-      "Daniel",
-      "Lily",
-      "Bill",
-    ])
-    .default("Rachel")
+    .string()
+    .min(1)
+    .default(ELEVENLABS_DEFAULT_VOICE_ID)
     .optional()
-    .describe("Voice to use for speech generation"),
+    .describe(
+      "Kie.ai ElevenLabs voice ID (20 characters, listed on the Kie.ai ElevenLabs model page). The names Aria, Laura, Callum, Liam, and Brian are accepted as aliases. Default: James.",
+    ),
   stability: z
     .number()
     .min(0)
@@ -1913,10 +1905,10 @@ export const TopazUpscaleImageSchema = z.object({
     .url()
     .describe("URL of image to upscale (JPEG, PNG, WEBP, max 10MB)"),
   upscale_factor: z
-    .enum(["1", "2", "4", "8"])
+    .enum(["1", "2", "4"])
     .default("2")
     .describe(
-      "Upscale factor: 1x (enhance only), 2x (default), 4x, or 8x. Max output dimension is 20,000px.",
+      "Upscale factor: 1x (enhance only), 2x (default), or 4x. Max output dimension is 20,000px.",
     ),
   callBackUrl: z
     .string()

@@ -34,6 +34,8 @@ import type {
   ZImageRequest,
 } from "./types.js";
 import {
+  ELEVENLABS_DEFAULT_VOICE_ID,
+  ELEVENLABS_VOICE_ALIASES,
   ByteDanceSeedreamImageSchema,
   GptImage2Schema,
   HappyHorseVideoSchema,
@@ -599,7 +601,10 @@ export class KieAiClient {
 
     const input: any = {
       text: request.text,
-      voice: request.voice || "Rachel",
+      voice:
+        ELEVENLABS_VOICE_ALIASES[request.voice ?? ""] ??
+        request.voice ??
+        ELEVENLABS_DEFAULT_VOICE_ID,
       stability: request.stability || 0.5,
       similarity_boost: request.similarity_boost || 0.75,
       style: request.style || 0,
@@ -1463,7 +1468,7 @@ export class KieAiClient {
   ): Promise<KieAiResponse<TaskResponse>> {
     const quality = request.quality || "standard";
     const model =
-      quality === "pro" ? "kling/ai-avatar-v1-pro" : "kling/v1-avatar-standard";
+      quality === "pro" ? "kling/ai-avatar-pro" : "kling/ai-avatar-standard";
 
     const input = {
       image_url: request.image_url,
