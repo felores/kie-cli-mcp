@@ -39,6 +39,7 @@ const TASK_OUTPUT_SCHEMA = z.toJSONSchema(
     status: z.string().optional(),
     api_type: z.string().optional(),
     error: z.string().optional(),
+    result_urls: z.array(z.string()).optional(),
   }),
 );
 
