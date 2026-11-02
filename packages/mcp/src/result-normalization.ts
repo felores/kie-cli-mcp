@@ -26,5 +26,11 @@ export function normalizeToolResult(result: ToolResult): ToolResult {
       structuredContent[key] = record[key];
     }
   }
+  if (
+    Array.isArray(record.result_urls) &&
+    record.result_urls.every((url) => typeof url === "string")
+  ) {
+    structuredContent.result_urls = record.result_urls;
+  }
   return { ...result, structuredContent };
 }

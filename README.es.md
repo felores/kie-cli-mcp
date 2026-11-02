@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.6.2
+
+- Los resultados de tareas completadas ahora llevan `result_urls` en el contenido estructurado, así que los clientes que leen contenido estructurado reciben las URLs de salida de `wait_for_task`.
+
 ## Novedades en MCP 5.6.1
 
 - Corrige que `prepare_media_generation` fallara en clientes MCP estrictos con "Structured content does not match the tool's output schema". El esquema de salida declarado ahora incluye el plan.

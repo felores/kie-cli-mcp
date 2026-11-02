@@ -219,6 +219,10 @@ Beyond tools, the MCP server exposes (all generated from the registry, so they n
   - `kie://tasks/active`, `kie://stats/usage`: live view of the local task database.
   - `ui://kie/upload.html`: sandboxed MCP Apps upload widget.
 
+## What's new in MCP 5.6.2
+
+- Completed task results now carry `result_urls` in structured content, so clients that read structured content receive the output URLs from `wait_for_task`.
+
 ## What's new in MCP 5.6.1
 
 - Fixes `prepare_media_generation` failing on strict MCP clients with "Structured content does not match the tool's output schema". The declared output schema now includes the plan.
@@ -443,7 +447,7 @@ Opt in with `MCP_TRANSPORT=http` or `--http`:
 KIE_AI_API_KEY=sk-... MCP_TRANSPORT=http MCP_HTTP_PORT=3000 \
   node packages/mcp/dist/index.js
 curl http://127.0.0.1:3000/health
-# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.6.1"}
+# → {"status":"ok","transport":"streamable-http","sessions":0,"version":"5.6.2"}
 ```
 
 Single `/mcp` endpoint (POST + GET/SSE + DELETE), stateful sessions via
