@@ -203,6 +203,10 @@ Además de las herramientas, el servidor MCP expone (todo generado desde el regi
 - `kie://tasks/active`, `kie://stats/usage`: vista en vivo de la base de datos local de tareas.
 - `ui://kie/upload.html`: widget de carga aislado de MCP Apps.
 
+## Novedades en MCP 5.6.1
+
+- Corrige que `prepare_media_generation` fallara en clientes MCP estrictos con "Structured content does not match the tool's output schema". El esquema de salida declarado ahora incluye el plan.
+
 ## Novedades en MCP 5.6.0
 
 - Los planes preparados muestran el precio de cada ítem en créditos y en USD ($0.005 por crédito publicado por Kie, marcado como conversión), y el plan completo se devuelve en el resultado de preparación. Los precios desconocidos siguen como `unknown`.

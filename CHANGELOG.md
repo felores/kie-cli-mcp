@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## MCP 5.6.1 - 2026-11-01
+
+### Fixed
+- `prepare_media_generation` failed on strict clients with "Structured content does not match the tool's output schema" since 5.6.0, because its result carries `plan` and the declared `outputSchema` did not list it. The schema now describes the full plan (items, effective settings, applied defaults, credits, USD, price state, total). A new integration test validates the structured content of prepare and submit against their declared schemas, with and without elicitation. CLI and OpenAI transport are unchanged.
+
 ## MCP 5.6.0 / CLI 0.14.0 - 2026-11-01
 
 ### Added
